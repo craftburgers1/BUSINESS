@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>스마트 장부 AI - 자영업 사장님 전용</title>
+    <title>가게손익앱 - 자영업 사장님 스마트 장부</title>
     
     <!-- iOS & PWA Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#f8fafc">
-    <link rel="apple-touch-icon" href="https://img.icons8.com/emoji/192/hamburger-emoji.png">
-    <link rel="icon" type="image/png" href="https://img.icons8.com/emoji/192/hamburger-emoji.png">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/analytics.png">
+    <link rel="icon" type="image/png" href="https://img.icons8.com/color/192/analytics.png">
 
     <!-- CSS & Icon CDNs -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -73,40 +73,60 @@
             border-color: #2563eb !important; 
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
         }
+
+        .listening-anim {
+            animation: pulse-red 1.2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Onboarding Store Setup Wizard Modal (최초 접속 시 가게명 & 업종 설정) -->
-    <div id="wizardModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <!-- Store Setup Wizard Modal -->
+    <div id="wizardModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-6 space-y-4 shadow-2xl">
             <div class="text-center">
                 <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-2xl mb-2">
                     <i class="fa-solid fa-store"></i>
                 </div>
-                <h2 class="text-lg font-bold text-slate-900">내 매장 맞춤 장부 만들기</h2>
-                <p class="text-xs text-slate-500 mt-1">상호명과 업종을 선택하시면 맞춤형 장부가 세팅됩니다.</p>
+                <h2 class="text-lg font-bold text-slate-900">가게 설정 및 맞춤 템플릿</h2>
+                <p class="text-xs text-slate-500 mt-1">상호명과 업종을 선택하시면 업종에 맞는 지출 항목이 세팅됩니다.</p>
             </div>
 
             <div class="space-y-3 pt-2">
                 <div>
                     <label class="text-xs font-semibold text-slate-700 mb-1 block">가게 이름 (상호명)</label>
-                    <input type="text" id="setupStoreName" placeholder="예: 세종도담 상점 / 대박카페" class="w-full text-xs rounded-xl p-3 border border-slate-300">
+                    <input type="text" id="setupStoreName" placeholder="예: 우리동네 대박 맛집" class="w-full text-xs rounded-xl p-3 border border-slate-300">
                 </div>
                 <div>
                     <label class="text-xs font-semibold text-slate-700 mb-1 block">업종 템플릿 선택</label>
                     <select id="setupIndustry" class="w-full text-xs rounded-xl p-3 border border-slate-300">
-                        <option value="burger">🍔 요식업 / 수제버거 / 맛집</option>
+                        <option value="korean">🍱 한식 / 식당 / 정식</option>
+                        <option value="western">🍝 양식 / 파스타 / 버거</option>
+                        <option value="japanese">🍣 일식 / 초밥 / 돈까스</option>
+                        <option value="bunsik">떡 분식 / 야식 / 분식집</option>
+                        <option value="meat">🥩 고깃집 / 삼겹살 / 구이</option>
+                        <option value="hof">🍺 호프집 / 주점 / 포차</option>
                         <option value="cafe">☕ 카페 / 디저트 / 베이커리</option>
-                        <option value="beauty">✂️ 미용실 / 뷰티 / 네일</option>
-                        <option value="general">🏪 일반 자영업 / 도소매</option>
+                        <option value="general">✂️ 미용 / 뷰티 / 일반 자영업</option>
                     </select>
                 </div>
                 <button onclick="saveStoreOnboarding()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
-                    내 매장 장부 시작하기
+                    저장 및 장부 적용하기
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- AI Voice Listening Banner -->
+    <div id="voiceListeningBanner" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden bg-rose-600 text-white px-5 py-2.5 rounded-full shadow-xl flex items-center gap-3 text-xs font-bold listening-anim">
+        <span class="w-3 h-3 bg-white rounded-full animate-ping"></span>
+        <span>음성을 듣고 있습니다... 말씀해 주세요</span>
+        <button onclick="stopVoiceRecognition()" class="ml-2 text-rose-200 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
     <!-- AI Confirmation Modal -->
@@ -139,15 +159,23 @@
 
     <!-- Header Navigation -->
     <header class="sticky top-0 z-40 ios-header px-4 py-3.5 flex justify-between items-center">
-        <div class="flex items-center gap-2.5">
-            <span id="storeIcon" class="text-2xl">🏪</span>
+        <div class="flex items-center gap-2.5 cursor-pointer" onclick="openWizardModal()">
+            <div class="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-base shadow-sm">
+                📈
+            </div>
             <div>
-                <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight">내 매장 장부</h1>
-                <p id="displayIndustry" class="text-xs text-slate-500">자영업 맞춤 장부 관리</p>
+                <div class="flex items-center gap-1.5">
+                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight">가게손익앱</h1>
+                    <i class="fa-solid fa-pen text-[10px] text-slate-400"></i>
+                </div>
+                <p id="displayIndustry" class="text-xs text-slate-500">클릭하여 가게명/업종 변경</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <button onclick="openWizardModal()" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold border border-slate-200">
+            <button onclick="startVoiceRecognition()" id="micHeaderBtn" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 hover:bg-rose-100 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-microphone"></i> 음성 AI
+            </button>
+            <button onclick="openWizardModal()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold border border-slate-200">
                 ⚙️ 설정
             </button>
         </div>
@@ -171,7 +199,7 @@
                     <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
                 </select>
             </div>
-            <span class="text-[11px] text-slate-500"><i class="fa-solid fa-shield-halved text-emerald-500 mr-1"></i>로컬 단독 DB 보호됨</span>
+            <span class="text-[11px] text-slate-500"><i class="fa-solid fa-shield-halved text-emerald-500 mr-1"></i>단독 안전 장부</span>
         </section>
 
         <!-- KPI Summary Cards -->
@@ -201,12 +229,12 @@
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </div>
                 <div>
-                    <h3 class="text-xs font-bold">Gemini AI 자동 입력</h3>
-                    <p class="text-[11px] text-blue-100">말하거나 영수증 촬영 시 AI가 판단하여 기입</p>
+                    <h3 class="text-xs font-bold">Gemini AI 자동 기입</h3>
+                    <p class="text-[11px] text-blue-100">말하거나 영수증 찍으면 AI가 자동 인식</p>
                 </div>
             </div>
             <div class="flex gap-1.5">
-                <button onclick="triggerVoiceInput()" class="px-3 py-1.5 bg-white text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-50 transition">
+                <button onclick="startVoiceRecognition()" class="px-3 py-1.5 bg-white text-blue-600 rounded-xl text-xs font-bold hover:bg-blue-50 transition">
                     <i class="fa-solid fa-microphone mr-1"></i>음성
                 </button>
                 <button onclick="openOcrModal()" class="px-3 py-1.5 bg-blue-700/60 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition">
@@ -283,40 +311,65 @@
         // Coupang Partners Tracking ID
         const COUPANG_SUB_ID = "AF4185384";
 
-        // Category Templates
+        // Clean & Categorized Industry Templates (No Specific Brand/Store Names)
         const industryTemplates = {
-            burger: {
-                icon: '🍔',
-                name: '요식업 / 수제버거',
-                fixed: ['가게세(임대료)', '상가관리비', '가스요금', '세무사수수료', '인건비', '포스기/티오더', '인터넷', '4대보험료'],
-                variable: ['패티용 고기', '햄버거 빵/번', '코스트코 식자재', '채소/토마토', '소스/시즈닝', '음료/주류/맥주', '포장 용기/소모품', '배민/쿠팡 수수료', '배달 대행료']
+            korean: {
+                icon: '🍱',
+                name: '한식 / 정식 / 식당',
+                fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용', '직원/알바 인건비', '포스기/테이블오더', '매장 통신비', '4대보험료'],
+                variable: ['쌀/잡곡 매입', '육류/정육 식자재', '수산물/생선 식자재', '야채/채소/양념류', '식용유/장류/소스', '음료/주류 매입', '포장 용기/소모품', '배달앱 수수료', '배달 대행료']
+            },
+            western: {
+                icon: '🍝',
+                name: '양식 / 이탈리안 / 버거',
+                fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용', '인건비', '포스/테이블오더', '매장 인터넷', '4대보험료'],
+                variable: ['원육/정육/패티용 고기', '수제빵/버거번/파스타면', '유제품/치즈/버터', '신선 야채/토마토/과일', '소스/드레싱/시즈닝', '음료/수제맥주/와인', '포장 용기/소모품', '배달 수수료', '배달 대행료']
+            },
+            japanese: {
+                icon: '🍣',
+                name: '일식 / 초밥 / 돈까스',
+                fixed: ['가게 임대료', '상가 관리비', '가스/수도 요금', '세무사 수수료', '직원/알바 인건비', '포스기/오더', '인터넷비용', '4대보험료'],
+                variable: ['초밥용 횟감/수산물', '돈까스용 정육/생고기', '튀김유/튀김가루', '초밥용 쌀/식초/와사비', '일식 소스/쯔유/장류', '사케/음료/주류', '포장 용기/소모품', '배달 수수료', '배달 대행료']
+            },
+            bunsik: {
+                icon: '떡',
+                name: '분식 / 야식 / 분식집',
+                fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무사 수수료', '직원 인건비', '포스기/통신비', '인터넷', '4대보험료'],
+                variable: ['떡볶이 떡/어묵', '튀김 재료/식용유', '순대/내장 재료', '야채/고춧가루/양념', '김밥 재료(김/단무지)', '음료/쿨피스', '포장 용기/비닐소모품', '배달 수수료', '배달 대행료']
+            },
+            meat: {
+                icon: '🥩',
+                name: '고깃집 / 삼겹살 / 구이',
+                fixed: ['가게 임대료', '상가 관리비', '가스/전기 요금', '세무사 수수료', '주방/홀 인건비', '포스/테이블오더', '인터넷', '4대보험료'],
+                variable: ['돼지고기/삼겹살 매입', '소고기/갈비 매입', '숯/불판 소모품', '쌈채소/마늘/버섯', '파채/양파/기본찬', '음료/소주/맥주', '포장/포장용기', '배달 수수료', '배달 대행료']
+            },
+            hof: {
+                icon: '🍺',
+                name: '호프집 / 주점 / 포차',
+                fixed: ['가게 임대료', '상가 관리비', '전기/가스 공과금', '세무사 수수료', '아르바이트 인건비', '포스기/통신비', '매장 인터넷', '4대보험료'],
+                variable: ['생맥주/병맥주 매입', '소주/하이볼/양주', '마른안주/견과류', '튀김안주/냉동식자재', '메인 안주 식재료', '기본 안주(강정/강나리)', '포장 용기/소모품', '배달 수수료', '배달 대행료']
             },
             cafe: {
                 icon: '☕',
-                name: '카페 / 디저트',
-                fixed: ['임대료', '상가관리비', '전기/수도요금', '세무 수수료', '직원/알바 인건비', '포스/통신비'],
-                variable: ['원두/지라니', '우유/시럽/파우더', '디저트 완제품', '테이크아웃 컵/빨대', '배달 수수료', '매장 소모품']
-            },
-            beauty: {
-                icon: '✂️',
-                name: '미용실 / 뷰티',
-                fixed: ['매장 임대료', '관리비', '네이버 예약 수수료', '인건비', '세무 수수료', '인터넷'],
-                variable: ['염색약/파마약', '샴푸/헤어케어 제품', '타월 세탁비', '매장 다과/음료', '마케팅/광고비']
+                name: '카페 / 디저트 / 베이커리',
+                fixed: ['가게 임대료', '상가 관리비', '전기/수도 요금', '세무 회계비용', '직원/알바 인건비', '포스/통신비', '매장 인터넷'],
+                variable: ['스페셜티 원두', '생유/우유/시럽', '베이커리/디저트 완제', '테이크아웃 컵/홀더/빨대', '원두 그라인더 소모품', '마케팅/인스타 광고비', '배달 수수료']
             },
             general: {
-                icon: '🏪',
-                name: '일반 자영업',
-                fixed: ['가게 임대료', '관리비', '공과금', '인건비', '세무 비용', '통신비'],
-                variable: ['메인 상품/재고', '포장 소모품', '카드 수수료', '배송비/운임', '기타 변동비']
+                icon: '✂️',
+                name: '미용 / 뷰티 / 일반 자영업',
+                fixed: ['매장 임대료', '상가 관리비', '전기/가스 공과금', '직원 인건비', '세무사 비용', '매장 통신비'],
+                variable: ['메인 업무 소모품', '마케팅/광고 비용', '카드 결제 수수료', '택배/배송 운임비', '매장 서비스 음료/다과', '기타 변동비']
             }
         };
 
-        // Local Storage System
-        let storeConfig = JSON.parse(localStorage.getItem('saas_store_config')) || null;
-        let dbData = JSON.parse(localStorage.getItem('saas_ledger_data')) || [];
+        // Local Storage State Management
+        let storeConfig = JSON.parse(localStorage.getItem('gagaesonik_config')) || null;
+        let dbData = JSON.parse(localStorage.getItem('gagaesonik_ledger_data')) || [];
         let currentTab = 'sales';
         let expenseChartObj = null;
         let pendingAiData = null;
+        let recognition = null;
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
 
@@ -333,9 +386,14 @@
 
             switchTab('sales');
             renderDashboard();
+            initSpeechRecognition();
         };
 
         function openWizardModal() {
+            if (storeConfig) {
+                document.getElementById('setupStoreName').value = storeConfig.name;
+                document.getElementById('setupIndustry').value = storeConfig.industryKey;
+            }
             document.getElementById('wizardModal').classList.remove('hidden');
         }
 
@@ -358,7 +416,7 @@
                 variable: [...template.variable]
             };
 
-            localStorage.setItem('saas_store_config', JSON.stringify(storeConfig));
+            localStorage.setItem('gagaesonik_config', JSON.stringify(storeConfig));
             document.getElementById('wizardModal').classList.add('hidden');
             applyStoreConfigUI();
             switchTab('sales');
@@ -367,11 +425,105 @@
         function applyStoreConfigUI() {
             if (!storeConfig) return;
             document.getElementById('displayStoreName').innerText = storeConfig.name;
-            document.getElementById('displayIndustry').innerText = storeConfig.industryName;
-            document.getElementById('storeIcon').innerText = storeConfig.icon;
+            document.getElementById('displayIndustry').innerText = `${storeConfig.icon} ${storeConfig.industryName}`;
         }
 
-        // Coupang Partners Search Link Generator with User Tracking ID
+        // Web Speech API Voice Engine
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.lang = 'ko-KR';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = function() {
+                    document.getElementById('voiceListeningBanner').classList.remove('hidden');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    stopVoiceRecognition();
+                    processVoiceTranscript(transcript);
+                };
+
+                recognition.onerror = function(event) {
+                    stopVoiceRecognition();
+                    alert('음성 인식 오류 또는 권한이 거부되었습니다: ' + event.error);
+                };
+
+                recognition.onend = function() {
+                    stopVoiceRecognition();
+                };
+            }
+        }
+
+        function startVoiceRecognition() {
+            if (!recognition) {
+                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 직접 입력해 보세요:\n(예: '어제 식자재 12만 원 카드로 결제했어')");
+                if (input) processVoiceTranscript(input);
+                return;
+            }
+            try {
+                recognition.start();
+            } catch (e) {
+                recognition.stop();
+            }
+        }
+
+        function stopVoiceRecognition() {
+            document.getElementById('voiceListeningBanner').classList.add('hidden');
+            if (recognition) {
+                try { recognition.stop(); } catch(e){}
+            }
+        }
+
+        function processVoiceTranscript(text) {
+            const numMatch = text.match(/(\d+)\s*(만|천)?\s*원?/);
+            let amount = 50000;
+            if (numMatch) {
+                let num = parseInt(numMatch[1]);
+                if (numMatch[2] === '만') num *= 10000;
+                else if (numMatch[2] === '천') num *= 1000;
+                amount = num;
+            }
+
+            const defaultCat = (storeConfig && storeConfig.variable.length > 0) ? storeConfig.variable[0] : '기타 변동비';
+
+            pendingAiData = {
+                id: Date.now().toString(),
+                type: 'variable',
+                date: getTodayStr(),
+                category: defaultCat,
+                amount: amount,
+                memo: `음성 인식: "${text}"`
+            };
+
+            document.getElementById('aiResDate').innerText = pendingAiData.date;
+            document.getElementById('aiResType').innerText = '지출 (변동비)';
+            document.getElementById('aiResCategory').innerText = pendingAiData.category;
+            document.getElementById('aiResAmount').innerText = pendingAiData.amount.toLocaleString() + '원';
+            document.getElementById('aiResMemo').innerText = pendingAiData.memo;
+
+            document.getElementById('aiConfirmModal').classList.remove('hidden');
+        }
+
+        function confirmAiEntry() {
+            if (!pendingAiData) return;
+
+            dbData.push(pendingAiData);
+            localStorage.setItem('gagaesonik_ledger_data', JSON.stringify(dbData));
+
+            closeAiConfirmModal();
+            renderDashboard();
+            alert('Gemini AI가 성공적으로 장부에 저장했습니다.');
+        }
+
+        function closeAiConfirmModal() {
+            document.getElementById('aiConfirmModal').classList.add('hidden');
+            pendingAiData = null;
+        }
+
         function openCoupangSearch(keyword) {
             const cleanKeyword = encodeURIComponent(keyword);
             const coupangUrl = `https://www.coupang.com/np/search?q=${cleanKeyword}&lptag=${COUPANG_SUB_ID}`;
@@ -414,7 +566,7 @@
                     </div>
                     <div>
                         <label class="text-[11px] text-slate-500 font-medium">메모</label>
-                        <input type="text" id="inputMemo" placeholder="예: 주말 매출 집계" class="w-full text-xs rounded-xl p-2.5">
+                        <input type="text" id="inputMemo" placeholder="예: 토요일 홀+배달 통합 매출" class="w-full text-xs rounded-xl p-2.5">
                     </div>
                     <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-md">
                         <i class="fa-solid fa-plus mr-1"></i> 매출 등록하기
@@ -445,7 +597,6 @@
                         </div>
                     </div>
                     
-                    <!-- Coupang Partners Lowest Price Buying Button -->
                     <div class="flex justify-end">
                         <button type="button" onclick="searchCurrentCategoryCoupang()" class="text-[11px] font-bold text-orange-600 hover:text-orange-700 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition">
                             🛒 선택한 항목 쿠팡 최저가 재구매
@@ -458,7 +609,7 @@
                     </div>
                     <div>
                         <label class="text-[11px] text-slate-500 font-medium">적요 / 거래처</label>
-                        <input type="text" id="inputMemo" placeholder="예: 최저가 구매건" class="w-full text-xs rounded-xl p-2.5">
+                        <input type="text" id="inputMemo" placeholder="예: 식자재 구매건" class="w-full text-xs rounded-xl p-2.5">
                     </div>
                     <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition shadow-md">
                         <i class="fa-solid fa-minus mr-1"></i> 지출 내역 저장
@@ -482,8 +633,7 @@
         function searchCurrentCategoryCoupang() {
             const el = document.getElementById('inputCategory');
             if (!el) return;
-            const keyword = el.value;
-            openCoupangSearch(keyword);
+            openCoupangSearch(el.value);
         }
 
         function addCategoryPrompt(type) {
@@ -497,7 +647,7 @@
                 if (!storeConfig.variable.includes(targetName)) storeConfig.variable.push(targetName);
             }
 
-            localStorage.setItem('saas_store_config', JSON.stringify(storeConfig));
+            localStorage.setItem('gagaesonik_config', JSON.stringify(storeConfig));
             switchTab(type);
         }
 
@@ -510,48 +660,8 @@
                 storeConfig.variable = storeConfig.variable.filter(c => c !== catName);
             }
 
-            localStorage.setItem('saas_store_config', JSON.stringify(storeConfig));
+            localStorage.setItem('gagaesonik_config', JSON.stringify(storeConfig));
             switchTab(type);
-        }
-
-        function triggerVoiceInput() {
-            const input = prompt("음성으로 말씀해 보세요:\n(예: '오늘 식자재 12만 원 구매했어')");
-            if (!input || !input.trim()) return;
-
-            const defaultCat = storeConfig.variable[0] || '기타 식자재';
-
-            pendingAiData = {
-                id: Date.now().toString(),
-                type: 'variable',
-                date: getTodayStr(),
-                category: defaultCat,
-                amount: 120000,
-                memo: input
-            };
-
-            document.getElementById('aiResDate').innerText = pendingAiData.date;
-            document.getElementById('aiResType').innerText = '지출 (변동비)';
-            document.getElementById('aiResCategory').innerText = pendingAiData.category;
-            document.getElementById('aiResAmount').innerText = pendingAiData.amount.toLocaleString() + '원';
-            document.getElementById('aiResMemo').innerText = pendingAiData.memo;
-
-            document.getElementById('aiConfirmModal').classList.remove('hidden');
-        }
-
-        function confirmAiEntry() {
-            if (!pendingAiData) return;
-
-            dbData.push(pendingAiData);
-            localStorage.setItem('saas_ledger_data', JSON.stringify(dbData));
-
-            closeAiConfirmModal();
-            renderDashboard();
-            alert('Gemini AI가 성공적으로 장부에 저장했습니다.');
-        }
-
-        function closeAiConfirmModal() {
-            document.getElementById('aiConfirmModal').classList.add('hidden');
-            pendingAiData = null;
         }
 
         function handleSaveEntry(e, type) {
@@ -571,11 +681,11 @@
             };
 
             dbData.push(newEntry);
-            localStorage.setItem('saas_ledger_data', JSON.stringify(dbData));
+            localStorage.setItem('gagaesonik_ledger_data', JSON.stringify(dbData));
 
             document.getElementById('inputAmount').value = '';
             document.getElementById('inputMemo').value = '';
-            alert('저장되었습니다.');
+            alert('성공적으로 저장되었습니다.');
 
             renderDashboard();
         }
@@ -619,7 +729,7 @@
                         <td class="py-2.5 text-slate-900 font-medium">${item.category} <span class="text-[10px] text-slate-400">${item.memo ? '('+item.memo+')' : ''}</span></td>
                         <td class="py-2.5 text-right font-bold ${isSales ? 'text-emerald-600' : 'text-rose-600'}">${item.amount.toLocaleString()}원</td>
                         <td class="py-2.5 text-center">
-                            ${!isSales ? `<button onclick="openCoupangSearch('${item.category}')" class="text-[10px] font-bold text-orange-600 hover:underline bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded">🛒 검색</button>` : '-'}
+                            ${!isSales ? `<button onclick="openCoupangSearch('${item.category}')" class="text-[10px] font-bold text-orange-600 hover:underline bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded">🛒 최저가</button>` : '-'}
                         </td>
                         <td class="py-2.5 text-center"><button onclick="deleteEntry('${item.id}')" class="text-slate-400 hover:text-rose-600 px-2 py-1"><i class="fa-solid fa-trash-can"></i></button></td>
                     </tr>
@@ -633,7 +743,7 @@
         function deleteEntry(id) {
             if (confirm('이 내역을 삭제하시겠습니까?')) {
                 dbData = dbData.filter(item => item.id !== id);
-                localStorage.setItem('saas_ledger_data', JSON.stringify(dbData));
+                localStorage.setItem('gagaesonik_ledger_data', JSON.stringify(dbData));
                 renderDashboard();
             }
         }
@@ -735,7 +845,7 @@
                     if (cleanNums.length > 0) amount = Math.max(...cleanNums);
                 }
 
-                const defaultCat = storeConfig.variable[0] || '영수증 지출';
+                const defaultCat = (storeConfig && storeConfig.variable.length > 0) ? storeConfig.variable[0] : '영수증 지출';
 
                 pendingAiData = {
                     id: Date.now().toString(),
