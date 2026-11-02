@@ -150,7 +150,6 @@
                 <div class="flex justify-between"><span class="text-slate-400">메모:</span><span id="aiResMemo" class="text-slate-600">-</span></div>
             </div>
 
-            <!-- New Category Auto-Add Notice Tag -->
             <div id="newCategoryNotice" class="hidden bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-2.5 text-[11px] flex items-start gap-1.5">
                 <i class="fa-solid fa-circle-info text-amber-600 mt-0.5"></i>
                 <span>기존 목록에 없는 신규 항목입니다. <b>[예, 입력해 주세요]</b>를 누르면 지출 항목 리스트에 새로 자동 추가됩니다.</span>
@@ -249,22 +248,16 @@
             </div>
         </section>
 
-        <!-- 🛒 NEW: Coupang Lowest Price Central Search Bar -->
-        <section class="ios-card bg-gradient-to-r from-orange-500 to-amber-500 text-white space-y-2 border-none shadow-md">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="text-lg">🛒</span>
-                    <h3 class="text-xs font-bold">식자재/소모품 쿠팡 최저가 바로 검색</h3>
-                </div>
-                <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">실시간 최저가 비교</span>
+        <!-- 🛒 Coupang Partners Banner Section -->
+        <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
+            <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                    🛒 식자재/소모품 쿠팡 최저가 검색
+                </span>
+                <span class="text-[10px] text-slate-400">쿠팡 파트너스 연동</span>
             </div>
-            <div class="flex gap-1.5">
-                <input type="text" id="centralCoupangSearchInput" placeholder="예: 케찹 9kg, 포장 용기, 베이컨, 원두" 
-                       onkeydown="if(event.key==='Enter') triggerCentralCoupangSearch()"
-                       class="flex-1 text-xs rounded-xl px-3 py-2.5 text-slate-900 border-none outline-none placeholder-slate-400">
-                <button onclick="triggerCentralCoupangSearch()" class="px-4 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition">
-                    검색
-                </button>
+            <div class="w-full flex justify-center items-center bg-white py-1">
+                <iframe src="https://coupa.ng/cqB5La" width="100%" height="75" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe>
             </div>
         </section>
 
@@ -333,10 +326,8 @@
 
     <!-- Application Script -->
     <script>
-        // Coupang Partners Tracking ID
-        const COUPANG_SUB_ID = "AF4185384";
+        const COUPANG_SUB_ID = "cqB5La";
 
-        // Clean & Categorized Industry Templates
         const industryTemplates = {
             korean: {
                 icon: '🍱',
@@ -388,7 +379,6 @@
             }
         };
 
-        // Local Storage State Management
         let storeConfig = JSON.parse(localStorage.getItem('gagaesonik_config')) || null;
         let dbData = JSON.parse(localStorage.getItem('gagaesonik_ledger_data')) || [];
         let currentTab = 'sales';
@@ -454,23 +444,12 @@
             document.getElementById('displayIndustry').innerText = `${storeConfig.icon} ${storeConfig.industryName}`;
         }
 
-        // Central Coupang Search Action
-        function triggerCentralCoupangSearch() {
-            const input = document.getElementById('centralCoupangSearchInput');
-            if (!input || !input.value.trim()) {
-                alert('검색할 식자재나 물품명을 입력해 주세요!');
-                return;
-            }
-            openCoupangSearch(input.value.trim());
-        }
-
         function openCoupangSearch(keyword) {
             const cleanKeyword = encodeURIComponent(keyword);
             const coupangUrl = `https://www.coupang.com/np/search?q=${cleanKeyword}&lptag=${COUPANG_SUB_ID}`;
             window.open(coupangUrl, '_blank');
         }
 
-        // Speech Recognition Engine
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
@@ -502,7 +481,7 @@
 
         function startVoiceRecognition() {
             if (!recognition) {
-                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 아래에 직접 입력해 보세요:\n(예: '어제 바질 페스토 3만 원 샀어')");
+                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 직접 입력해 보세요:\n(예: '어제 케찹 3만 원 샀어')");
                 if (input) processVoiceTranscript(input);
                 return;
             }
@@ -520,9 +499,7 @@
             }
         }
 
-        // Gemini AI Category Intelligence & Auto-Creation Logic
         function processVoiceTranscript(text) {
-            // 1. Extract Amount
             const numMatch = text.match(/(\d+)\s*(만|천)?\s*원?/);
             let amount = 50000;
             if (numMatch) {
@@ -532,12 +509,10 @@
                 amount = num;
             }
 
-            // 2. Classify Category with Existing List
             const currentVariables = storeConfig ? storeConfig.variable : [];
             let matchedCategory = null;
             isNewCategoryFound = false;
 
-            // Search for direct keyword match in speech
             for (let cat of currentVariables) {
                 const cleanCat = cat.replace(/\(.*?\)/g, '').trim();
                 if (text.includes(cleanCat) || cleanCat.includes(text.split(' ')[0])) {
@@ -546,10 +521,8 @@
                 }
             }
 
-            // If no match found, AI infers new category name
             if (!matchedCategory) {
                 isNewCategoryFound = true;
-                // Extract main noun from text
                 const words = text.replace(/(\d+)\s*(만|천)?\s*원?|샀어|결제했어|구매했어|카드/g, '').trim().split(' ');
                 matchedCategory = words[0] || '신규 지출항목';
             }
@@ -563,7 +536,6 @@
                 memo: `음성 인식: "${text}"`
             };
 
-            // Render Confirmation Modal
             document.getElementById('aiResDate').innerText = pendingAiData.date;
             document.getElementById('aiResType').innerText = '지출 (변동비)';
             document.getElementById('aiResCategory').innerText = pendingAiData.category;
@@ -583,7 +555,6 @@
         function confirmAiEntry() {
             if (!pendingAiData) return;
 
-            // If it's a new category, automatically add it to the store category list
             if (isNewCategoryFound && storeConfig) {
                 if (!storeConfig.variable.includes(pendingAiData.category)) {
                     storeConfig.variable.push(pendingAiData.category);
