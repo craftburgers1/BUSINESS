@@ -26,7 +26,6 @@
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         
-        /* iOS Clean Light Theme */
         body { 
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; 
             background-color: #f1f5f9; 
@@ -35,7 +34,6 @@
             padding-bottom: 90px; 
         }
         
-        /* iOS Glassmorphism & Card styling */
         .ios-card { 
             background: rgba(255, 255, 255, 0.9); 
             backdrop-filter: blur(20px); 
@@ -60,7 +58,7 @@
             background: #f8fafc; 
             border: 1px solid #e2e8f0;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
-            whitespace-nowrap: nowrap; 
+            white-space: nowrap; 
         }
         .tab-btn.active { 
             background-color: #2563eb; 
@@ -80,21 +78,11 @@
             border-color: #2563eb !important; 
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
         }
-
-        /* Pulsing Voice Microphone Effect */
-        .mic-pulse {
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
-            70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
     </style>
 </head>
 <body>
 
-    <!-- Onboarding Industry Template Wizard (First Time Users) -->
+    <!-- Onboarding Industry Template Wizard -->
     <div id="wizardModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm text-center p-6 space-y-4 shadow-2xl">
             <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-2xl">
@@ -102,7 +90,7 @@
             </div>
             <div>
                 <h2 class="text-lg font-bold text-slate-900">업종 맞춤 템플릿 선택</h2>
-                <p class="text-xs text-slate-500 mt-1">사장님의 업종을 선택하시면 자주 쓰는 지출 항목이 3초 만에 자동 세팅됩니다.</p>
+                <p class="text-xs text-slate-500 mt-1">업종을 선택하시면 자주 쓰는 지출 항목이 자동 세팅됩니다.</p>
             </div>
             <div class="grid grid-cols-2 gap-2 text-left">
                 <button onclick="applyIndustryTemplate('burger')" class="p-3 border border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition">
@@ -129,7 +117,7 @@
         </div>
     </div>
 
-    <!-- AI Voice & Receipt Double-Check Confirmation Modal -->
+    <!-- AI Voice & Receipt Confirmation Modal -->
     <div id="aiConfirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-6 space-y-4 shadow-2xl">
             <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
@@ -166,8 +154,8 @@
         <div class="flex items-center gap-2.5">
             <span class="text-2xl">🍔</span>
             <div>
-                <h1 class="text-base font-bold text-slate-900 leading-tight">더크래프트버거</h1>
-                <p class="text-xs text-slate-500">세종도담점 스마트 장부</p>
+                <h1 class="text-base font-bold text-slate-900 leading-tight">스마트 장부 AI</h1>
+                <p class="text-xs text-slate-500">자영업 사장님 전용 장부</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
@@ -201,7 +189,7 @@
             <span class="text-[11px] text-slate-500"><i class="fa-solid fa-cloud-arrow-up text-blue-500 mr-1"></i>클라우드 동기화</span>
         </section>
 
-        <!-- KPI Summary Cards (iOS White Style) -->
+        <!-- KPI Summary Cards -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="ios-card border-l-4 border-blue-500">
                 <p class="text-[11px] font-semibold text-slate-400">총 매출</p>
@@ -221,7 +209,7 @@
             </div>
         </section>
 
-        <!-- AI Voice & Receipt Quick Bar -->
+        <!-- AI Quick Bar -->
         <section class="ios-card bg-gradient-to-r from-blue-500 to-indigo-600 text-white flex items-center justify-between border-none shadow-md">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg">
@@ -252,7 +240,7 @@
 
             <!-- Main Input Form Area -->
             <div id="form-container" class="mt-4">
-                <!-- Javascript Form Injected Here -->
+                <!-- Form Rendered Here -->
             </div>
         </section>
 
@@ -309,9 +297,8 @@
         </div>
     </div>
 
-    <!-- Firebase System Logic -->
+    <!-- Firebase Logic -->
     <script>
-        // 1. Firebase Config Setup
         const firebaseConfig = {
             apiKey: "AIzaSyB4YZlNVSkc7haxMxTBInMsECMFCuU6ztE",
             authDomain: "data-base-94ba6.firebaseapp.com",
@@ -327,7 +314,6 @@
         }
         const db = firebase.firestore();
 
-        // Updated Default Categories from User Images
         const defaultFixed = [
             '가게세(임대료)', '상가관리비', '가스요금', '세무사수수료', '기타고정비',
             '인건비', '티오더', '포스기', '인터넷', '부가세 세금(월적립)', '4대보험료'
@@ -350,7 +336,7 @@
         let dbData = [];
         let currentTab = 'sales';
         let expenseChartObj = null;
-        let pendingAiData = null; // AI Voice / OCR Temp Storage
+        let pendingAiData = null;
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
 
@@ -364,7 +350,6 @@
             initCategorySync();
         };
 
-        // Realtime Category Sync
         function initCategorySync() {
             db.collection("craftburger_config").doc("categories").onSnapshot((doc) => {
                 if (doc.exists) {
@@ -383,7 +368,6 @@
             });
         }
 
-        // Realtime Ledger Sync
         function initRealtimeSync() {
             db.collection("craftburger_ledger").onSnapshot((snapshot) => {
                 dbData = [];
@@ -400,7 +384,6 @@
             });
         }
 
-        // Tab Switching
         function switchTab(tab) {
             currentTab = tab;
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -414,7 +397,6 @@
             else if (tab === 'variable') renderExpenseForm(container, 'variable', variableCategories);
         }
 
-        // Render Sales Form
         function renderSalesForm(container) {
             container.innerHTML = `
                 <form onsubmit="handleSaveEntry(event, 'sales')" class="space-y-3">
@@ -447,7 +429,6 @@
             `;
         }
 
-        // Render Expense Form
         function renderExpenseForm(container, type, categories) {
             const options = categories.map(c => `<option value="${c}">${c}</option>`).join('');
             const typeName = type === 'fixed' ? '고정비' : '식자재/변동비';
@@ -528,12 +509,10 @@
             });
         }
 
-        // Voice AI Simulation & Confirmation Pop-up Trigger
         function triggerVoiceInput() {
             const input = prompt("음성으로 말씀해 보세요:\n(예: '어제 코스트코 햄버거치즈 15만 원 카드 결제했어')");
             if (!input || !input.trim()) return;
 
-            // Simple Parsing Engine Simulation
             pendingAiData = {
                 type: 'variable',
                 date: getTodayStr(),
@@ -542,7 +521,6 @@
                 memo: input
             };
 
-            // Show Confirmation Modal
             document.getElementById('aiResDate').innerText = pendingAiData.date;
             document.getElementById('aiResType').innerText = '지출 (변동비)';
             document.getElementById('aiResCategory').innerText = pendingAiData.category;
@@ -555,7 +533,6 @@
         function confirmAiEntry() {
             if (!pendingAiData) return;
 
-            // Auto Create Category if missing
             if (!variableCategories.includes(pendingAiData.category)) {
                 variableCategories.push(pendingAiData.category);
                 db.collection("craftburger_config").doc("categories").set({
