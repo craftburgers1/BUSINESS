@@ -184,6 +184,33 @@
         </div>
     </div>
 
+    <!-- 지출 항목 커스텀 관리 모달 (고정비/변동비 항목 추가/삭제) -->
+    <div id="categoryManageModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-sm p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                <h3 id="categoryModalTitle" class="text-sm font-bold text-slate-900">⚙️ 지출 항목 관리</h3>
+                <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <!-- 새 항목 추가 -->
+            <div class="flex gap-2">
+                <input type="text" id="newCategoryInput" placeholder="새 항목 입력 (예: 경조사비)" class="flex-1 text-xs rounded-xl p-2.5 border border-slate-300">
+                <button onclick="addNewCategory()" class="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">
+                    추가
+                </button>
+            </div>
+
+            <!-- 기존 항목 목록 -->
+            <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1" id="categoryListContainer">
+                <!-- JS에서 항목 목록 렌더링 -->
+            </div>
+
+            <button onclick="closeCategoryModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                완료 및 닫기
+            </button>
+        </div>
+    </div>
+
     <!-- AI Voice Listening Banner -->
     <div id="voiceListeningBanner" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden bg-rose-600 text-white px-5 py-2.5 rounded-full shadow-xl flex items-center gap-3 text-xs font-bold listening-anim">
         <span class="w-3 h-3 bg-white rounded-full animate-ping"></span>
@@ -409,6 +436,7 @@
         let currentTab = 'sales';
         let expenseChartObj = null;
         let recognition = null;
+        let activeManageCategoryType = 'fixed'; // 'fixed' or 'variable'
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
 
@@ -416,6 +444,83 @@
         function closePrivacyModal() { document.getElementById('privacyModal').classList.add('hidden'); }
         function openOcrModal() { document.getElementById('ocrModal').classList.remove('hidden'); }
         function closeOcrModal() { document.getElementById('ocrModal').classList.add('hidden'); }
+
+        // 지출 항목 커스텀 관리 모달
+        function openCategoryModal(type) {
+            activeManageCategoryType = type;
+            const titleEl = document.getElementById('categoryModalTitle');
+            titleEl.innerText = type === 'fixed' ? '⚙️ 고정비 항목 추가 / 관리' : '⚙️ 변동비 항목 추가 / 관리';
+            renderCategoryManageList();
+            document.getElementById('categoryManageModal').classList.remove('hidden');
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('categoryManageModal').classList.add('hidden');
+            document.getElementById('newCategoryInput').value = '';
+            switchTab(currentTab); // 수동 입력 폼 드롭다운 재갱신
+        }
+
+        function renderCategoryManageList() {
+            const container = document.getElementById('categoryListContainer');
+            if (!storeConfig) return;
+
+            const list = storeConfig[activeManageCategoryType] || [];
+            if (list.length === 0) {
+                container.innerHTML = `<p class="text-center text-xs text-slate-400 py-3">등록된 항목이 없습니다.</p>`;
+                return;
+            }
+
+            let html = '';
+            list.forEach((item, index) => {
+                html += `
+                    <div class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-xl text-xs">
+                        <span class="font-medium text-slate-700">${item}</span>
+                        <button onclick="removeCategory(${index})" class="text-rose-500 hover:text-rose-700 font-bold px-1 text-[11px]">
+                            <i class="fa-solid fa-trash-can mr-1"></i>삭제
+                        </button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        async function addNewCategory() {
+            const input = document.getElementById('newCategoryInput');
+            const catName = input.value.trim();
+
+            if (!catName) {
+                alert('추가할 항목명을 입력해 주세요.');
+                return;
+            }
+
+            if (!storeConfig[activeManageCategoryType]) {
+                storeConfig[activeManageCategoryType] = [];
+            }
+
+            if (storeConfig[activeManageCategoryType].includes(catName)) {
+                alert('이미 존재해 있는 항목입니다.');
+                return;
+            }
+
+            storeConfig[activeManageCategoryType].push(catName);
+
+            if (currentUser) {
+                await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), storeConfig);
+            }
+
+            input.value = '';
+            renderCategoryManageList();
+        }
+
+        async function removeCategory(index) {
+            if (confirm('이 지출 항목을 삭제하시겠습니까?')) {
+                storeConfig[activeManageCategoryType].splice(index, 1);
+                if (currentUser) {
+                    await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), storeConfig);
+                }
+                renderCategoryManageList();
+            }
+        }
 
         function openCoupangSearch(keyword) {
             const cleanKeyword = encodeURIComponent(keyword);
@@ -719,7 +824,7 @@
             }
         }
 
-        // 📌 지난달 고정비 복사 스마트 기능
+        // 지난달 고정비 복사 스마트 기능
         async function checkAndCopyPrevFixedExpenses() {
             const currentYearStr = document.getElementById('yearSelect').value;
             const currentMonthStr = document.getElementById('monthSelect').value;
@@ -742,7 +847,6 @@
             const prevYStr = prevY.toString();
             const prevMStr = prevM.toString().padStart(2, '0');
 
-            // 지난달 고정비 추출
             const prevFixedEntries = dbData.filter(item => {
                 if (item.type !== 'fixed' || !item.date) return false;
                 const p = item.date.split('-');
@@ -754,7 +858,6 @@
                 return;
             }
 
-            // 이번 달에 이미 들어간 고정비 내역
             const currentFixedEntries = dbData.filter(item => {
                 if (item.type !== 'fixed' || !item.date) return false;
                 const p = item.date.split('-');
@@ -771,7 +874,6 @@
                 }
             }
 
-            // 복사 실행 (이번달 1일 날짜로 세팅)
             const targetDate = `${currentYearStr}-${currentMonthStr}-01`;
             for (const item of prevFixedEntries) {
                 const newEntry = {
@@ -805,7 +907,6 @@
             else if (tab === 'fixed') renderExpenseForm(container, 'fixed', storeConfig ? storeConfig.fixed : []);
             else if (tab === 'variable') renderExpenseForm(container, 'variable', storeConfig ? storeConfig.variable : []);
 
-            // 고정비 탭 클릭 시 자동 감지 팝업 트리거 체크
             if (tab === 'fixed') {
                 setTimeout(() => {
                     checkAndCopyPrevFixedExpensesAutoPrompt();
@@ -813,7 +914,6 @@
             }
         }
 
-        // 고정비 탭으로 넘어왔을 때 조건이 맞으면 팝업 띄우기
         function checkAndCopyPrevFixedExpensesAutoPrompt() {
             const currentYearStr = document.getElementById('yearSelect').value;
             const currentMonthStr = document.getElementById('monthSelect').value;
@@ -830,7 +930,6 @@
             const prevFixed = dbData.filter(item => item.type === 'fixed' && item.date && item.date.startsWith(`${prevYStr}-${prevMStr}`));
             const curFixed = dbData.filter(item => item.type === 'fixed' && item.date && item.date.startsWith(`${currentYearStr}-${currentMonthStr}`));
 
-            // 지난달 고정비는 있는데 이번 달 고정비는 한 건도 없을 때 자동 팝업
             if (prevFixed.length > 0 && curFixed.length === 0) {
                 checkAndCopyPrevFixedExpenses();
             }
@@ -877,11 +976,15 @@
         }
 
         function renderExpenseForm(container, type, categories) {
-            const options = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            const options = (categories && categories.length > 0) 
+                ? categories.map(c => `<option value="${c}">${c}</option>`).join('') 
+                : `<option value="기타 지출">기타 지출</option>`;
 
             container.innerHTML = `
                 <div class="flex justify-between items-center mb-2">
-                    <span class="text-[11px] text-slate-500 font-medium">${type === 'fixed' ? '📌 월 고정비 관리' : '🛒 변동비/생활비 관리'}</span>
+                    <button type="button" onclick="openCategoryModal('${type}')" class="text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition">
+                        <i class="fa-solid fa-gear mr-1"></i>${type === 'fixed' ? '고정비' : '변동비'} 항목 관리/추가
+                    </button>
                     ${type === 'fixed' ? `
                         <button type="button" onclick="checkAndCopyPrevFixedExpenses()" class="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-100 transition">
                             <i class="fa-solid fa-copy mr-1"></i>지난달 고정비 불러오기
