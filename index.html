@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>가게손익앱 - 자영업 사장님 스마트 장부</title>
+    <title>스마트 장부 & 가계부 - 손익/수입지출 관리</title>
     
     <!-- iOS & PWA Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,7 +24,6 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // 사장님의 Firebase SDK 설정
         const firebaseConfig = {
             apiKey: "AIzaSyAemJzk3V5hKH0cb0jP_XxtVRaYOZzL848",
             authDomain: "alluser-77808.firebaseapp.com",
@@ -128,8 +127,8 @@
                 📈
             </div>
             <div>
-                <h2 class="text-xl font-bold text-slate-900">가게손익앱 시작하기</h2>
-                <p class="text-xs text-slate-500 mt-1">로그인하시면 어느 기기에서나 사장님 전용 데이터가 실시간 연동됩니다.</p>
+                <h2 class="text-xl font-bold text-slate-900">손익장부 & 가계부 시작하기</h2>
+                <p class="text-xs text-slate-500 mt-1">로그인하시면 어느 기기에서나 사장님/개인 전용 데이터가 실시간 연동됩니다.</p>
             </div>
 
             <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-left space-y-1.5">
@@ -166,25 +165,16 @@
                 <div class="bg-slate-50 p-3 rounded-xl space-y-1">
                     <p class="font-bold text-slate-800">1. 개인정보 수집 및 이용 목적</p>
                     <p class="text-[11px] text-slate-500">- 사용자 식별 및 서비스 이용자 본인 확인</p>
-                    <p class="text-[11px] text-slate-500">- 가게 장부 데이터(매출/지출 내역) 기기 간 실시간 동기화 및 안전한 저장</p>
+                    <p class="text-[11px] text-slate-500">- 가게 장부 및 가계부 데이터(수입/지출 내역) 기기 간 실시간 동기화</p>
                 </div>
-
                 <div class="bg-slate-50 p-3 rounded-xl space-y-1">
                     <p class="font-bold text-slate-800">2. 수집하는 개인정보 항목</p>
                     <p class="text-[11px] text-slate-500">- Google 계정 이메일 주소, Google 고유 사용자 ID(UID)</p>
-                    <p class="text-[11px] text-slate-500">- 사용자가 직접 입력한 가게명, 업종, 일일 매출 및 지출 내역</p>
+                    <p class="text-[11px] text-slate-500">- 사용자가 직접 입력한 명칭, 업종/용도, 수입 및 지출 내역</p>
                 </div>
-
                 <div class="bg-slate-50 p-3 rounded-xl space-y-1">
                     <p class="font-bold text-slate-800">3. 개인정보의 보유 및 이용 기간</p>
                     <p class="text-[11px] text-slate-500">- 회원 탈퇴 신청 시 또는 서비스 종료 시까지 영구 안전 보관</p>
-                    <p class="text-[11px] text-slate-500">- 사용자가 삭제를 요청하는 경우 즉시 데이터가 파기됩니다.</p>
-                </div>
-
-                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
-                    <p class="font-bold text-slate-800">4. 제3자 제공 및 제휴 안내</p>
-                    <p class="text-[11px] text-slate-500">- 수집된 정보는 제3자에게 매매되거나 공유되지 않습니다.</p>
-                    <p class="text-[11px] text-slate-500">- 앱 내 외부 링크(쿠팡 파트너스 배너 등) 이용 시 서비스 파트너 정책에 따릅니다.</p>
                 </div>
             </div>
 
@@ -201,25 +191,26 @@
         <button onclick="stopVoiceRecognition()" class="ml-2 text-rose-200 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
-    <!-- Store Setup Wizard Modal -->
+    <!-- Setup Wizard Modal (가게/가계부 설정) -->
     <div id="wizardModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-6 space-y-4 shadow-2xl">
             <div class="text-center">
                 <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-2xl mb-2">
-                    <i class="fa-solid fa-store"></i>
+                    <i class="fa-solid fa-house-user"></i>
                 </div>
-                <h2 class="text-lg font-bold text-slate-900">가게 설정 및 맞춤 템플릿</h2>
-                <p class="text-xs text-slate-500 mt-1">상호명과 업종을 선택하시면 맞춤 지출 항목이 세팅됩니다.</p>
+                <h2 class="text-lg font-bold text-slate-900">사용 용도 및 맞춤 템플릿</h2>
+                <p class="text-xs text-slate-500 mt-1">가게 상호명이나 개인 가계부 이름을 설정해 주세요.</p>
             </div>
 
             <div class="space-y-3 pt-2">
                 <div>
-                    <label class="text-xs font-semibold text-slate-700 mb-1 block">가게 이름 (상호명)</label>
-                    <input type="text" id="setupStoreName" placeholder="예: 우리동네 대박 맛집" class="w-full text-xs rounded-xl p-3 border border-slate-300">
+                    <label class="text-xs font-semibold text-slate-700 mb-1 block">이름 (상호명 또는 가계부 명칭)</label>
+                    <input type="text" id="setupStoreName" placeholder="예: 우리집 가계부 / 대박 맛집" class="w-full text-xs rounded-xl p-3 border border-slate-300">
                 </div>
                 <div>
-                    <label class="text-xs font-semibold text-slate-700 mb-1 block">업종 템플릿 선택</label>
+                    <label class="text-xs font-semibold text-slate-700 mb-1 block">업종 / 용도 템플릿 선택</label>
                     <select id="setupIndustry" class="w-full text-xs rounded-xl p-3 border border-slate-300">
+                        <option value="home">🏠 일반가정 / 개인 가계부</option>
                         <option value="korean">🍱 한식 / 정식 / 식당</option>
                         <option value="western">🍝 양식 / 파스타 / 버거</option>
                         <option value="japanese">🍣 일식 / 초밥 / 돈까스</option>
@@ -231,7 +222,7 @@
                     </select>
                 </div>
                 <button onclick="saveStoreOnboarding()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
-                    저장 및 장부 적용하기
+                    저장 및 설정 적용하기
                 </button>
             </div>
         </div>
@@ -245,10 +236,10 @@
             </div>
             <div>
                 <div class="flex items-center gap-1.5">
-                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight">가게손익앱</h1>
+                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight">스마트 장부</h1>
                     <i class="fa-solid fa-pen text-[10px] text-slate-400"></i>
                 </div>
-                <p id="displayIndustry" class="text-xs text-slate-500">클릭하여 가게명/업종 변경</p>
+                <p id="displayIndustry" class="text-xs text-slate-500">클릭하여 명칭/용도 변경</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
@@ -283,7 +274,7 @@
         <!-- KPI Summary Cards -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="ios-card border-l-4 border-blue-500">
-                <p class="text-[11px] font-semibold text-slate-400">총 매출</p>
+                <p id="labelSalesCard" class="text-[11px] font-semibold text-slate-400">총 수입(매출)</p>
                 <p id="totalSales" class="text-lg font-bold text-slate-900 mt-1">0원</p>
             </div>
             <div class="ios-card border-l-4 border-rose-500">
@@ -291,28 +282,27 @@
                 <p id="totalExpense" class="text-lg font-bold text-rose-600 mt-1">0원</p>
             </div>
             <div class="ios-card border-l-4 border-emerald-500">
-                <p class="text-[11px] font-semibold text-slate-400">순이익</p>
+                <p id="labelNetCard" class="text-[11px] font-semibold text-slate-400">순잔액(순이익)</p>
                 <p id="netProfit" class="text-lg font-bold text-emerald-600 mt-1">0원</p>
             </div>
             <div class="ios-card border-l-4 border-amber-500">
-                <p class="text-[11px] font-semibold text-slate-400">순이익률</p>
+                <p id="labelMarginCard" class="text-[11px] font-semibold text-slate-400">저축/이익률</p>
                 <p id="profitMargin" class="text-lg font-bold text-amber-600 mt-1">0%</p>
             </div>
         </section>
 
-        <!-- 수동 입력 폼 (매출/고정비/변동비 탭) -->
+        <!-- 수동 입력 폼 (수입/고정비/변동비 탭) -->
         <section class="ios-card">
             <div class="flex border-b border-slate-100 pb-3 gap-1 overflow-x-auto">
-                <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn active">매출 입력</button>
+                <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn active">수입/매출 입력</button>
                 <button onclick="switchTab('fixed')" id="tab-fixed" class="tab-btn">고정비 입력</button>
-                <button onclick="switchTab('variable')" id="tab-variable" class="tab-btn">식자재/변동비 입력</button>
+                <button onclick="switchTab('variable')" id="tab-variable" class="tab-btn">변동비/생활비 입력</button>
             </div>
 
-            <!-- Form Rendered Area -->
             <div id="form-container" class="mt-4"></div>
         </section>
 
-        <!-- Gemini AI Quick Entry Bar (수동 입력 바로 아래) -->
+        <!-- Gemini AI Quick Entry Bar -->
         <section class="ios-card bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between border-none shadow-md">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg">
@@ -333,7 +323,7 @@
             </div>
         </section>
 
-        <!-- Chart Section (지출 항목별 분석) -->
+        <!-- Chart Section -->
         <section class="ios-card space-y-2">
             <h3 id="chartTitle" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <i class="fa-solid fa-chart-pie text-blue-500"></i> 지출 항목별 분석
@@ -343,11 +333,11 @@
             </div>
         </section>
 
-        <!-- 🛒 Coupang Partners Banner Section (그래프 바로 밑, 상세내역 바로 위 배치) -->
+        <!-- 🛒 Coupang Partners Banner Section -->
         <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
             <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                    🛒 식자재/소모품 쿠팡 최저가 검색
+                    🛒 식자재 / 생필품 쿠팡 최저가 검색
                 </span>
                 <span class="text-[10px] text-slate-400">쿠팡 파트너스 연동</span>
             </div>
@@ -361,11 +351,11 @@
             </div>
         </section>
 
-        <!-- Live Ledger History List (매출 및 지출 상세 내역) -->
+        <!-- Live Ledger History List -->
         <section class="ios-card space-y-3">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
                 <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <i class="fa-solid fa-list-check text-blue-500"></i> 매출 및 지출 상세 내역
+                    <i class="fa-solid fa-list-check text-blue-500"></i> 수입 및 지출 상세 내역
                 </h3>
                 <span id="historyCount" class="text-[11px] text-slate-400">0건</span>
             </div>
@@ -377,7 +367,7 @@
             <p class="text-[10px] text-slate-400">
                 이 포스팅/배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
             </p>
-            <p class="text-[10px] text-slate-300">© 가게손익앱. All rights reserved.</p>
+            <p class="text-[10px] text-slate-300">© 손익장부 & 가계부. All rights reserved.</p>
         </footer>
 
     </main>
@@ -447,7 +437,6 @@
             }
         }
 
-        // Web Speech API Voice Recognition
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
@@ -479,7 +468,7 @@
 
         function startVoiceRecognition() {
             if (!recognition) {
-                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 아래에 직접 입력하세요:\n(예: '식자재 15만 원 결제했어')");
+                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 아래에 직접 입력하세요:\n(예: '마트 장보기 5만 원 결제했어')");
                 if (input) processVoiceTranscript(input);
                 return;
             }
@@ -503,7 +492,7 @@
 
             const defaultCat = (storeConfig && storeConfig.variable.length > 0) ? storeConfig.variable[0] : '기타 변동비';
             
-            if (confirm(`AI 음성 인식 완료:\n- 항목: ${defaultCat}\n- 금액: ${amount.toLocaleString()}원\n- 메모: "${text}"\n\n장부에 등록할까요?`)) {
+            if (confirm(`AI 음성 인식 완료:\n- 항목: ${defaultCat}\n- 금액: ${amount.toLocaleString()}원\n- 메모: "${text}"\n\n등록할까요?`)) {
                 const newEntry = {
                     id: Date.now().toString(),
                     type: 'variable',
@@ -518,7 +507,7 @@
                 }
                 dbData.push(newEntry);
                 renderDashboard();
-                alert('장부에 등록되었습니다.');
+                alert('저장되었습니다.');
             }
         }
 
@@ -549,7 +538,7 @@
 
                 const defaultCat = (storeConfig && storeConfig.variable.length > 0) ? storeConfig.variable[0] : '영수증 지출';
 
-                if (confirm(`AI 영수증 스캔 완료:\n- 인식 금액: ${(amount || 50000).toLocaleString()}원\n\n장부에 자동 기입할까요?`)) {
+                if (confirm(`AI 영수증 스캔 완료:\n- 인식 금액: ${(amount || 50000).toLocaleString()}원\n\n자동 기입할까요?`)) {
                     const newEntry = {
                         id: Date.now().toString(),
                         type: 'variable',
@@ -564,7 +553,7 @@
                     }
                     dbData.push(newEntry);
                     renderDashboard();
-                    alert('영수증 내역이 클라우드 장부에 저장되었습니다.');
+                    alert('영수증 내역이 저장되었습니다.');
                 }
             }).catch(err => {
                 alert('OCR 분석 오류: ' + err.message);
@@ -651,11 +640,12 @@
             const indKey = document.getElementById('setupIndustry').value;
 
             if (!nameInput) {
-                alert('가게 이름을 입력해 주세요!');
+                alert('이름 또는 상호명을 입력해 주세요!');
                 return;
             }
 
             const industryTemplates = {
+                home: { icon: '🏠', name: '일반가정 / 개인 가계부', fixed: ['아파트 관리비', '월세/대출이자', '통신비/인터넷', '보험료', 'OTT/구독료'], variable: ['식비/장보기', '외식/배달비', '교통/유류비', '생필품 구매', '문화/소비'] },
                 korean: { icon: '🍱', name: '한식 / 정식 / 식당', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], variable: ['쌀/잡곡 매입', '육류/정육 식자재', '포장 용기', '배달앱 수수료'] },
                 western: { icon: '🍝', name: '양식 / 파스타 / 버거', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], variable: ['원육/정육/패티', '파스타/버거번', '포장 용기', '배달 수수료'] },
                 japanese: { icon: '🍣', name: '일식 / 초밥 / 돈까스', fixed: ['가게 임대료', '상가 관리비', '가스/수도 요금', '세무사 수수료'], variable: ['초밥용 횟감', '돈까스용 생고기', '튀김유', '포장 용기'] },
@@ -666,7 +656,7 @@
                 general: { icon: '✂️', name: '미용 / 뷰티 / 일반 자영업', fixed: ['매장 임대료', '상가 관리비', '전기/가스 공과금', '세무사 비용'], variable: ['소모품', '마케팅/광고비', '카드 수수료', '기타 변동비'] }
             };
 
-            const template = industryTemplates[indKey] || industryTemplates.korean;
+            const template = industryTemplates[indKey] || industryTemplates.home;
             storeConfig = {
                 name: nameInput,
                 industryKey: indKey,
@@ -714,7 +704,7 @@
             dbData.push(newEntry);
             document.getElementById('inputAmount').value = '';
             document.getElementById('inputMemo').value = '';
-            alert('클라우드 장부에 안전하게 저장되었습니다.');
+            alert('클라우드에 안전하게 저장되었습니다.');
 
             renderDashboard();
         }
@@ -743,6 +733,8 @@
         }
 
         function renderSalesForm(container) {
+            const isHome = storeConfig && storeConfig.industryKey === 'home';
+            
             container.innerHTML = `
                 <form onsubmit="handleSaveEntry(event, 'sales')" class="space-y-3">
                     <div class="grid grid-cols-2 gap-2">
@@ -751,24 +743,30 @@
                             <input type="date" id="inputDate" value="${getTodayStr()}" required class="w-full text-xs rounded-xl p-2.5">
                         </div>
                         <div>
-                            <label class="text-[11px] text-slate-500 font-medium">매출 구분</label>
+                            <label class="text-[11px] text-slate-500 font-medium">수입/매출 구분</label>
                             <select id="salesType" class="w-full text-xs rounded-xl p-2.5">
-                                <option value="일일 총매출">일일 통합 매출</option>
-                                <option value="홀 매출">홀 매출</option>
-                                <option value="배달 매출">배달 매출</option>
+                                ${isHome ? `
+                                    <option value="월급 / 급여">월급 / 급여</option>
+                                    <option value="부수입 / 용돈">부수입 / 용돈</option>
+                                    <option value="금융 / 이자수익">금융 / 이자수익</option>
+                                ` : `
+                                    <option value="일일 총매출">일일 통합 매출</option>
+                                    <option value="홀 매출">홀 매출</option>
+                                    <option value="배달 매출">배달 매출</option>
+                                `}
                             </select>
                         </div>
                     </div>
                     <div>
-                        <label class="text-[11px] text-slate-500 font-medium">매출 금액 (원)</label>
-                        <input type="number" id="inputAmount" placeholder="예: 850000" required class="w-full text-xs font-bold text-emerald-600 rounded-xl p-2.5">
+                        <label class="text-[11px] text-slate-500 font-medium">금액 (원)</label>
+                        <input type="number" id="inputAmount" placeholder="예: 3000000" required class="w-full text-xs font-bold text-emerald-600 rounded-xl p-2.5">
                     </div>
                     <div>
                         <label class="text-[11px] text-slate-500 font-medium">메모</label>
-                        <input type="text" id="inputMemo" placeholder="예: 토요일 홀+배달 통합 매출" class="w-full text-xs rounded-xl p-2.5">
+                        <input type="text" id="inputMemo" placeholder="예: 11월 월급 입금" class="w-full text-xs rounded-xl p-2.5">
                     </div>
                     <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-md">
-                        <i class="fa-solid fa-plus mr-1"></i> 클라우드 장부에 등록하기
+                        <i class="fa-solid fa-plus mr-1"></i> 수입/매출 등록하기
                     </button>
                 </form>
             `;
@@ -794,8 +792,8 @@
                         <input type="number" id="inputAmount" placeholder="예: 155000" required class="w-full text-xs font-bold text-rose-600 rounded-xl p-2.5">
                     </div>
                     <div>
-                        <label class="text-[11px] text-slate-500 font-medium">적요 / 거래처</label>
-                        <input type="text" id="inputMemo" placeholder="예: 식자재 구매건" class="w-full text-xs rounded-xl p-2.5">
+                        <label class="text-[11px] text-slate-500 font-medium">적요 / 사용처</label>
+                        <input type="text" id="inputMemo" placeholder="예: 마트 장보기" class="w-full text-xs rounded-xl p-2.5">
                     </div>
                     <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition shadow-md">
                         <i class="fa-solid fa-minus mr-1"></i> 지출 내역 저장
@@ -862,7 +860,7 @@
                                 <th class="pb-2 font-medium">구분</th>
                                 <th class="pb-2 font-medium">항목</th>
                                 <th class="pb-2 text-right font-medium">금액</th>
-                                <th class="pb-2 text-center font-medium">더싼 식자재</th>
+                                <th class="pb-2 text-center font-medium">더싼 식자재/필수품</th>
                                 <th class="pb-2 text-center font-medium">삭제</th>
                             </tr>
                         </thead>
@@ -874,7 +872,7 @@
                 html += `
                     <tr>
                         <td class="py-2.5 text-slate-600 font-medium">${item.date}</td>
-                        <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] ${isSales ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}">${isSales ? '매출' : '지출'}</span></td>
+                        <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] ${isSales ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}">${isSales ? '수입' : '지출'}</span></td>
                         <td class="py-2.5 text-slate-900 font-medium">${item.category} <span class="text-[10px] text-slate-400">${item.memo ? '('+item.memo+')' : ''}</span></td>
                         <td class="py-2.5 text-right font-bold ${isSales ? 'text-emerald-600' : 'text-rose-600'}">${item.amount.toLocaleString()}원</td>
                         <td class="py-2.5 text-center">
