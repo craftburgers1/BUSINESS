@@ -184,7 +184,40 @@
         </div>
     </div>
 
-    <!-- 지출 항목 커스텀 관리 모달 (고정비/변동비 항목 추가/삭제) -->
+    <!-- 👤 내정보 / 계정 관리 모달 -->
+    <div id="userInfoModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-sm p-6 space-y-5 text-center shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-user-gear text-blue-500 mr-1.5"></i>내정보 & 계정 관리</h3>
+                <button onclick="closeUserInfoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-3">
+                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto text-3xl border-2 border-blue-200">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">Google 계정 로그인 중</span>
+                    <p id="modalUserEmail" class="text-sm font-bold text-slate-800 mt-1.5 break-all">user@gmail.com</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-3 text-left space-y-1 border border-slate-100 text-[11px] text-slate-500">
+                <p><i class="fa-solid fa-shield-halved text-blue-500 mr-1"></i> 모든 장부 데이터는 위 구글 계정에 실시간 동기화되어 안전하게 보관됩니다.</p>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <button onclick="handleLogout()" class="w-full py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
+                </button>
+                <button onclick="closeUserInfoModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 지출 항목 커스텀 관리 모달 -->
     <div id="categoryManageModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-5 space-y-4 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
@@ -192,7 +225,6 @@
                 <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
 
-            <!-- 새 항목 추가 -->
             <div class="flex gap-2">
                 <input type="text" id="newCategoryInput" placeholder="새 항목 입력 (예: 경조사비)" class="flex-1 text-xs rounded-xl p-2.5 border border-slate-300">
                 <button onclick="addNewCategory()" class="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">
@@ -200,10 +232,7 @@
                 </button>
             </div>
 
-            <!-- 기존 항목 목록 -->
-            <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1" id="categoryListContainer">
-                <!-- JS에서 항목 목록 렌더링 -->
-            </div>
+            <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1" id="categoryListContainer"></div>
 
             <button onclick="closeCategoryModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
                 완료 및 닫기
@@ -273,9 +302,9 @@
             <button onclick="startVoiceRecognition()" id="micHeaderBtn" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 hover:bg-rose-100 transition flex items-center gap-1">
                 <i class="fa-solid fa-microphone"></i> 음성 AI
             </button>
-            <span id="userEmailTag" class="text-[10px] text-slate-400 hidden sm:inline"></span>
-            <button onclick="handleLogout()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold border border-slate-200">
-                로그아웃
+            <!-- 👤 내정보 버튼 -->
+            <button onclick="openUserInfoModal()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 flex items-center gap-1 transition">
+                <i class="fa-solid fa-circle-user text-blue-600 text-sm"></i> 내정보
             </button>
         </div>
     </header>
@@ -436,7 +465,7 @@
         let currentTab = 'sales';
         let expenseChartObj = null;
         let recognition = null;
-        let activeManageCategoryType = 'fixed'; // 'fixed' or 'variable'
+        let activeManageCategoryType = 'fixed';
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
 
@@ -444,6 +473,18 @@
         function closePrivacyModal() { document.getElementById('privacyModal').classList.add('hidden'); }
         function openOcrModal() { document.getElementById('ocrModal').classList.remove('hidden'); }
         function closeOcrModal() { document.getElementById('ocrModal').classList.add('hidden'); }
+
+        // 👤 내정보 모달 열기/닫기
+        function openUserInfoModal() {
+            if (currentUser) {
+                document.getElementById('modalUserEmail').innerText = currentUser.email || '구글 계정 정보 없음';
+            }
+            document.getElementById('userInfoModal').classList.remove('hidden');
+        }
+
+        function closeUserInfoModal() {
+            document.getElementById('userInfoModal').classList.add('hidden');
+        }
 
         // 지출 항목 커스텀 관리 모달
         function openCategoryModal(type) {
@@ -457,7 +498,7 @@
         function closeCategoryModal() {
             document.getElementById('categoryManageModal').classList.add('hidden');
             document.getElementById('newCategoryInput').value = '';
-            switchTab(currentTab); // 수동 입력 폼 드롭다운 재갱신
+            switchTab(currentTab);
         }
 
         function renderCategoryManageList() {
@@ -678,7 +719,6 @@
                         if (user) {
                             currentUser = user;
                             document.getElementById('loginModal').classList.add('hidden');
-                            document.getElementById('userEmailTag').innerText = user.email;
                             await loadUserDataFromCloud();
                         } else {
                             currentUser = null;
