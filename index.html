@@ -132,7 +132,6 @@
                 <p class="text-xs text-slate-500 mt-1">로그인하시면 어느 기기에서나 사장님 전용 데이터가 실시간 연동됩니다.</p>
             </div>
 
-            <!-- 약관 및 개인정보 수집 동의 체크박스 + 보기 버튼 -->
             <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-left space-y-1.5">
                 <div class="flex items-center justify-between">
                     <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-700 font-semibold">
@@ -155,7 +154,7 @@
         </div>
     </div>
 
-    <!-- 약관 및 개인정보 처리방침 상세보기 팝업 모달 -->
+    <!-- 약관 상세보기 모달 -->
     <div id="privacyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[80vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
@@ -301,7 +300,19 @@
             </div>
         </section>
 
-        <!-- AI Quick Entry Bar (음성 + 영수증 OCR) -->
+        <!-- 1️⃣ 수동 입력 폼 (매출/고정비/변동비 탭) -->
+        <section class="ios-card">
+            <div class="flex border-b border-slate-100 pb-3 gap-1 overflow-x-auto">
+                <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn active">매출 입력</button>
+                <button onclick="switchTab('fixed')" id="tab-fixed" class="tab-btn">고정비 입력</button>
+                <button onclick="switchTab('variable')" id="tab-variable" class="tab-btn">식자재/변동비 입력</button>
+            </div>
+
+            <!-- Form Rendered Area -->
+            <div id="form-container" class="mt-4"></div>
+        </section>
+
+        <!-- 2️⃣ AI Quick Entry Bar (수동 입력 바로 아래 배치) -->
         <section class="ios-card bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between border-none shadow-md">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg">
@@ -322,7 +333,28 @@
             </div>
         </section>
 
-        <!-- 🛒 Coupang Partners Banner Section -->
+        <!-- Chart Section -->
+        <section class="ios-card space-y-2">
+            <h3 id="chartTitle" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-chart-pie text-blue-500"></i> 지출 항목별 분석
+            </h3>
+            <div class="h-52 relative">
+                <canvas id="expenseChart"></canvas>
+            </div>
+        </section>
+
+        <!-- 3️⃣ Live Ledger History List (매출 및 지출 상세 내역) -->
+        <section class="ios-card space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-list-check text-blue-500"></i> 매출 및 지출 상세 내역
+                </h3>
+                <span id="historyCount" class="text-[11px] text-slate-400">0건</span>
+            </div>
+            <div id="history-container"></div>
+        </section>
+
+        <!-- 4️⃣ 🛒 Coupang Partners Banner Section (상세내역 바로 아래 배치) -->
         <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
             <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
@@ -340,40 +372,7 @@
             </div>
         </section>
 
-        <!-- Entry Form Navigation Tabs -->
-        <section class="ios-card">
-            <div class="flex border-b border-slate-100 pb-3 gap-1 overflow-x-auto">
-                <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn active">매출 입력</button>
-                <button onclick="switchTab('fixed')" id="tab-fixed" class="tab-btn">고정비 입력</button>
-                <button onclick="switchTab('variable')" id="tab-variable" class="tab-btn">식자재/변동비 입력</button>
-            </div>
-
-            <!-- Form Rendered Area -->
-            <div id="form-container" class="mt-4"></div>
-        </section>
-
-        <!-- Chart Section -->
-        <section class="ios-card space-y-2">
-            <h3 id="chartTitle" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <i class="fa-solid fa-chart-pie text-blue-500"></i> 지출 항목별 분석
-            </h3>
-            <div class="h-52 relative">
-                <canvas id="expenseChart"></canvas>
-            </div>
-        </section>
-
-        <!-- Live Ledger History List -->
-        <section class="ios-card space-y-3">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
-                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <i class="fa-solid fa-list-check text-blue-500"></i> 매출 및 지출 상세 내역
-                </h3>
-                <span id="historyCount" class="text-[11px] text-slate-400">0건</span>
-            </div>
-            <div id="history-container"></div>
-        </section>
-
-        <!-- 앱 하단 파트너스 안내 Footer -->
+        <!-- Footer -->
         <footer class="text-center py-4 space-y-1">
             <p class="text-[10px] text-slate-400">
                 이 포스팅/배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
