@@ -105,7 +105,7 @@
                 <div>
                     <label class="text-xs font-semibold text-slate-700 mb-1 block">업종 템플릿 선택</label>
                     <select id="setupIndustry" class="w-full text-xs rounded-xl p-3 border border-slate-300">
-                        <option value="korean">🍱 한식 / 식당 / 정식</option>
+                        <option value="korean">🍱 한식 / 정식 / 식당</option>
                         <option value="western">🍝 양식 / 파스타 / 버거</option>
                         <option value="japanese">🍣 일식 / 초밥 / 돈까스</option>
                         <option value="bunsik">떡 분식 / 야식 / 분식집</option>
@@ -148,6 +148,12 @@
                 <div class="flex justify-between"><span class="text-slate-400">항목:</span><span id="aiResCategory" class="font-bold text-slate-800">식자재</span></div>
                 <div class="flex justify-between"><span class="text-slate-400">금액:</span><span id="aiResAmount" class="font-bold text-rose-600 text-sm">0원</span></div>
                 <div class="flex justify-between"><span class="text-slate-400">메모:</span><span id="aiResMemo" class="text-slate-600">-</span></div>
+            </div>
+
+            <!-- New Category Auto-Add Notice Tag -->
+            <div id="newCategoryNotice" class="hidden bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-2.5 text-[11px] flex items-start gap-1.5">
+                <i class="fa-solid fa-circle-info text-amber-600 mt-0.5"></i>
+                <span>기존 목록에 없는 신규 항목입니다. <b>[예, 입력해 주세요]</b>를 누르면 지출 항목 리스트에 새로 자동 추가됩니다.</span>
             </div>
 
             <div class="flex gap-2 pt-2">
@@ -230,7 +236,7 @@
                 </div>
                 <div>
                     <h3 class="text-xs font-bold">Gemini AI 자동 기입</h3>
-                    <p class="text-[11px] text-blue-100">말하거나 영수증 찍으면 AI가 자동 인식</p>
+                    <p class="text-[11px] text-blue-100">말하거나 영수증 찍으면 AI가 자동 분류</p>
                 </div>
             </div>
             <div class="flex gap-1.5">
@@ -239,6 +245,25 @@
                 </button>
                 <button onclick="openOcrModal()" class="px-3 py-1.5 bg-blue-700/60 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition">
                     <i class="fa-solid fa-camera mr-1"></i>영수증
+                </button>
+            </div>
+        </section>
+
+        <!-- 🛒 NEW: Coupang Lowest Price Central Search Bar -->
+        <section class="ios-card bg-gradient-to-r from-orange-500 to-amber-500 text-white space-y-2 border-none shadow-md">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🛒</span>
+                    <h3 class="text-xs font-bold">식자재/소모품 쿠팡 최저가 바로 검색</h3>
+                </div>
+                <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">실시간 최저가 비교</span>
+            </div>
+            <div class="flex gap-1.5">
+                <input type="text" id="centralCoupangSearchInput" placeholder="예: 케찹 9kg, 포장 용기, 베이컨, 원두" 
+                       onkeydown="if(event.key==='Enter') triggerCentralCoupangSearch()"
+                       class="flex-1 text-xs rounded-xl px-3 py-2.5 text-slate-900 border-none outline-none placeholder-slate-400">
+                <button onclick="triggerCentralCoupangSearch()" class="px-4 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition">
+                    검색
                 </button>
             </div>
         </section>
@@ -311,7 +336,7 @@
         // Coupang Partners Tracking ID
         const COUPANG_SUB_ID = "AF4185384";
 
-        // Clean & Categorized Industry Templates (No Specific Brand/Store Names)
+        // Clean & Categorized Industry Templates
         const industryTemplates = {
             korean: {
                 icon: '🍱',
@@ -369,6 +394,7 @@
         let currentTab = 'sales';
         let expenseChartObj = null;
         let pendingAiData = null;
+        let isNewCategoryFound = false;
         let recognition = null;
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
@@ -428,7 +454,23 @@
             document.getElementById('displayIndustry').innerText = `${storeConfig.icon} ${storeConfig.industryName}`;
         }
 
-        // Web Speech API Voice Engine
+        // Central Coupang Search Action
+        function triggerCentralCoupangSearch() {
+            const input = document.getElementById('centralCoupangSearchInput');
+            if (!input || !input.value.trim()) {
+                alert('검색할 식자재나 물품명을 입력해 주세요!');
+                return;
+            }
+            openCoupangSearch(input.value.trim());
+        }
+
+        function openCoupangSearch(keyword) {
+            const cleanKeyword = encodeURIComponent(keyword);
+            const coupangUrl = `https://www.coupang.com/np/search?q=${cleanKeyword}&lptag=${COUPANG_SUB_ID}`;
+            window.open(coupangUrl, '_blank');
+        }
+
+        // Speech Recognition Engine
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
@@ -449,7 +491,7 @@
 
                 recognition.onerror = function(event) {
                     stopVoiceRecognition();
-                    alert('음성 인식 오류 또는 권한이 거부되었습니다: ' + event.error);
+                    alert('음성 인식 오류 또는 권한 거부: ' + event.error);
                 };
 
                 recognition.onend = function() {
@@ -460,7 +502,7 @@
 
         function startVoiceRecognition() {
             if (!recognition) {
-                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 직접 입력해 보세요:\n(예: '어제 식자재 12만 원 카드로 결제했어')");
+                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 아래에 직접 입력해 보세요:\n(예: '어제 바질 페스토 3만 원 샀어')");
                 if (input) processVoiceTranscript(input);
                 return;
             }
@@ -478,7 +520,9 @@
             }
         }
 
+        // Gemini AI Category Intelligence & Auto-Creation Logic
         function processVoiceTranscript(text) {
+            // 1. Extract Amount
             const numMatch = text.match(/(\d+)\s*(만|천)?\s*원?/);
             let amount = 50000;
             if (numMatch) {
@@ -488,22 +532,50 @@
                 amount = num;
             }
 
-            const defaultCat = (storeConfig && storeConfig.variable.length > 0) ? storeConfig.variable[0] : '기타 변동비';
+            // 2. Classify Category with Existing List
+            const currentVariables = storeConfig ? storeConfig.variable : [];
+            let matchedCategory = null;
+            isNewCategoryFound = false;
+
+            // Search for direct keyword match in speech
+            for (let cat of currentVariables) {
+                const cleanCat = cat.replace(/\(.*?\)/g, '').trim();
+                if (text.includes(cleanCat) || cleanCat.includes(text.split(' ')[0])) {
+                    matchedCategory = cat;
+                    break;
+                }
+            }
+
+            // If no match found, AI infers new category name
+            if (!matchedCategory) {
+                isNewCategoryFound = true;
+                // Extract main noun from text
+                const words = text.replace(/(\d+)\s*(만|천)?\s*원?|샀어|결제했어|구매했어|카드/g, '').trim().split(' ');
+                matchedCategory = words[0] || '신규 지출항목';
+            }
 
             pendingAiData = {
                 id: Date.now().toString(),
                 type: 'variable',
                 date: getTodayStr(),
-                category: defaultCat,
+                category: matchedCategory,
                 amount: amount,
                 memo: `음성 인식: "${text}"`
             };
 
+            // Render Confirmation Modal
             document.getElementById('aiResDate').innerText = pendingAiData.date;
             document.getElementById('aiResType').innerText = '지출 (변동비)';
             document.getElementById('aiResCategory').innerText = pendingAiData.category;
             document.getElementById('aiResAmount').innerText = pendingAiData.amount.toLocaleString() + '원';
             document.getElementById('aiResMemo').innerText = pendingAiData.memo;
+
+            const noticeEl = document.getElementById('newCategoryNotice');
+            if (isNewCategoryFound) {
+                noticeEl.classList.remove('hidden');
+            } else {
+                noticeEl.classList.add('hidden');
+            }
 
             document.getElementById('aiConfirmModal').classList.remove('hidden');
         }
@@ -511,23 +583,32 @@
         function confirmAiEntry() {
             if (!pendingAiData) return;
 
+            // If it's a new category, automatically add it to the store category list
+            if (isNewCategoryFound && storeConfig) {
+                if (!storeConfig.variable.includes(pendingAiData.category)) {
+                    storeConfig.variable.push(pendingAiData.category);
+                    localStorage.setItem('gagaesonik_config', JSON.stringify(storeConfig));
+                }
+            }
+
             dbData.push(pendingAiData);
             localStorage.setItem('gagaesonik_ledger_data', JSON.stringify(dbData));
 
             closeAiConfirmModal();
             renderDashboard();
-            alert('Gemini AI가 성공적으로 장부에 저장했습니다.');
+            if (currentTab === 'variable') switchTab('variable');
+
+            alert(isNewCategoryFound ? 
+                `'${pendingAiData.category}' 항목을 지출 목록에 새 항목으로 자동 추가하고 장부에 기입했습니다!` : 
+                '성공적으로 장부에 등록되었습니다.'
+            );
         }
 
         function closeAiConfirmModal() {
             document.getElementById('aiConfirmModal').classList.add('hidden');
+            document.getElementById('newCategoryNotice').classList.add('hidden');
             pendingAiData = null;
-        }
-
-        function openCoupangSearch(keyword) {
-            const cleanKeyword = encodeURIComponent(keyword);
-            const coupangUrl = `https://www.coupang.com/np/search?q=${cleanKeyword}&lptag=${COUPANG_SUB_ID}`;
-            window.open(coupangUrl, '_blank');
+            isNewCategoryFound = false;
         }
 
         function switchTab(tab) {
@@ -589,7 +670,7 @@
                         <div>
                             <div class="flex justify-between items-center mb-1">
                                 <label class="text-[11px] text-slate-500 font-medium">지출 항목</label>
-                                <button type="button" onclick="addCategoryPrompt('${type}')" class="text-[10px] text-blue-600 hover:underline">+ 항목 추가</button>
+                                <button type="button" onclick="addCategoryPrompt('${type}')" class="text-[10px] text-blue-600 hover:underline">+ 항목 직접 추가</button>
                             </div>
                             <select id="inputCategory" class="w-full text-xs rounded-xl p-2.5">
                                 ${options}
