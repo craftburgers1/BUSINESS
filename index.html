@@ -191,7 +191,7 @@
         <button onclick="stopVoiceRecognition()" class="ml-2 text-rose-200 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
-    <!-- Setup Wizard Modal (가게/가계부 설정) -->
+    <!-- Setup Wizard Modal -->
     <div id="wizardModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-6 space-y-4 shadow-2xl">
             <div class="text-center">
@@ -719,6 +719,80 @@
             }
         }
 
+        // 📌 지난달 고정비 복사 스마트 기능
+        async function checkAndCopyPrevFixedExpenses() {
+            const currentYearStr = document.getElementById('yearSelect').value;
+            const currentMonthStr = document.getElementById('monthSelect').value;
+
+            if (currentMonthStr === 'ALL') {
+                alert('특정 월(예: 11월)을 선택하신 후 지난달 고정비를 가져올 수 있습니다.');
+                return;
+            }
+
+            let curY = parseInt(currentYearStr);
+            let curM = parseInt(currentMonthStr);
+
+            let prevY = curY;
+            let prevM = curM - 1;
+            if (prevM < 1) {
+                prevM = 12;
+                prevY = curY - 1;
+            }
+
+            const prevYStr = prevY.toString();
+            const prevMStr = prevM.toString().padStart(2, '0');
+
+            // 지난달 고정비 추출
+            const prevFixedEntries = dbData.filter(item => {
+                if (item.type !== 'fixed' || !item.date) return false;
+                const p = item.date.split('-');
+                return p[0] === prevYStr && p[1] === prevMStr;
+            });
+
+            if (prevFixedEntries.length === 0) {
+                alert(`지난달(${prevM}월)에 등록된 고정비 내역이 없습니다.`);
+                return;
+            }
+
+            // 이번 달에 이미 들어간 고정비 내역
+            const currentFixedEntries = dbData.filter(item => {
+                if (item.type !== 'fixed' || !item.date) return false;
+                const p = item.date.split('-');
+                return p[0] === currentYearStr && p[1] === currentMonthStr;
+            });
+
+            if (currentFixedEntries.length > 0) {
+                if (!confirm(`이번달(${curM}월)에 이미 ${currentFixedEntries.length}건의 고정비가 있습니다.\n지난달(${prevM}월) 고정비 ${prevFixedEntries.length}건을 추가로 가져올까요?`)) {
+                    return;
+                }
+            } else {
+                if (!confirm(`지난달(${prevM}월) 고정비 내역이 ${prevFixedEntries.length}건 존재합니다.\n이번달(${curM}월)에도 그대로 자동 입력할까요?`)) {
+                    return;
+                }
+            }
+
+            // 복사 실행 (이번달 1일 날짜로 세팅)
+            const targetDate = `${currentYearStr}-${currentMonthStr}-01`;
+            for (const item of prevFixedEntries) {
+                const newEntry = {
+                    id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
+                    type: 'fixed',
+                    date: targetDate,
+                    category: item.category,
+                    amount: item.amount,
+                    memo: item.memo ? `(지난달 복사) ${item.memo}` : '(지난달 복사)'
+                };
+
+                if (currentUser) {
+                    await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
+                }
+                dbData.push(newEntry);
+            }
+
+            alert(`지난달(${prevM}월) 고정지출 ${prevFixedEntries.length}건이 이번달(${curM}월)로 자동 입력되었습니다!`);
+            renderDashboard();
+        }
+
         function switchTab(tab) {
             currentTab = tab;
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -730,6 +804,36 @@
             if (tab === 'sales') renderSalesForm(container);
             else if (tab === 'fixed') renderExpenseForm(container, 'fixed', storeConfig ? storeConfig.fixed : []);
             else if (tab === 'variable') renderExpenseForm(container, 'variable', storeConfig ? storeConfig.variable : []);
+
+            // 고정비 탭 클릭 시 자동 감지 팝업 트리거 체크
+            if (tab === 'fixed') {
+                setTimeout(() => {
+                    checkAndCopyPrevFixedExpensesAutoPrompt();
+                }, 100);
+            }
+        }
+
+        // 고정비 탭으로 넘어왔을 때 조건이 맞으면 팝업 띄우기
+        function checkAndCopyPrevFixedExpensesAutoPrompt() {
+            const currentYearStr = document.getElementById('yearSelect').value;
+            const currentMonthStr = document.getElementById('monthSelect').value;
+            if (currentMonthStr === 'ALL') return;
+
+            let curY = parseInt(currentYearStr);
+            let curM = parseInt(currentMonthStr);
+            let prevY = curM === 1 ? curY - 1 : curY;
+            let prevM = curM === 1 ? 12 : curM - 1;
+
+            const prevYStr = prevY.toString();
+            const prevMStr = prevM.toString().padStart(2, '0');
+
+            const prevFixed = dbData.filter(item => item.type === 'fixed' && item.date && item.date.startsWith(`${prevYStr}-${prevMStr}`));
+            const curFixed = dbData.filter(item => item.type === 'fixed' && item.date && item.date.startsWith(`${currentYearStr}-${currentMonthStr}`));
+
+            // 지난달 고정비는 있는데 이번 달 고정비는 한 건도 없을 때 자동 팝업
+            if (prevFixed.length > 0 && curFixed.length === 0) {
+                checkAndCopyPrevFixedExpenses();
+            }
         }
 
         function renderSalesForm(container) {
@@ -776,6 +880,14 @@
             const options = categories.map(c => `<option value="${c}">${c}</option>`).join('');
 
             container.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[11px] text-slate-500 font-medium">${type === 'fixed' ? '📌 월 고정비 관리' : '🛒 변동비/생활비 관리'}</span>
+                    ${type === 'fixed' ? `
+                        <button type="button" onclick="checkAndCopyPrevFixedExpenses()" class="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-100 transition">
+                            <i class="fa-solid fa-copy mr-1"></i>지난달 고정비 불러오기
+                        </button>
+                    ` : ''}
+                </div>
                 <form onsubmit="handleSaveEntry(event, '${type}')" class="space-y-3">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
