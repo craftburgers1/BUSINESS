@@ -112,7 +112,7 @@
 </head>
 <body>
 
-    <!-- Login Modal (개인정보 및 이용약관 동의 포함) -->
+    <!-- Login Modal -->
     <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-6 space-y-4 text-center shadow-2xl">
             <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto text-3xl">
@@ -123,20 +123,70 @@
                 <p class="text-xs text-slate-500 mt-1">로그인하시면 어느 기기에서나 사장님 전용 데이터가 실시간 연동됩니다.</p>
             </div>
 
-            <!-- 약관 및 개인정보 수집 동의 체크박스 -->
+            <!-- 약관 및 개인정보 수집 동의 체크박스 + 보기 버튼 -->
             <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-left space-y-1.5">
-                <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-700 font-semibold">
-                    <input type="checkbox" id="agreeTerms" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-                    <span>[필수] 서비스 이용 및 개인정보 동의</span>
-                </label>
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-700 font-semibold">
+                        <input type="checkbox" id="agreeTerms" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
+                        <span>[필수] 서비스 이용 및 개인정보 동의</span>
+                    </label>
+                    <button type="button" onclick="openPrivacyModal()" class="text-[11px] font-bold text-blue-600 hover:underline">
+                        [보기]
+                    </button>
+                </div>
                 <p class="text-[10px] text-slate-400 pl-6 leading-relaxed">
-                    구글 이메일 및 입력하신 장부 데이터는 본인 확인 및 서비스 제공 목적 외에 타인에게 절대 공유되거나 제공되지 않습니다.
+                    구글 이메일 및 입력하신 장부 데이터는 본인 확인 및 서비스 제공 목적 외에 타인에게 절대 공유되지 않습니다.
                 </p>
             </div>
 
             <button onclick="handleGoogleLoginWithCheck()" class="w-full py-3 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4">
                 Google 계정으로 로그인
+            </button>
+        </div>
+    </div>
+
+    <!-- 약관 및 개인정보 처리방침 상세보기 팝업 모달 -->
+    <div id="privacyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <h3 class="text-sm font-bold text-slate-900">📄 서비스 이용약관 및 개인정보 처리방침</h3>
+                <button onclick="closePrivacyModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="overflow-y-auto space-y-3 text-xs text-slate-600 pr-1 flex-1 leading-relaxed">
+                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
+                    <p class="font-bold text-slate-800">1. 개인정보 수집 및 이용 목적</p>
+                    <p class="text-[11px] text-slate-500">- 사용자 식별 및 서비스 이용자 본인 확인</p>
+                    <p class="text-[11px] text-slate-500">- 가게 장부 데이터(매출/지출 내역) 기기 간 실시간 동기화 및 안전한 저장</p>
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
+                    <p class="font-bold text-slate-800">2. 수집하는 개인정보 항목</p>
+                    <p class="text-[11px] text-slate-500">- Google 계정 이메일 주소, Google 고유 사용자 ID(UID)</p>
+                    <p class="text-[11px] text-slate-500">- 사용자가 직접 입력한 가게명, 업종, 일일 매출 및 지출 내역</p>
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
+                    <p class="font-bold text-slate-800">3. 개인정보의 보유 및 이용 기간</p>
+                    <p class="text-[11px] text-slate-500">- 회원 탈퇴 신청 시 또는 서비스 종료 시까지 영구 안전 보관</p>
+                    <p class="text-[11px] text-slate-500">- 사용자가 삭제를 요청하는 경우 즉시 데이터가 파기됩니다.</p>
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
+                    <p class="font-bold text-slate-800">4. 제3자 제공 및 제휴 안내</p>
+                    <p class="text-[11px] text-slate-500">- 수집된 정보는 제3자에게 매매되거나 공유되지 않습니다.</p>
+                    <p class="text-[11px] text-slate-500">- 앱 내 외부 링크(쿠팡 파트너스 배너 등) 이용 시 서비스 파트너 정책에 따릅니다.</p>
+                </div>
+
+                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
+                    <p class="font-bold text-slate-800">5. 동의 거부 권리 및 불이익</p>
+                    <p class="text-[11px] text-slate-500">- 귀하는 개인정보 수집·이용에 동의하지 않을 권리가 있으나, 거부 시 클라우드 장부 서비스 이용이 제한될 수 있습니다.</p>
+                </div>
+            </div>
+
+            <button onclick="closePrivacyModal()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md">
+                확인 및 닫기
             </button>
         </div>
     </div>
@@ -240,7 +290,7 @@
             </div>
         </section>
 
-        <!-- 🛒 Coupang Partners Banner Section with Policy Compliance Text -->
+        <!-- 🛒 Coupang Partners Banner Section -->
         <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
             <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
@@ -303,6 +353,9 @@
         let expenseChartObj = null;
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
+
+        function openPrivacyModal() { document.getElementById('privacyModal').classList.remove('hidden'); }
+        function closePrivacyModal() { document.getElementById('privacyModal').classList.add('hidden'); }
 
         // Auth Observer
         window.addEventListener('load', () => {
