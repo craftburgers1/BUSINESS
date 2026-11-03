@@ -690,7 +690,12 @@
 
         function initYearOptions() {
             const yearSelect = document.getElementById('yearSelect');
-            const currentYear = new Date().getFullYear();
+            const monthSelect = document.getElementById('monthSelect');
+            
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+
             yearSelect.innerHTML = '';
 
             for (let y = 2020; y <= 2040; y++) {
@@ -699,6 +704,11 @@
                 opt.innerText = y + '년';
                 if (y === currentYear) opt.selected = true;
                 yearSelect.appendChild(opt);
+            }
+
+            // 접속 시 기본 선택 월을 '현재 월'로 변경
+            if (monthSelect) {
+                monthSelect.value = currentMonth;
             }
         }
 
