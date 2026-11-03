@@ -110,12 +110,12 @@
             color: #ffffff;
         }
 
-        input, select { 
+        input, select, textarea { 
             background-color: #f8fafc !important; 
             color: #0f172a !important; 
             border: 1px solid #cbd5e1 !important; 
         }
-        input:focus, select:focus { 
+        input:focus, select:focus, textarea:focus { 
             outline: none; 
             border-color: #2563eb !important; 
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
@@ -228,6 +228,51 @@
         </div>
     </div>
 
+    <!-- 💬 자유 게시판 및 건의사항 모달 -->
+    <div id="boardModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-comments text-blue-600 mr-1.5"></i>자유 게시판 & 불편사항 건의</h3>
+                    <span id="adminBadge" class="hidden text-[10px] bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full">👑 관리자 모드</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="loginAdminMode()" id="adminLoginBtn" title="관리자 인증" class="text-xs text-slate-400 hover:text-purple-600 p-1">
+                        <i class="fa-solid fa-key"></i>
+                    </button>
+                    <button onclick="closeBoardModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+            </div>
+
+            <!-- 글쓰기 폼 -->
+            <form onsubmit="handleSaveBoardPost(event)" class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="postAuthor" placeholder="작성자 닉네임" required class="text-xs rounded-xl p-2 font-medium">
+                    <input type="password" id="postPw" placeholder="글 비밀번호 (4자리)" maxlength="8" required class="text-xs rounded-xl p-2 font-medium">
+                </div>
+                <textarea id="postContent" rows="2" placeholder="앱 사용 피드백, 불편한 점, 기능 추가 요청 등을 자유롭게 남겨주세요." required class="w-full text-xs rounded-xl p-2.5 resize-none"></textarea>
+                <div class="flex items-center justify-between pt-0.5">
+                    <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-medium">
+                        <input type="checkbox" id="postIsPrivate" onchange="togglePwNotice()" class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5">
+                        <span>🔒 비공개글 (작성자/관리자만 보기)</span>
+                    </label>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-sm transition">
+                        게시글 등록
+                    </button>
+                </div>
+            </form>
+
+            <!-- 게시글 리스트 영역 -->
+            <div id="boardListContainer" class="overflow-y-auto flex-1 space-y-2.5 pr-1">
+                <!-- 동적 렌더링 -->
+            </div>
+
+            <button onclick="closeBoardModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                닫기
+            </button>
+        </div>
+    </div>
+
     <!-- 특정 날짜 상세내역 팝업 모달 -->
     <div id="dayDetailModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[80vh] flex flex-col">
@@ -315,6 +360,9 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
+            <button onclick="openBoardModal()" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold border border-blue-200 flex items-center gap-1 transition">
+                <i class="fa-solid fa-comments"></i> 게시판
+            </button>
             <button onclick="openUserInfoModal()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 flex items-center gap-1 transition">
                 <i class="fa-solid fa-circle-user text-blue-600 text-sm"></i> 내정보
             </button>
@@ -452,6 +500,22 @@
             </div>
         </section>
 
+        <!-- 💡 개발자 안내 및 자유 게시판 이동 카드 -->
+        <section class="ios-card bg-gradient-to-br from-slate-900 to-slate-800 text-white space-y-3 shadow-lg border-none">
+            <div class="flex items-start justify-between">
+                <div class="space-y-1">
+                    <span class="text-[10px] font-bold bg-blue-500/30 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full">개발자 한마디</span>
+                    <h3 class="text-sm font-bold text-white pt-1">자유롭게 사용하시고 소중한 의견을 남겨주세요!</h3>
+                </div>
+                <button onclick="openBoardModal()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition shadow-md whitespace-nowrap">
+                    <i class="fa-solid fa-comments mr-1"></i> 게시판 열기
+                </button>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+                기존 가계부 앱들이 답답해서 직접 만든 앱입니다. 자유롭게 공유하고 무료로 사용하세요. 쿠팡 검색으로 인한 소정의 수수료를 쿠팡으로부터 제공받지만 이용자에게는 어떠한 불이익도 없습니다. 앱은 계속해서 업데이트 됩니다. 불편한 사항을 게시판에 자유롭게 남겨주세요.
+            </p>
+        </section>
+
         <!-- Footer -->
         <footer class="text-center py-4 space-y-1">
             <p class="text-[10px] text-slate-400">
@@ -465,18 +529,18 @@
     <!-- Application Script -->
     <script>
         const COUPANG_TRACKING_CODE = "AF4185384";
+        const ADMIN_PASS = "2039";
         let currentUser = null;
         let storeConfig = null;
         let dbData = [];
+        let boardPosts = [];
         let currentTab = 'sales';
         let currentHistoryView = 'calendar';
         let expenseChartObj = null;
         let activeManageCategoryType = 'sales';
+        let isAdmin = false;
 
-        // 현재 팝업에 표시된 날짜 저장용 변수
         let currentActiveDetailDate = '';
-
-        // 달력 조회를 위한 개별 년/월 상태
         let calendarYear = new Date().getFullYear();
         let calendarMonth = new Date().getMonth() + 1;
 
@@ -501,7 +565,141 @@
             currentActiveDetailDate = '';
         }
 
-        // 항목 커스텀 관리 모달
+        /* ----- 💬 게시판 관련 제어 함수 ----- */
+        function openBoardModal() {
+            document.getElementById('boardModal').classList.remove('hidden');
+            loadBoardPosts();
+        }
+
+        function closeBoardModal() {
+            document.getElementById('boardModal').classList.add('hidden');
+        }
+
+        function loginAdminMode() {
+            if (isAdmin) {
+                if (confirm('관리자 모드를 해제하시겠습니까?')) {
+                    isAdmin = false;
+                    document.getElementById('adminBadge').classList.add('hidden');
+                    renderBoardList();
+                }
+                return;
+            }
+            const input = prompt('관리자 비밀번호 4자리를 입력하세요:');
+            if (input === ADMIN_PASS) {
+                isAdmin = true;
+                document.getElementById('adminBadge').classList.remove('hidden');
+                alert('관리자 모드로 인증되었습니다.');
+                renderBoardList();
+            } else if (input !== null) {
+                alert('비밀번호가 올바르지 않습니다.');
+            }
+        }
+
+        async function loadBoardPosts() {
+            try {
+                const snap = await window.getDocs(window.collection(window.firebaseDb, "community_board"));
+                boardPosts = [];
+                snap.forEach(docSnap => {
+                    boardPosts.push(docSnap.data());
+                });
+                renderBoardList();
+            } catch(e) {
+                console.error("Board load error:", e);
+            }
+        }
+
+        function renderBoardList() {
+            const container = document.getElementById('boardListContainer');
+            if (boardPosts.length === 0) {
+                container.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">등록된 게시글이 없습니다. 첫 의견을 남겨주세요!</p>`;
+                return;
+            }
+
+            boardPosts.sort((a,b) => b.createdAt - a.createdAt);
+
+            let html = '';
+            boardPosts.forEach(post => {
+                const isPrivate = post.isPrivate;
+                const canView = !isPrivate || isAdmin || (currentUser && post.uid === currentUser.uid);
+
+                html += `
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1.5">
+                        <div class="flex justify-between items-center text-slate-500 text-[11px]">
+                            <div class="flex items-center gap-1.5 font-bold text-slate-700">
+                                <i class="fa-solid fa-user-circle text-blue-500"></i>
+                                <span>${post.author}</span>
+                                ${isPrivate ? `<span class="text-[10px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.2 rounded">🔒 비공개</span>` : ''}
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span>${post.dateStr || ''}</span>
+                                <button onclick="deleteBoardPost('${post.id}', '${post.pw}')" class="text-slate-400 hover:text-rose-600 transition" title="삭제">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-slate-800 leading-relaxed pt-1">
+                            ${canView ? post.content : `<span class="text-slate-400 italic"><i class="fa-solid fa-lock mr-1"></i>비공개글입니다. (작성자 및 관리자만 조회 가능)</span>`}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        async function handleSaveBoardPost(e) {
+            e.preventDefault();
+            const author = document.getElementById('postAuthor').value.trim();
+            const pw = document.getElementById('postPw').value.trim();
+            const content = document.getElementById('postContent').value.trim();
+            const isPrivate = document.getElementById('postIsPrivate').checked;
+
+            if (!author || !pw || !content) {
+                alert('모든 필드를 입력해 주세요.');
+                return;
+            }
+
+            const newPost = {
+                id: Date.now().toString(),
+                uid: currentUser ? currentUser.uid : 'anonymous',
+                author: author,
+                pw: pw,
+                content: content,
+                isPrivate: isPrivate,
+                createdAt: Date.now(),
+                dateStr: new Date().toLocaleDateString('ko-KR')
+            };
+
+            await window.setDoc(window.doc(window.firebaseDb, "community_board", newPost.id), newPost);
+            boardPosts.push(newPost);
+            
+            document.getElementById('postContent').value = '';
+            document.getElementById('postPw').value = '';
+            alert('의견이 성공적으로 등록되었습니다!');
+            renderBoardList();
+        }
+
+        async function deleteBoardPost(id, postPw) {
+            if (isAdmin) {
+                if (confirm('[관리자 권한] 이 게시글을 삭제하시겠습니까?')) {
+                    await window.deleteDoc(window.doc(window.firebaseDb, "community_board", id));
+                    boardPosts = boardPosts.filter(p => p.id !== id);
+                    renderBoardList();
+                }
+                return;
+            }
+
+            const inputPw = prompt('글 작성 시 설정한 비밀번호를 입력해 주세요:');
+            if (inputPw === postPw) {
+                await window.deleteDoc(window.doc(window.firebaseDb, "community_board", id));
+                boardPosts = boardPosts.filter(p => p.id !== id);
+                alert('삭제되었습니다.');
+                renderBoardList();
+            } else if (inputPw !== null) {
+                alert('비밀번호가 일치하지 않습니다.');
+            }
+        }
+
+        /* ----- 항목 커스텀 관리 모달 ----- */
         function openCategoryModal(type) {
             activeManageCategoryType = type;
             const titleEl = document.getElementById('categoryModalTitle');
