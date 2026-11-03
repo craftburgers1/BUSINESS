@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>스마트 장부 & 가계부 - 손익/수입지출 관리</title>
+    <title>가게손익앱 - 자영업 사장님 스마트 장부</title>
     
     <!-- iOS & PWA Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,6 +24,7 @@
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+        // 사장님의 Firebase SDK 설정
         const firebaseConfig = {
             apiKey: "AIzaSyAemJzk3V5hKH0cb0jP_XxtVRaYOZzL848",
             authDomain: "alluser-77808.firebaseapp.com",
@@ -97,23 +98,6 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
-        .sub-tab-btn {
-            padding: 5px 12px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s;
-        }
-        .sub-tab-btn.active {
-            background-color: #0f172a;
-            color: #ffffff;
-            font-weight: 700;
-            border-color: #0f172a;
-        }
-
         input, select { 
             background-color: #f8fafc !important; 
             color: #0f172a !important; 
@@ -133,205 +117,46 @@
             70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-
-        /* Calendar Grid Style */
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
-        }
-        .calendar-day-head {
-            text-align: center;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 6px 0;
-            color: #64748b;
-        }
-        .calendar-cell {
-            min-height: 54px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 4px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .calendar-cell:hover {
-            border-color: #2563eb;
-            background-color: #eff6ff;
-        }
-        .calendar-cell.other-month {
-            opacity: 0.3;
-            background-color: #f1f5f9;
-        }
     </style>
 </head>
 <body>
 
     <!-- Login Modal -->
     <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="ios-card bg-white w-full max-w-sm p-6 space-y-4 text-center shadow-2xl">
+        <div class="ios-card bg-white w-full max-w-sm p-6 space-y-5 text-center shadow-2xl">
             <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto text-3xl">
                 📈
             </div>
             <div>
-                <h2 class="text-xl font-bold text-slate-900">손익장부 & 가계부 시작하기</h2>
-                <p class="text-xs text-slate-500 mt-1">로그인하시면 어느 기기에서나 사장님/개인 전용 데이터가 실시간 연동됩니다.</p>
+                <h2 class="text-xl font-bold text-slate-900">가게손익앱 시작하기</h2>
+                <p class="text-xs text-slate-500 mt-1">로그인하시면 어느 기기에서나 사장님 전용 데이터가 실시간 연동됩니다.</p>
             </div>
-
-            <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-left space-y-1.5">
-                <div class="flex items-center justify-between">
-                    <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-700 font-semibold">
-                        <input type="checkbox" id="agreeTerms" checked class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4">
-                        <span>[필수] 서비스 이용 및 개인정보 동의</span>
-                    </label>
-                    <button type="button" onclick="openPrivacyModal()" class="text-[11px] font-bold text-blue-600 hover:underline">
-                        [보기]
-                    </button>
-                </div>
-                <p class="text-[10px] text-slate-400 pl-6 leading-relaxed">
-                    구글 이메일 및 입력하신 장부 데이터는 본인 확인 및 서비스 제공 목적 외에 타인에게 절대 공유되지 않습니다.
-                </p>
-            </div>
-
-            <button onclick="handleGoogleLoginWithCheck()" class="w-full py-3 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition">
+            <button onclick="handleGoogleLogin()" class="w-full py-3 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4">
                 Google 계정으로 로그인
             </button>
         </div>
     </div>
 
-    <!-- 약관 상세보기 모달 -->
-    <div id="privacyModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="ios-card bg-white w-full max-w-md p-5 space-y-4 shadow-2xl max-h-[80vh] flex flex-col">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
-                <h3 class="text-sm font-bold text-slate-900">📄 서비스 이용약관 및 개인정보 처리방침</h3>
-                <button onclick="closePrivacyModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            
-            <div class="overflow-y-auto space-y-3 text-xs text-slate-600 pr-1 flex-1 leading-relaxed">
-                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
-                    <p class="font-bold text-slate-800">1. 개인정보 수집 및 이용 목적</p>
-                    <p class="text-[11px] text-slate-500">- 사용자 식별 및 서비스 이용자 본인 확인</p>
-                    <p class="text-[11px] text-slate-500">- 가게 장부 및 가계부 데이터(수입/지출 내역) 기기 간 실시간 동기화</p>
-                </div>
-                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
-                    <p class="font-bold text-slate-800">2. 수집하는 개인정보 항목</p>
-                    <p class="text-[11px] text-slate-500">- Google 계정 이메일 주소, Google 고유 사용자 ID(UID)</p>
-                    <p class="text-[11px] text-slate-500">- 사용자가 직접 입력한 명칭, 업종/용도, 수입 및 지출 내역</p>
-                </div>
-                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
-                    <p class="font-bold text-slate-800">3. 개인정보의 보유 및 이용 기간</p>
-                    <p class="text-[11px] text-slate-500">- 회원 탈퇴 신청 시 또는 서비스 종료 시까지 영구 안전 보관</p>
-                </div>
-            </div>
-
-            <button onclick="closePrivacyModal()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md">
-                확인 및 닫기
-            </button>
-        </div>
-    </div>
-
-    <!-- 👤 내정보 / 계정 관리 모달 -->
-    <div id="userInfoModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="ios-card bg-white w-full max-w-sm p-6 space-y-5 text-center shadow-2xl">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-                <h3 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-user-gear text-blue-500 mr-1.5"></i>내정보 & 계정 관리</h3>
-                <button onclick="closeUserInfoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-
-            <div class="space-y-3">
-                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto text-3xl border-2 border-blue-200">
-                    <i class="fa-solid fa-user"></i>
-                </div>
-                <div>
-                    <span class="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">Google 계정 로그인 중</span>
-                    <p id="modalUserEmail" class="text-sm font-bold text-slate-800 mt-1.5 break-all">user@gmail.com</p>
-                </div>
-            </div>
-
-            <div class="bg-slate-50 rounded-xl p-3 text-left space-y-1 border border-slate-100 text-[11px] text-slate-500">
-                <p><i class="fa-solid fa-shield-halved text-blue-500 mr-1"></i> 모든 장부 데이터는 위 구글 계정에 실시간 동기화되어 안전하게 보관됩니다.</p>
-            </div>
-
-            <div class="space-y-2 pt-1">
-                <button onclick="handleLogout()" class="w-full py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
-                    <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
-                </button>
-                <button onclick="closeUserInfoModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
-                    닫기
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 항목 커스텀 관리 모달 -->
-    <div id="categoryManageModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="ios-card bg-white w-full max-w-sm p-5 space-y-4 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                <h3 id="categoryModalTitle" class="text-sm font-bold text-slate-900">⚙️ 항목 관리</h3>
-                <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-
-            <div class="flex gap-2">
-                <input type="text" id="newCategoryInput" placeholder="새 항목 입력 (예: 쿠팡이츠 매출)" class="flex-1 text-xs rounded-xl p-2.5 border border-slate-300">
-                <button onclick="addNewCategory()" class="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">
-                    추가
-                </button>
-            </div>
-
-            <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1" id="categoryListContainer"></div>
-
-            <button onclick="closeCategoryModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
-                완료 및 닫기
-            </button>
-        </div>
-    </div>
-
-    <!-- 특정 일자 상세 모달 -->
-    <div id="dayDetailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="ios-card bg-white w-full max-w-md p-5 space-y-4 shadow-2xl">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                <h3 id="dayDetailTitle" class="text-sm font-bold text-slate-900">📅 특정 날짜 내역</h3>
-                <button onclick="closeDayDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <div id="dayDetailContent" class="space-y-2 max-h-60 overflow-y-auto"></div>
-            <button onclick="closeDayDetailModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
-                닫기
-            </button>
-        </div>
-    </div>
-
-    <!-- AI Voice Listening Banner -->
-    <div id="voiceListeningBanner" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden bg-rose-600 text-white px-5 py-2.5 rounded-full shadow-xl flex items-center gap-3 text-xs font-bold listening-anim">
-        <span class="w-3 h-3 bg-white rounded-full animate-ping"></span>
-        <span>음성을 듣고 있습니다... 말씀해 주세요</span>
-        <button onclick="stopVoiceRecognition()" class="ml-2 text-rose-200 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-
-    <!-- Setup Wizard Modal -->
+    <!-- Store Setup Wizard Modal -->
     <div id="wizardModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-6 space-y-4 shadow-2xl">
             <div class="text-center">
                 <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-2xl mb-2">
-                    <i class="fa-solid fa-house-user"></i>
+                    <i class="fa-solid fa-store"></i>
                 </div>
-                <h2 class="text-lg font-bold text-slate-900">사용 용도 및 맞춤 템플릿</h2>
-                <p class="text-xs text-slate-500 mt-1">가게 상호명이나 개인 가계부 이름을 설정해 주세요.</p>
+                <h2 class="text-lg font-bold text-slate-900">가게 설정 및 맞춤 템플릿</h2>
+                <p class="text-xs text-slate-500 mt-1">상호명과 업종을 선택하시면 맞춤 지출 항목이 세팅됩니다.</p>
             </div>
 
             <div class="space-y-3 pt-2">
                 <div>
-                    <label class="text-xs font-semibold text-slate-700 mb-1 block">이름 (상호명 또는 가계부 명칭)</label>
-                    <input type="text" id="setupStoreName" placeholder="예: 우리집 가계부 / 대박 맛집" class="w-full text-xs rounded-xl p-3 border border-slate-300">
+                    <label class="text-xs font-semibold text-slate-700 mb-1 block">가게 이름 (상호명)</label>
+                    <input type="text" id="setupStoreName" placeholder="예: 우리동네 대박 맛집" class="w-full text-xs rounded-xl p-3 border border-slate-300">
                 </div>
                 <div>
-                    <label class="text-xs font-semibold text-slate-700 mb-1 block">업종 / 용도 템플릿 선택</label>
+                    <label class="text-xs font-semibold text-slate-700 mb-1 block">업종 템플릿 선택</label>
                     <select id="setupIndustry" class="w-full text-xs rounded-xl p-3 border border-slate-300">
-                        <option value="home">🏠 일반가정 / 개인 가계부</option>
                         <option value="korean">🍱 한식 / 정식 / 식당</option>
                         <option value="western">🍝 양식 / 파스타 / 버거</option>
                         <option value="japanese">🍣 일식 / 초밥 / 돈까스</option>
@@ -343,8 +168,48 @@
                     </select>
                 </div>
                 <button onclick="saveStoreOnboarding()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
-                    저장 및 설정 적용하기
+                    저장 및 장부 적용하기
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Voice Listening Banner -->
+    <div id="voiceListeningBanner" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden bg-rose-600 text-white px-5 py-2.5 rounded-full shadow-xl flex items-center gap-3 text-xs font-bold listening-anim">
+        <span class="w-3 h-3 bg-white rounded-full animate-ping"></span>
+        <span>음성을 듣고 있습니다... 말씀해 주세요</span>
+        <button onclick="stopVoiceRecognition()" class="ml-2 text-rose-200 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- AI Confirmation Modal -->
+    <div id="aiConfirmModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-sm p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900">AI 인식 결과 확인</h3>
+                    <p class="text-[11px] text-slate-500">아래 내용으로 장부에 입력할까요?</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-3.5 space-y-2 text-xs">
+                <div class="flex justify-between"><span class="text-slate-400">날짜:</span><span id="aiResDate" class="font-bold text-slate-800">2026-11-03</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">구분:</span><span id="aiResType" class="font-bold text-blue-600">지출</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">항목:</span><span id="aiResCategory" class="font-bold text-slate-800">식자재</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">금액:</span><span id="aiResAmount" class="font-bold text-rose-600 text-sm">0원</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">메모:</span><span id="aiResMemo" class="text-slate-600">-</span></div>
+            </div>
+
+            <div id="newCategoryNotice" class="hidden bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-2.5 text-[11px] flex items-start gap-1.5">
+                <i class="fa-solid fa-circle-info text-amber-600 mt-0.5"></i>
+                <span>기존 목록에 없는 신규 항목입니다. <b>[예, 입력해 주세요]</b>를 누르면 지출 항목 리스트에 새로 자동 추가됩니다.</span>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeAiConfirmModal()" class="flex-1 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold">취소</button>
+                <button onclick="confirmAiEntry()" class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-md">예, 입력해 주세요</button>
             </div>
         </div>
     </div>
@@ -357,18 +222,19 @@
             </div>
             <div>
                 <div class="flex items-center gap-1.5">
-                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight">스마트 장부</h1>
+                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight">가게손익앱</h1>
                     <i class="fa-solid fa-pen text-[10px] text-slate-400"></i>
                 </div>
-                <p id="displayIndustry" class="text-xs text-slate-500">클릭하여 명칭/용도 변경</p>
+                <p id="displayIndustry" class="text-xs text-slate-500">클릭하여 가게명/업종 변경</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <button onclick="startVoiceRecognition()" id="micHeaderBtn" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 hover:bg-rose-100 transition flex items-center gap-1">
+            <button onclick="startVoiceRecognition()" id="micHeaderBtn" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 hover:bg-rose-100 transition flex items-center gap-1.5">
                 <i class="fa-solid fa-microphone"></i> 음성 AI
             </button>
-            <button onclick="openUserInfoModal()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 flex items-center gap-1 transition">
-                <i class="fa-solid fa-circle-user text-blue-600 text-sm"></i> 내정보
+            <span id="userEmailTag" class="text-[10px] text-slate-400 hidden sm:inline"></span>
+            <button onclick="handleLogout()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold border border-slate-200">
+                로그아웃
             </button>
         </div>
     </header>
@@ -379,7 +245,10 @@
         <!-- Date Selection Filter -->
         <section class="ios-card flex flex-wrap gap-2 justify-between items-center">
             <div class="flex items-center gap-2 w-full sm:w-auto">
-                <select id="yearSelect" onchange="renderDashboard()" class="text-xs font-semibold rounded-xl px-3 py-2"></select>
+                <select id="yearSelect" onchange="renderDashboard()" class="text-xs font-semibold rounded-xl px-3 py-2">
+                    <option value="2026">2026년</option>
+                    <option value="2025">2025년</option>
+                </select>
                 <select id="monthSelect" onchange="renderDashboard()" class="text-xs font-semibold rounded-xl px-3 py-2 flex-1">
                     <option value="ALL">📅 연간 전체 (1년 누적)</option>
                     <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option>
@@ -394,7 +263,7 @@
         <!-- KPI Summary Cards -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="ios-card border-l-4 border-blue-500">
-                <p id="labelSalesCard" class="text-[11px] font-semibold text-slate-400">총 수입(매출)</p>
+                <p class="text-[11px] font-semibold text-slate-400">총 매출</p>
                 <p id="totalSales" class="text-lg font-bold text-slate-900 mt-1">0원</p>
             </div>
             <div class="ios-card border-l-4 border-rose-500">
@@ -402,35 +271,24 @@
                 <p id="totalExpense" class="text-lg font-bold text-rose-600 mt-1">0원</p>
             </div>
             <div class="ios-card border-l-4 border-emerald-500">
-                <p id="labelNetCard" class="text-[11px] font-semibold text-slate-400">순잔액(순이익)</p>
+                <p class="text-[11px] font-semibold text-slate-400">순이익</p>
                 <p id="netProfit" class="text-lg font-bold text-emerald-600 mt-1">0원</p>
             </div>
             <div class="ios-card border-l-4 border-amber-500">
-                <p id="labelMarginCard" class="text-[11px] font-semibold text-slate-400">저축/이익률</p>
+                <p class="text-[11px] font-semibold text-slate-400">순이익률</p>
                 <p id="profitMargin" class="text-lg font-bold text-amber-600 mt-1">0%</p>
             </div>
         </section>
 
-        <!-- 수동 입력 폼 (수입/고정비/변동비 탭) -->
-        <section class="ios-card">
-            <div class="flex border-b border-slate-100 pb-3 gap-1 overflow-x-auto">
-                <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn active">수입/매출 입력</button>
-                <button onclick="switchTab('fixed')" id="tab-fixed" class="tab-btn">고정비 입력</button>
-                <button onclick="switchTab('variable')" id="tab-variable" class="tab-btn">변동비/생활비 입력</button>
-            </div>
-
-            <div id="form-container" class="mt-4"></div>
-        </section>
-
-        <!-- Gemini AI Quick Entry Bar -->
+        <!-- AI Voice & Receipt Quick Bar -->
         <section class="ios-card bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between border-none shadow-md">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </div>
                 <div>
-                    <h3 class="text-xs font-bold">Gemini AI 빠른 입력</h3>
-                    <p class="text-[11px] text-blue-100">말하거나 영수증 촬영으로 자동 기입</p>
+                    <h3 class="text-xs font-bold">AI 장부 자동 기입</h3>
+                    <p class="text-[11px] text-blue-100">말하거나 영수증 찍으면 AI가 자동 분류</p>
                 </div>
             </div>
             <div class="flex gap-1.5">
@@ -443,6 +301,49 @@
             </div>
         </section>
 
+        <!-- 🛒 Coupang Partners Dynamic Banner Section -->
+        <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
+            <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                    🛒 식자재/생필품 맞춤 추천 (쿠팡 최저가)
+                </span>
+                <span class="text-[10px] text-slate-400">쿠팡 파트너스 연동</span>
+            </div>
+            
+            <!-- Dynamic Banner Container -->
+            <div class="w-full flex justify-center items-center bg-white py-2 overflow-x-auto">
+                <script src="https://ads-partners.coupang.com/g.js"></script>
+                <script>
+                    new PartnersCoupang.G({
+                        "id": 1046008,
+                        "template": "carousel",
+                        "trackingCode": "AF4185384",
+                        "width": "680",
+                        "height": "140"
+                    });
+                </script>
+            </div>
+
+            <!-- Policy Statement Banner Text -->
+            <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-center">
+                <p class="text-[9px] text-slate-400">
+                    이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+                </p>
+            </div>
+        </section>
+
+        <!-- Entry Form Navigation Tabs -->
+        <section class="ios-card">
+            <div class="flex border-b border-slate-100 pb-3 gap-1 overflow-x-auto">
+                <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn active">매출 입력</button>
+                <button onclick="switchTab('fixed')" id="tab-fixed" class="tab-btn">고정비 입력</button>
+                <button onclick="switchTab('variable')" id="tab-variable" class="tab-btn">식자재/변동비 입력</button>
+            </div>
+
+            <!-- Form Rendered Area -->
+            <div id="form-container" class="mt-4"></div>
+        </section>
+
         <!-- Chart Section -->
         <section class="ios-card space-y-2">
             <h3 id="chartTitle" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -453,77 +354,24 @@
             </div>
         </section>
 
-        <!-- Live Ledger History List & Calendar Section -->
+        <!-- Live Ledger History List -->
         <section class="ios-card space-y-3">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
                 <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <i class="fa-solid fa-list-check text-blue-500"></i> 수입 및 지출 상세 내역
+                    <i class="fa-solid fa-list-check text-blue-500"></i> 매출 및 지출 상세 내역
                 </h3>
-                <div class="flex gap-1">
-                    <button onclick="switchHistoryView('table')" id="subtab-table" class="sub-tab-btn active">
-                        <i class="fa-solid fa-table-list mr-1"></i>목록 보기
-                    </button>
-                    <button onclick="switchHistoryView('calendar')" id="subtab-calendar" class="sub-tab-btn">
-                        <i class="fa-solid fa-calendar-days mr-1"></i>달력 보기
-                    </button>
-                </div>
+                <span id="historyCount" class="text-[11px] text-slate-400">0건</span>
             </div>
-
-            <!-- Table View -->
-            <div id="history-table-view">
-                <div id="history-container"></div>
-            </div>
-
-            <!-- Calendar View -->
-            <div id="history-calendar-view" class="hidden">
-                <div class="calendar-grid mb-1">
-                    <div class="calendar-day-head text-rose-500">일</div>
-                    <div class="calendar-day-head">월</div>
-                    <div class="calendar-day-head">화</div>
-                    <div class="calendar-day-head">수</div>
-                    <div class="calendar-day-head">목</div>
-                    <div class="calendar-day-head">금</div>
-                    <div class="calendar-day-head text-blue-500">토</div>
-                </div>
-                <div id="calendar-grid-container" class="calendar-grid"></div>
-            </div>
+            <div id="history-container"></div>
         </section>
 
-        <!-- 🛒 Coupang Partners Dynamic Banner Section (화면 최하단으로 이동) -->
-        <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
-            <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                    🛒 고객 관심 맞춤 상품 추천 (쿠팡)
-                </span>
-                <span class="text-[10px] text-slate-400">쿠팡 파트너스 연동</span>
-            </div>
-            <div class="w-full flex justify-center items-center bg-white py-2 overflow-x-auto">
-                <script src="https://ads-partners.coupang.com/g.js"></script>
-                <script>
-                    new PartnersCoupang.G({
-                        "id": 1046008,
-                        "template": "carousel",
-                        "trackingCode": "AF4185384",
-                        "subId": "craftburgers",
-                        "width": "680",
-                        "height": "140",
-                        "tsource": ""
-                    });
-                </script>
-            </div>
-            <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-center">
-                <p class="text-[9px] text-slate-400">
-                    이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
-                </p>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer class="text-center py-4 space-y-1">
-            <p class="text-[10px] text-slate-400">
-                이 포스팅/배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+        <!-- App Footer Section with Compliance Statement -->
+        <footer class="pt-4 pb-6 text-center space-y-2 border-t border-slate-200/60 mt-8">
+            <p class="text-xs font-semibold text-slate-500">가게손익앱 - 자영업 사장님 스마트 장부</p>
+            <p class="text-[10px] text-slate-400 max-w-md mx-auto leading-relaxed">
+                이 포스팅/배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.<br>
+                모든 장부 데이터는 안전한 파이어베이스 클라우드에 암호화되어 보관됩니다.
             </p>
-            <p class="text-[10px] text-slate-300">© 손익장부 & 가계부. All rights reserved.</p>
         </footer>
 
     </main>
@@ -546,7 +394,7 @@
 
             <div id="ocrProgress" class="hidden space-y-2">
                 <div class="flex justify-between text-xs text-slate-500">
-                    <span>Gemini AI 분석 중...</span>
+                    <span>AI 영수증 분석 중...</span>
                     <span id="ocrPercent">0%</span>
                 </div>
                 <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -558,158 +406,137 @@
 
     <!-- Application Script -->
     <script>
-        const COUPANG_TRACKING_CODE = "AF4185384";
+        const COUPANG_SUB_ID = "AF4185384";
         let currentUser = null;
         let storeConfig = null;
         let dbData = [];
         let currentTab = 'sales';
-        let currentHistoryView = 'table';
         let expenseChartObj = null;
+        let pendingAiData = null;
+        let isNewCategoryFound = false;
         let recognition = null;
-        let activeManageCategoryType = 'sales';
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
 
-        function openPrivacyModal() { document.getElementById('privacyModal').classList.remove('hidden'); }
-        function closePrivacyModal() { document.getElementById('privacyModal').classList.add('hidden'); }
-        function openOcrModal() { document.getElementById('ocrModal').classList.remove('hidden'); }
-        function closeOcrModal() { document.getElementById('ocrModal').classList.add('hidden'); }
+        // Auth Observer
+        window.addEventListener('load', () => {
+            const checkAuth = setInterval(() => {
+                if (window.onAuthStateChanged) {
+                    clearInterval(checkAuth);
+                    window.onAuthStateChanged(window.firebaseAuth, async (user) => {
+                        if (user) {
+                            currentUser = user;
+                            document.getElementById('loginModal').classList.add('hidden');
+                            document.getElementById('userEmailTag').innerText = user.email;
+                            await loadUserDataFromCloud();
+                        } else {
+                            currentUser = null;
+                            document.getElementById('loginModal').classList.remove('hidden');
+                        }
+                    });
+                }
+            }, 100);
 
-        function openUserInfoModal() {
-            if (currentUser) {
-                document.getElementById('modalUserEmail').innerText = currentUser.email || '구글 계정 정보 없음';
-            }
-            document.getElementById('userInfoModal').classList.remove('hidden');
-        }
+            initSpeechRecognition();
+        });
 
-        function closeUserInfoModal() {
-            document.getElementById('userInfoModal').classList.add('hidden');
-        }
-
-        function switchHistoryView(view) {
-            currentHistoryView = view;
-            if (view === 'table') {
-                document.getElementById('history-table-view').classList.remove('hidden');
-                document.getElementById('history-calendar-view').classList.add('hidden');
-                document.getElementById('subtab-table').classList.add('active');
-                document.getElementById('subtab-calendar').classList.remove('active');
-            } else {
-                document.getElementById('history-table-view').classList.add('hidden');
-                document.getElementById('history-calendar-view').classList.remove('hidden');
-                document.getElementById('subtab-table').classList.remove('active');
-                document.getElementById('subtab-calendar').classList.add('active');
-                renderCalendarView();
+        async function handleGoogleLogin() {
+            try {
+                await window.signInWithPopup(window.firebaseAuth, window.googleProvider);
+            } catch (err) {
+                alert('로그인 오류: ' + err.message);
             }
         }
 
-        // 항목 커스텀 관리 모달
-        function openCategoryModal(type) {
-            activeManageCategoryType = type;
-            const titleEl = document.getElementById('categoryModalTitle');
-            if (type === 'sales') titleEl.innerText = '⚙️ 수입/매출 항목 추가 / 관리';
-            else if (type === 'fixed') titleEl.innerText = '⚙️ 고정비 항목 추가 / 관리';
-            else titleEl.innerText = '⚙️ 변동비 항목 추가 / 관리';
-
-            renderCategoryManageList();
-            document.getElementById('categoryManageModal').classList.remove('hidden');
-        }
-
-        function closeCategoryModal() {
-            document.getElementById('categoryManageModal').classList.add('hidden');
-            document.getElementById('newCategoryInput').value = '';
-            switchTab(currentTab);
-        }
-
-        function renderCategoryManageList() {
-            const container = document.getElementById('categoryListContainer');
-            if (!storeConfig) return;
-
-            const list = storeConfig[activeManageCategoryType] || [];
-            if (list.length === 0) {
-                container.innerHTML = `<p class="text-center text-xs text-slate-400 py-3">등록된 항목이 없습니다.</p>`;
-                return;
+        async function handleLogout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                await window.signOut(window.firebaseAuth);
+                location.reload();
             }
+        }
 
-            let html = '';
-            list.forEach((item, index) => {
-                html += `
-                    <div class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-xl text-xs">
-                        <span class="font-medium text-slate-700">${item}</span>
-                        <button onclick="removeCategory(${index})" class="text-rose-500 hover:text-rose-700 font-bold px-1 text-[11px]">
-                            <i class="fa-solid fa-trash-can mr-1"></i>삭제
-                        </button>
-                    </div>
-                `;
+        async function loadUserDataFromCloud() {
+            if (!currentUser) return;
+
+            // Load Store Config
+            const configSnap = await window.getDocs(window.collection(window.firebaseDb, "users", currentUser.uid, "settings"));
+            let foundConfig = false;
+            configSnap.forEach(docSnap => {
+                if (docSnap.id === 'config') {
+                    storeConfig = docSnap.data();
+                    foundConfig = true;
+                }
             });
-            container.innerHTML = html;
+
+            if (!foundConfig) {
+                openWizardModal();
+            } else {
+                applyStoreConfigUI();
+            }
+
+            // Load Ledger Entries
+            const ledgerRef = window.collection(window.firebaseDb, "users", currentUser.uid, "ledger");
+            const ledgerSnap = await window.getDocs(ledgerRef);
+            dbData = [];
+            ledgerSnap.forEach(docSnap => {
+                dbData.push(docSnap.data());
+            });
+
+            switchTab('sales');
+            renderDashboard();
         }
 
-        async function addNewCategory() {
-            const input = document.getElementById('newCategoryInput');
-            const catName = input.value.trim();
+        function openWizardModal() { document.getElementById('wizardModal').classList.remove('hidden'); }
 
-            if (!catName) {
-                alert('추가할 항목명을 입력해 주세요.');
+        async function saveStoreOnboarding() {
+            const nameInput = document.getElementById('setupStoreName').value.trim();
+            const indKey = document.getElementById('setupIndustry').value;
+
+            if (!nameInput) {
+                alert('가게 이름을 입력해 주세요!');
                 return;
             }
 
-            if (!storeConfig[activeManageCategoryType]) {
-                storeConfig[activeManageCategoryType] = [];
-            }
+            const industryTemplates = {
+                korean: { icon: '🍱', name: '한식 / 정식 / 식당', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용', '직원/알바 인건비', '포스기/오더', '인터넷/통신비', '4대보험료'], variable: ['쌀/잡곡 매입', '육류/정육 식자재', '수산물/생선 식자재', '야채/채소/양념류', '식용유/장류/소스', '음료/주류 매입', '포장 용기/소모품', '배달앱 수수료', '배달 대행료'] },
+                western: { icon: '🍝', name: '양식 / 파스타 / 버거', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용', '인건비', '포스/테이블오더', '매장 인터넷', '4대보험료'], variable: ['원육/정육/패티용 고기', '수제빵/버거번/파스타면', '유제품/치즈/버터', '신선 야채/토마토/과일', '소스/드레싱/시즈닝', '음료/수제맥주/와인', '포장 용기/소모품', '배달 수수료', '배달 대행료'] },
+                japanese: { icon: '🍣', name: '일식 / 초밥 / 돈까스', fixed: ['가게 임대료', '상가 관리비', '가스/수도 요금', '세무사 수수료', '직원/알바 인건비', '포스기/오더', '인터넷비용', '4대보험료'], variable: ['초밥용 횟감/수산물', '돈까스용 정육/생고기', '튀김유/튀김가루', '초밥용 쌀/식초/와사비', '일식 소스/쯔유/장류', '사케/음료/주류', '포장 용기/소모품', '배달 수수료', '배달 대행료'] },
+                bunsik: { icon: '떡', name: '분식 / 야식 / 분식집', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무사 수수료', '직원 인건비', '포스기/통신비', '인터넷', '4대보험료'], variable: ['떡볶이 떡/어묵', '튀김 재료/식용유', '순대/내장 재료', '야채/고춧가루/양념', '김밥 재료(김/단무지)', '음료/쿨피스', '포장 용기/비닐소모품', '배달 수수료', '배달 대행료'] },
+                meat: { icon: '🥩', name: '고깃집 / 삼겹살 / 구이', fixed: ['가게 임대료', '상가 관리비', '가스/전기 요금', '세무사 수수료', '주방/홀 인건비', '포스/테이블오더', '인터넷', '4대보험료'], variable: ['돼지고기/삼겹살 매입', '소고기/갈비 매입', '숯/불판 소모품', '쌈채소/마늘/버섯', '파채/양파/기본찬', '음료/소주/맥주', '포장/포장용기', '배달 수수료', '배달 대행료'] },
+                hof: { icon: '🍺', name: '호프집 / 주점 / 포차', fixed: ['가게 임대료', '상가 관리비', '전기/가스 공과금', '세무사 수수료', '아르바이트 인건비', '포스기/통신비', '매장 인터넷', '4대보험료'], variable: ['생맥주/병맥주 매입', '소주/하이볼/양주', '마른안주/견과류', '튀김안주/냉동식자재', '메인 안주 식재료', '기본 안주(강정/강나리)', '포장 용기/소모품', '배달 수수료', '배달 대행료'] },
+                cafe: { icon: '☕', name: '카페 / 디저트 / 베이커리', fixed: ['가게 임대료', '상가 관리비', '전기/수도 요금', '세무 회계비용', '직원/알바 인건비', '포스/통신비', '매장 인터넷'], variable: ['스페셜티 원두', '생유/우유/시럽', '베이커리/디저트 완제', '테이크아웃 컵/홀더/빨대', '원두 그라인더 소모품', '마케팅/인스타 광고비', '배달 수수료'] },
+                general: { icon: '✂️', name: '미용 / 뷰티 / 일반 자영업', fixed: ['매장 임대료', '상가 관리비', '전기/가스 공과금', '직원 인건비', '세무사 비용', '매장 통신비'], variable: ['메인 업무 소모품', '마케팅/광고 비용', '카드 결제 수수료', '택배/배송 운임비', '매장 서비스 음료/다과', '기타 변동비'] }
+            };
 
-            if (storeConfig[activeManageCategoryType].includes(catName)) {
-                alert('이미 존재해 있는 항목입니다.');
-                return;
-            }
-
-            storeConfig[activeManageCategoryType].push(catName);
+            const template = industryTemplates[indKey] || industryTemplates.korean;
+            storeConfig = {
+                name: nameInput,
+                industryKey: indKey,
+                icon: template.icon,
+                industryName: template.name,
+                fixed: [...template.fixed],
+                variable: [...template.variable]
+            };
 
             if (currentUser) {
                 await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), storeConfig);
             }
 
-            input.value = '';
-            renderCategoryManageList();
+            document.getElementById('wizardModal').classList.add('hidden');
+            applyStoreConfigUI();
+            switchTab('sales');
         }
 
-        async function removeCategory(index) {
-            if (confirm('이 항목을 삭제하시겠습니까?')) {
-                storeConfig[activeManageCategoryType].splice(index, 1);
-                if (currentUser) {
-                    await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), storeConfig);
-                }
-                renderCategoryManageList();
-            }
+        function applyStoreConfigUI() {
+            if (!storeConfig) return;
+            document.getElementById('displayStoreName').innerText = storeConfig.name;
+            document.getElementById('displayIndustry').innerText = `${storeConfig.icon} ${storeConfig.industryName}`;
         }
 
         function openCoupangSearch(keyword) {
             const cleanKeyword = encodeURIComponent(keyword);
-            const coupangUrl = `https://www.coupang.com/np/search?q=${cleanKeyword}&lptag=${COUPANG_TRACKING_CODE}&subid=craftburgers`;
+            const coupangUrl = `https://www.coupang.com/np/search?q=${cleanKeyword}&lptag=${COUPANG_SUB_ID}`;
             window.open(coupangUrl, '_blank');
-        }
-
-        function initYearOptions() {
-            const yearSelect = document.getElementById('yearSelect');
-            const monthSelect = document.getElementById('monthSelect');
-            
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-
-            yearSelect.innerHTML = '';
-
-            for (let y = 2020; y <= 2040; y++) {
-                const opt = document.createElement('option');
-                opt.value = y.toString();
-                opt.innerText = y + '년';
-                if (y === currentYear) opt.selected = true;
-                yearSelect.appendChild(opt);
-            }
-
-            // 접속 시 기본 선택 월을 '현재 월'로 변경
-            if (monthSelect) {
-                monthSelect.value = currentMonth;
-            }
         }
 
         function initSpeechRecognition() {
@@ -743,19 +570,25 @@
 
         function startVoiceRecognition() {
             if (!recognition) {
-                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 아래에 직접 입력하세요:\n(예: '마트 장보기 5만 원 결제했어')");
+                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 직접 입력해 보세요:\n(예: '어제 식자재 3만 원 샀어')");
                 if (input) processVoiceTranscript(input);
                 return;
             }
-            try { recognition.start(); } catch (e) { recognition.stop(); }
+            try {
+                recognition.start();
+            } catch (e) {
+                recognition.stop();
+            }
         }
 
         function stopVoiceRecognition() {
             document.getElementById('voiceListeningBanner').classList.add('hidden');
-            if (recognition) { try { recognition.stop(); } catch(e){} }
+            if (recognition) {
+                try { recognition.stop(); } catch(e){}
+            }
         }
 
-        async function processVoiceTranscript(text) {
+        function processVoiceTranscript(text) {
             const numMatch = text.match(/(\d+)\s*(만|천)?\s*원?/);
             let amount = 50000;
             if (numMatch) {
@@ -765,240 +598,77 @@
                 amount = num;
             }
 
-            const defaultCat = (storeConfig && storeConfig.variable.length > 0) ? storeConfig.variable[0] : '기타 변동비';
-            
-            if (confirm(`AI 음성 인식 완료:\n- 항목: ${defaultCat}\n- 금액: ${amount.toLocaleString()}원\n- 메모: "${text}"\n\n등록할까요?`)) {
-                const newEntry = {
-                    id: Date.now().toString(),
-                    type: 'variable',
-                    date: getTodayStr(),
-                    category: defaultCat,
-                    amount: amount,
-                    memo: `음성 인식: "${text}"`
-                };
+            const currentVariables = storeConfig ? storeConfig.variable : [];
+            let matchedCategory = null;
+            isNewCategoryFound = false;
 
-                if (currentUser) {
-                    await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
+            for (let cat of currentVariables) {
+                const cleanCat = cat.replace(/\(.*?\)/g, '').trim();
+                if (text.includes(cleanCat) || cleanCat.includes(text.split(' ')[0])) {
+                    matchedCategory = cat;
+                    break;
                 }
-                dbData.push(newEntry);
-                renderDashboard();
-                alert('저장되었습니다.');
             }
-        }
 
-        function processReceipt(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            document.getElementById('ocrProgress').classList.remove('hidden');
-
-            Tesseract.recognize(file, 'kor+eng', {
-                logger: m => {
-                    if (m.status === 'recognizing text') {
-                        const pct = Math.round(m.progress * 100);
-                        document.getElementById('ocrPercent').innerText = pct + '%';
-                        document.getElementById('ocrBar').style.width = pct + '%';
-                    }
-                }
-            }).then(async ({ data: { text } }) => {
-                document.getElementById('ocrProgress').classList.add('hidden');
-                closeOcrModal();
-
-                const numbers = text.match(/[\d,]{3,}/g);
-                let amount = 0;
-                if (numbers) {
-                    const cleanNums = numbers.map(n => parseInt(n.replace(/,/g, ''))).filter(n => n > 100 && n < 10000000);
-                    if (cleanNums.length > 0) amount = Math.max(...cleanNums);
-                }
-
-                const defaultCat = (storeConfig && storeConfig.variable.length > 0) ? storeConfig.variable[0] : '영수증 지출';
-
-                if (confirm(`AI 영수증 스캔 완료:\n- 인식 금액: ${(amount || 50000).toLocaleString()}원\n\n자동 기입할까요?`)) {
-                    const newEntry = {
-                        id: Date.now().toString(),
-                        type: 'variable',
-                        date: getTodayStr(),
-                        category: defaultCat,
-                        amount: amount || 50000,
-                        memo: 'AI 영수증 스캔 등록'
-                    };
-
-                    if (currentUser) {
-                        await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
-                    }
-                    dbData.push(newEntry);
-                    renderDashboard();
-                    alert('영수증 내역이 저장되었습니다.');
-                }
-            }).catch(err => {
-                alert('OCR 분석 오류: ' + err.message);
-                document.getElementById('ocrProgress').classList.add('hidden');
-            });
-        }
-
-        // Auth Observer
-        window.addEventListener('load', () => {
-            initYearOptions();
-            initSpeechRecognition();
-
-            const checkAuth = setInterval(() => {
-                if (window.onAuthStateChanged) {
-                    clearInterval(checkAuth);
-                    window.onAuthStateChanged(window.firebaseAuth, async (user) => {
-                        if (user) {
-                            currentUser = user;
-                            document.getElementById('loginModal').classList.add('hidden');
-                            await loadUserDataFromCloud();
-                        } else {
-                            currentUser = null;
-                            document.getElementById('loginModal').classList.remove('hidden');
-                        }
-                    });
-                }
-            }, 100);
-        });
-
-        async function handleGoogleLoginWithCheck() {
-            const isAgreed = document.getElementById('agreeTerms').checked;
-            if (!isAgreed) {
-                alert('서비스 이용 및 개인정보 동의에 체크해 주셔야 시작하실 수 있습니다.');
-                return;
+            if (!matchedCategory) {
+                isNewCategoryFound = true;
+                const words = text.replace(/(\d+)\s*(만|천)?\s*원?|샀어|결제했어|구매했어|카드/g, '').trim().split(' ');
+                matchedCategory = words[0] || '신규 지출항목';
             }
-            try {
-                await window.signInWithPopup(window.firebaseAuth, window.googleProvider);
-            } catch (err) {
-                alert('로그인 오류: ' + err.message);
-            }
-        }
 
-        async function handleLogout() {
-            if (confirm('로그아웃 하시겠습니까?')) {
-                await window.signOut(window.firebaseAuth);
-                location.reload();
-            }
-        }
+            pendingAiData = {
+                id: Date.now().toString(),
+                type: 'variable',
+                date: getTodayStr(),
+                category: matchedCategory,
+                amount: amount,
+                memo: `음성 인식: "${text}"`
+            };
 
-        async function loadUserDataFromCloud() {
-            if (!currentUser) return;
+            document.getElementById('aiResDate').innerText = pendingAiData.date;
+            document.getElementById('aiResType').innerText = '지출 (변동비)';
+            document.getElementById('aiResCategory').innerText = pendingAiData.category;
+            document.getElementById('aiResAmount').innerText = pendingAiData.amount.toLocaleString() + '원';
+            document.getElementById('aiResMemo').innerText = pendingAiData.memo;
 
-            const configSnap = await window.getDocs(window.collection(window.firebaseDb, "users", currentUser.uid, "settings"));
-            let foundConfig = false;
-            configSnap.forEach(docSnap => {
-                if (docSnap.id === 'config') {
-                    storeConfig = docSnap.data();
-                    foundConfig = true;
-                }
-            });
-
-            if (!foundConfig) {
-                openWizardModal();
+            const noticeEl = document.getElementById('newCategoryNotice');
+            if (isNewCategoryFound) {
+                noticeEl.classList.remove('hidden');
             } else {
-                applyStoreConfigUI();
+                noticeEl.classList.add('hidden');
             }
 
-            const ledgerRef = window.collection(window.firebaseDb, "users", currentUser.uid, "ledger");
-            const ledgerSnap = await window.getDocs(ledgerRef);
-            dbData = [];
-            ledgerSnap.forEach(docSnap => {
-                dbData.push(docSnap.data());
-            });
-
-            switchTab('sales');
-            renderDashboard();
+            document.getElementById('aiConfirmModal').classList.remove('hidden');
         }
 
-        function openWizardModal() { document.getElementById('wizardModal').classList.remove('hidden'); }
+        async function confirmAiEntry() {
+            if (!pendingAiData || !currentUser) return;
 
-        async function saveStoreOnboarding() {
-            const nameInput = document.getElementById('setupStoreName').value.trim();
-            const indKey = document.getElementById('setupIndustry').value;
-
-            if (!nameInput) {
-                alert('이름 또는 상호명을 입력해 주세요!');
-                return;
-            }
-
-            const industryTemplates = {
-                home: { 
-                    icon: '🏠', name: '일반가정 / 개인 가계부', 
-                    sales: ['월급 / 급여', '부수입 / 용돈', '금융 / 이자수익'],
-                    fixed: ['아파트 관리비', '월세/대출이자', '통신비/인터넷', '보험료', 'OTT/구독료'], 
-                    variable: ['식비/장보기', '외식/배달비', '교통/유류비', '생필품 구매', '문화/소비'] 
-                },
-                korean: { 
-                    icon: '🍱', name: '한식 / 정식 / 식당', 
-                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
-                    fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], 
-                    variable: ['쌀/잡곡 매입', '육류/정육 식자재', '포장 용기', '배달앱 수수료'] 
-                },
-                western: { 
-                    icon: '🍝', name: '양식 / 파스타 / 버거', 
-                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
-                    fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], 
-                    variable: ['원육/정육/패티', '파스타/버거번', '포장 용기', '배달 수수료'] 
-                },
-                japanese: { 
-                    icon: '🍣', name: '일식 / 초밥 / 돈까스', 
-                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
-                    fixed: ['가게 임대료', '상가 관리비', '가스/수도 요금', '세무사 수수료'], 
-                    variable: ['초밥용 횟감', '돈까스용 생고기', '튀김유', '포장 용기'] 
-                },
-                bunsik: { 
-                    icon: '떡', name: '분식 / 야식 / 분식집', 
-                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
-                    fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무사 수수료'], 
-                    variable: ['떡볶이 떡/어묵', '튀김 재료/식용유', '순대/내장', '포장 용기'] 
-                },
-                meat: { 
-                    icon: '🥩', name: '고깃집 / 삼겹살 / 구이', 
-                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
-                    fixed: ['가게 임대료', '상가 관리비', '가스/전기 요금', '세무사 수수료'], 
-                    variable: ['돼지고기/삼겹살', '소고기/갈비', '숯/불판 소모품', '음료/주류'] 
-                },
-                hof: { 
-                    icon: '🍺', name: '호프집 / 주점 / 포차', 
-                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
-                    fixed: ['가게 임대료', '상가 관리비', '전기/가스 공과금', '세무사 수수료'], 
-                    variable: ['생맥주/병맥주', '소주/하이볼', '안주 식재료', '포장 용기'] 
-                },
-                cafe: { 
-                    icon: '☕', name: '카페 / 디저트 / 베이커리', 
-                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
-                    fixed: ['가게 임대료', '상가 관리비', '전기/수도 요금', '세무 회계비용'], 
-                    variable: ['원두', '우유/시럽', '베이커리 디저트', '테이크아웃 컵/빨대'] 
-                },
-                general: { 
-                    icon: '✂️', name: '미용 / 뷰티 / 일반 자영업', 
-                    sales: ['일일 총매출', '시술/서비스 매출', '제품 판매 매출'],
-                    fixed: ['매장 임대료', '상가 관리비', '전기/가스 공과금', '세무사 비용'], 
-                    variable: ['소모품', '마케팅/광고비', '카드 수수료', '기타 변동비'] 
+            if (isNewCategoryFound && storeConfig) {
+                if (!storeConfig.variable.includes(pendingAiData.category)) {
+                    storeConfig.variable.push(pendingAiData.category);
+                    await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), storeConfig);
                 }
-            };
-
-            const template = industryTemplates[indKey] || industryTemplates.home;
-            storeConfig = {
-                name: nameInput,
-                industryKey: indKey,
-                icon: template.icon,
-                industryName: template.name,
-                sales: [...template.sales],
-                fixed: [...template.fixed],
-                variable: [...template.variable]
-            };
-
-            if (currentUser) {
-                await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), storeConfig);
             }
 
-            document.getElementById('wizardModal').classList.add('hidden');
-            applyStoreConfigUI();
-            switchTab('sales');
+            await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", pendingAiData.id), pendingAiData);
+            dbData.push(pendingAiData);
+
+            closeAiConfirmModal();
+            renderDashboard();
+            if (currentTab === 'variable') switchTab('variable');
+
+            alert(isNewCategoryFound ? 
+                `'${pendingAiData.category}' 항목을 지출 목록에 새 항목으로 자동 추가하고 클라우드 장부에 기입했습니다!` : 
+                '성공적으로 장부에 등록되었습니다.'
+            );
         }
 
-        function applyStoreConfigUI() {
-            if (!storeConfig) return;
-            document.getElementById('displayStoreName').innerText = storeConfig.name;
-            document.getElementById('displayIndustry').innerText = `${storeConfig.icon} ${storeConfig.industryName}`;
+        function closeAiConfirmModal() {
+            document.getElementById('aiConfirmModal').classList.add('hidden');
+            document.getElementById('newCategoryNotice').classList.add('hidden');
+            pendingAiData = null;
+            isNewCategoryFound = false;
         }
 
         async function handleSaveEntry(e, type) {
@@ -1024,7 +694,7 @@
             dbData.push(newEntry);
             document.getElementById('inputAmount').value = '';
             document.getElementById('inputMemo').value = '';
-            alert('클라우드에 안전하게 저장되었습니다.');
+            alert('클라우드 장부에 안전하게 저장되었습니다.');
 
             renderDashboard();
         }
@@ -1039,77 +709,6 @@
             }
         }
 
-        // 지난달 고정비 복사 기능
-        async function checkAndCopyPrevFixedExpenses() {
-            const currentYearStr = document.getElementById('yearSelect').value;
-            const currentMonthStr = document.getElementById('monthSelect').value;
-
-            if (currentMonthStr === 'ALL') {
-                alert('특정 월(예: 11월)을 선택하신 후 지난달 고정비를 가져올 수 있습니다.');
-                return;
-            }
-
-            let curY = parseInt(currentYearStr);
-            let curM = parseInt(currentMonthStr);
-
-            let prevY = curY;
-            let prevM = curM - 1;
-            if (prevM < 1) {
-                prevM = 12;
-                prevY = curY - 1;
-            }
-
-            const prevYStr = prevY.toString();
-            const prevMStr = prevM.toString().padStart(2, '0');
-
-            const prevFixedEntries = dbData.filter(item => {
-                if (item.type !== 'fixed' || !item.date) return false;
-                const p = item.date.split('-');
-                return p[0] === prevYStr && p[1] === prevMStr;
-            });
-
-            if (prevFixedEntries.length === 0) {
-                alert(`지난달(${prevM}월)에 등록된 고정비 내역이 없습니다.`);
-                return;
-            }
-
-            const currentFixedEntries = dbData.filter(item => {
-                if (item.type !== 'fixed' || !item.date) return false;
-                const p = item.date.split('-');
-                return p[0] === currentYearStr && p[1] === currentMonthStr;
-            });
-
-            if (currentFixedEntries.length > 0) {
-                if (!confirm(`이번달(${curM}월)에 이미 ${currentFixedEntries.length}건의 고정비가 있습니다.\n지난달(${prevM}월) 고정비 ${prevFixedEntries.length}건을 추가로 가져올까요?`)) {
-                    return;
-                }
-            } else {
-                if (!confirm(`지난달(${prevM}월) 고정비 내역이 ${prevFixedEntries.length}건 존재합니다.\n이번달(${curM}월)에도 그대로 자동 입력할까요?`)) {
-                    return;
-                }
-            }
-
-            const targetDate = `${currentYearStr}-${currentMonthStr}-01`;
-            for (const item of prevFixedEntries) {
-                const newEntry = {
-                    id: Date.now().toString() + Math.random().toString(36).substring(2, 5),
-                    type: 'fixed',
-                    date: targetDate,
-                    category: item.category,
-                    amount: item.amount,
-                    memo: item.memo ? `(지난달 복사) ${item.memo}` : '(지난달 복사)'
-                };
-
-                if (currentUser) {
-                    await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
-                }
-                dbData.push(newEntry);
-            }
-
-            alert(`지난달(${prevM}월) 고정지출 ${prevFixedEntries.length}건이 이번달(${curM}월)로 자동 입력되었습니다!`);
-            renderDashboard();
-        }
-
         function switchTab(tab) {
             currentTab = tab;
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -1121,48 +720,10 @@
             if (tab === 'sales') renderSalesForm(container);
             else if (tab === 'fixed') renderExpenseForm(container, 'fixed', storeConfig ? storeConfig.fixed : []);
             else if (tab === 'variable') renderExpenseForm(container, 'variable', storeConfig ? storeConfig.variable : []);
-
-            if (tab === 'fixed') {
-                setTimeout(() => {
-                    checkAndCopyPrevFixedExpensesAutoPrompt();
-                }, 100);
-            }
-        }
-
-        function checkAndCopyPrevFixedExpensesAutoPrompt() {
-            const currentYearStr = document.getElementById('yearSelect').value;
-            const currentMonthStr = document.getElementById('monthSelect').value;
-            if (currentMonthStr === 'ALL') return;
-
-            let curY = parseInt(currentYearStr);
-            let curM = parseInt(currentMonthStr);
-            let prevY = curM === 1 ? curY - 1 : curY;
-            let prevM = curM === 1 ? 12 : curM - 1;
-
-            const prevYStr = prevY.toString();
-            const prevMStr = prevM.toString().padStart(2, '0');
-
-            const prevFixed = dbData.filter(item => item.type === 'fixed' && item.date && item.date.startsWith(`${prevYStr}-${prevMStr}`));
-            const curFixed = dbData.filter(item => item.type === 'fixed' && item.date && item.date.startsWith(`${currentYearStr}-${currentMonthStr}`));
-
-            if (prevFixed.length > 0 && curFixed.length === 0) {
-                checkAndCopyPrevFixedExpenses();
-            }
         }
 
         function renderSalesForm(container) {
-            let salesCategories = (storeConfig && storeConfig.sales && storeConfig.sales.length > 0) 
-                ? storeConfig.sales 
-                : ['일일 총매출', '홀 매출', '배달 매출'];
-
-            const options = salesCategories.map(c => `<option value="${c}">${c}</option>`).join('');
-            
             container.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <button type="button" onclick="openCategoryModal('sales')" class="text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition">
-                        <i class="fa-solid fa-gear mr-1"></i>수입/매출 항목 관리/추가
-                    </button>
-                </div>
                 <form onsubmit="handleSaveEntry(event, 'sales')" class="space-y-3">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
@@ -1170,41 +731,33 @@
                             <input type="date" id="inputDate" value="${getTodayStr()}" required class="w-full text-xs rounded-xl p-2.5">
                         </div>
                         <div>
-                            <label class="text-[11px] text-slate-500 font-medium">수입/매출 구분</label>
-                            <select id="salesType" class="w-full text-xs rounded-xl p-2.5">${options}</select>
+                            <label class="text-[11px] text-slate-500 font-medium">매출 구분</label>
+                            <select id="salesType" class="w-full text-xs rounded-xl p-2.5">
+                                <option value="일일 총매출">일일 통합 매출</option>
+                                <option value="홀 매출">홀 매출</option>
+                                <option value="배달 매출">배달 매출</option>
+                            </select>
                         </div>
                     </div>
                     <div>
-                        <label class="text-[11px] text-slate-500 font-medium">금액 (원)</label>
-                        <input type="number" id="inputAmount" placeholder="예: 3000000" required class="w-full text-xs font-bold text-emerald-600 rounded-xl p-2.5">
+                        <label class="text-[11px] text-slate-500 font-medium">매출 금액 (원)</label>
+                        <input type="number" id="inputAmount" placeholder="예: 850000" required class="w-full text-xs font-bold text-emerald-600 rounded-xl p-2.5">
                     </div>
                     <div>
                         <label class="text-[11px] text-slate-500 font-medium">메모</label>
-                        <input type="text" id="inputMemo" placeholder="예: 11월 월급 / 토요일 매출" class="w-full text-xs rounded-xl p-2.5">
+                        <input type="text" id="inputMemo" placeholder="예: 토요일 홀+배달 통합 매출" class="w-full text-xs rounded-xl p-2.5">
                     </div>
                     <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-md">
-                        <i class="fa-solid fa-plus mr-1"></i> 수입/매출 등록하기
+                        <i class="fa-solid fa-plus mr-1"></i> 클라우드 장부에 등록하기
                     </button>
                 </form>
             `;
         }
 
         function renderExpenseForm(container, type, categories) {
-            const options = (categories && categories.length > 0) 
-                ? categories.map(c => `<option value="${c}">${c}</option>`).join('') 
-                : `<option value="기타 지출">기타 지출</option>`;
+            const options = categories.map(c => `<option value="${c}">${c}</option>`).join('');
 
             container.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <button type="button" onclick="openCategoryModal('${type}')" class="text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition">
-                        <i class="fa-solid fa-gear mr-1"></i>${type === 'fixed' ? '고정비' : '변동비'} 항목 관리/추가
-                    </button>
-                    ${type === 'fixed' ? `
-                        <button type="button" onclick="checkAndCopyPrevFixedExpenses()" class="text-[11px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-100 transition">
-                            <i class="fa-solid fa-copy mr-1"></i>지난달 고정비 불러오기
-                        </button>
-                    ` : ''}
-                </div>
                 <form onsubmit="handleSaveEntry(event, '${type}')" class="space-y-3">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
@@ -1216,19 +769,32 @@
                             <select id="inputCategory" class="w-full text-xs rounded-xl p-2.5">${options}</select>
                         </div>
                     </div>
+
+                    <div class="flex justify-end">
+                        <button type="button" onclick="searchCurrentCategoryCoupang()" class="text-[11px] font-bold text-orange-600 hover:text-orange-700 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-lg flex items-center gap-1 transition">
+                            🛒 선택한 항목 쿠팡 최저가 재구매
+                        </button>
+                    </div>
+
                     <div>
                         <label class="text-[11px] text-slate-500 font-medium">지출 금액 (원)</label>
                         <input type="number" id="inputAmount" placeholder="예: 155000" required class="w-full text-xs font-bold text-rose-600 rounded-xl p-2.5">
                     </div>
                     <div>
-                        <label class="text-[11px] text-slate-500 font-medium">적요 / 사용처</label>
-                        <input type="text" id="inputMemo" placeholder="예: 마트 장보기" class="w-full text-xs rounded-xl p-2.5">
+                        <label class="text-[11px] text-slate-500 font-medium">적요 / 거래처</label>
+                        <input type="text" id="inputMemo" placeholder="예: 식자재 구매건" class="w-full text-xs rounded-xl p-2.5">
                     </div>
                     <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition shadow-md">
                         <i class="fa-solid fa-minus mr-1"></i> 지출 내역 저장
                     </button>
                 </form>
             `;
+        }
+
+        function searchCurrentCategoryCoupang() {
+            const el = document.getElementById('inputCategory');
+            if (!el) return;
+            openCoupangSearch(el.value);
         }
 
         function getFilteredData() {
@@ -1263,16 +829,15 @@
             document.getElementById('profitMargin').innerText = margin + '%';
 
             renderChart(categories);
-            if (currentHistoryView === 'table') {
-                renderHistorySection();
-            } else {
-                renderCalendarView();
-            }
+            renderHistorySection();
         }
 
         function renderHistorySection() {
             const container = document.getElementById('history-container');
+            const countEl = document.getElementById('historyCount');
             const filtered = getFilteredData();
+
+            countEl.innerText = `${filtered.length}건`;
 
             if (filtered.length === 0) {
                 container.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">등록된 내역이 없습니다.</p>`;
@@ -1290,7 +855,7 @@
                                 <th class="pb-2 font-medium">구분</th>
                                 <th class="pb-2 font-medium">항목</th>
                                 <th class="pb-2 text-right font-medium">금액</th>
-                                <th class="pb-2 text-center font-medium">더싼 식자재/필수품</th>
+                                <th class="pb-2 text-center font-medium">쿠팡 최저가</th>
                                 <th class="pb-2 text-center font-medium">삭제</th>
                             </tr>
                         </thead>
@@ -1302,7 +867,7 @@
                 html += `
                     <tr>
                         <td class="py-2.5 text-slate-600 font-medium">${item.date}</td>
-                        <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] ${isSales ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}">${isSales ? '수입' : '지출'}</span></td>
+                        <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] ${isSales ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}">${isSales ? '매출' : '지출'}</span></td>
                         <td class="py-2.5 text-slate-900 font-medium">${item.category} <span class="text-[10px] text-slate-400">${item.memo ? '('+item.memo+')' : ''}</span></td>
                         <td class="py-2.5 text-right font-bold ${isSales ? 'text-emerald-600' : 'text-rose-600'}">${item.amount.toLocaleString()}원</td>
                         <td class="py-2.5 text-center">
@@ -1315,96 +880,6 @@
 
             html += `</tbody></table></div>`;
             container.innerHTML = html;
-        }
-
-        // 📅 달력 뷰 연동 함수
-        function renderCalendarView() {
-            const container = document.getElementById('calendar-grid-container');
-            const year = parseInt(document.getElementById('yearSelect').value);
-            const monthVal = document.getElementById('monthSelect').value;
-
-            if (monthVal === 'ALL') {
-                container.innerHTML = `<div class="col-span-7 text-center text-xs text-slate-400 py-8">월(1월~12월)을 선택하시면 달력이 활성화됩니다.</div>`;
-                return;
-            }
-
-            const month = parseInt(monthVal) - 1; // 0-indexed
-            const firstDayIndex = new Date(year, month, 1).getDay();
-            const lastDate = new Date(year, month + 1, 0).getDate();
-
-            // 특정 날짜별 데이터 집계
-            const dayMap = {};
-            const filtered = getFilteredData();
-            filtered.forEach(item => {
-                const dayNum = parseInt(item.date.split('-')[2]);
-                if (!dayMap[dayNum]) dayMap[dayNum] = { sales: 0, expense: 0, items: [] };
-                if (item.type === 'sales') dayMap[dayNum].sales += item.amount;
-                else dayMap[dayNum].expense += item.amount;
-                dayMap[dayNum].items.push(item);
-            });
-
-            let html = '';
-
-            // 이전 달 빈 셀
-            for (let i = 0; i < firstDayIndex; i++) {
-                html += `<div class="calendar-cell other-month"></div>`;
-            }
-
-            // 현재 달 날짜 셀
-            for (let d = 1; d <= lastDate; d++) {
-                const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                const dayData = dayMap[d];
-
-                let cellContent = '';
-                if (dayData) {
-                    if (dayData.sales > 0) {
-                        cellContent += `<div class="text-[9px] font-bold text-emerald-600 leading-tight">+${(dayData.sales/10000).toFixed(0)}만</div>`;
-                    }
-                    if (dayData.expense > 0) {
-                        cellContent += `<div class="text-[9px] font-bold text-rose-500 leading-tight">-${(dayData.expense/10000).toFixed(0)}만</div>`;
-                    }
-                }
-
-                html += `
-                    <div class="calendar-cell" onclick="openDayDetailModal('${dateStr}')">
-                        <div class="text-[11px] font-bold text-slate-700">${d}</div>
-                        <div class="space-y-0.5">${cellContent}</div>
-                    </div>
-                `;
-            }
-
-            container.innerHTML = html;
-        }
-
-        function openDayDetailModal(dateStr) {
-            const dayEntries = dbData.filter(item => item.date === dateStr);
-            document.getElementById('dayDetailTitle').innerText = `📅 ${dateStr} 상세 내역`;
-            
-            const container = document.getElementById('dayDetailContent');
-            if (dayEntries.length === 0) {
-                container.innerHTML = `<p class="text-center text-xs text-slate-400 py-4">등록된 수입/지출 내역이 없습니다.</p>`;
-            } else {
-                let html = '';
-                dayEntries.forEach(item => {
-                    const isSales = item.type === 'sales';
-                    html += `
-                        <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl text-xs">
-                            <div>
-                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isSales ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}">${isSales ? '수입' : '지출'}</span>
-                                <span class="font-bold text-slate-800 ml-1">${item.category}</span>
-                                ${item.memo ? `<span class="text-[10px] text-slate-400"> (${item.memo})</span>` : ''}
-                            </div>
-                            <span class="font-bold ${isSales ? 'text-emerald-600' : 'text-rose-600'}">${item.amount.toLocaleString()}원</span>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-            }
-            document.getElementById('dayDetailModal').classList.remove('hidden');
-        }
-
-        function closeDayDetailModal() {
-            document.getElementById('dayDetailModal').classList.add('hidden');
         }
 
         function renderChart(categoryMap) {
@@ -1438,6 +913,58 @@
                         legend: { position: 'right', labels: { color: '#64748b', font: { size: 10 } } }
                     }
                 }
+            });
+        }
+
+        function openOcrModal() { document.getElementById('ocrModal').classList.remove('hidden'); }
+        function closeOcrModal() { document.getElementById('ocrModal').classList.add('hidden'); }
+
+        function processReceipt(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('ocrProgress').classList.remove('hidden');
+
+            Tesseract.recognize(file, 'kor+eng', {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        const pct = Math.round(m.progress * 100);
+                        document.getElementById('ocrPercent').innerText = pct + '%';
+                        document.getElementById('ocrBar').style.width = pct + '%';
+                    }
+                }
+            }).then(({ data: { text } }) => {
+                document.getElementById('ocrProgress').classList.add('hidden');
+                closeOcrModal();
+
+                const numbers = text.match(/[\d,]{3,}/g);
+                let amount = 0;
+                if (numbers) {
+                    const cleanNums = numbers.map(n => parseInt(n.replace(/,/g, ''))).filter(n => n > 100 && n < 10000000);
+                    if (cleanNums.length > 0) amount = Math.max(...cleanNums);
+                }
+
+                const defaultCat = (storeConfig && storeConfig.variable.length > 0) ? storeConfig.variable[0] : '영수증 지출';
+
+                pendingAiData = {
+                    id: Date.now().toString(),
+                    type: 'variable',
+                    date: getTodayStr(),
+                    category: defaultCat,
+                    amount: amount || 50000,
+                    memo: 'AI 영수증 스캔 자동 등록'
+                };
+
+                document.getElementById('aiResDate').innerText = pendingAiData.date;
+                document.getElementById('aiResType').innerText = '지출 (변동비)';
+                document.getElementById('aiResCategory').innerText = pendingAiData.category;
+                document.getElementById('aiResAmount').innerText = pendingAiData.amount.toLocaleString() + '원';
+                document.getElementById('aiResMemo').innerText = pendingAiData.memo;
+
+                document.getElementById('aiConfirmModal').classList.remove('hidden');
+            }).catch(err => {
+                alert('OCR 오류: ' + err.message);
+                document.getElementById('ocrProgress').classList.add('hidden');
             });
         }
     </script>
