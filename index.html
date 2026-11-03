@@ -97,6 +97,23 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
+        .sub-tab-btn {
+            padding: 5px 12px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        .sub-tab-btn.active {
+            background-color: #0f172a;
+            color: #ffffff;
+            font-weight: 700;
+            border-color: #0f172a;
+        }
+
         input, select { 
             background-color: #f8fafc !important; 
             color: #0f172a !important; 
@@ -115,6 +132,40 @@
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
             70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Calendar Grid Style */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day-head {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 0;
+            color: #64748b;
+        }
+        .calendar-cell {
+            min-height: 54px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .calendar-cell:hover {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+        }
+        .calendar-cell.other-month {
+            opacity: 0.3;
+            background-color: #f1f5f9;
         }
     </style>
 </head>
@@ -217,7 +268,7 @@
         </div>
     </div>
 
-    <!-- 항목 커스텀 관리 모달 (수입/고정비/변동비 공용) -->
+    <!-- 항목 커스텀 관리 모달 -->
     <div id="categoryManageModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-5 space-y-4 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
@@ -236,6 +287,20 @@
 
             <button onclick="closeCategoryModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
                 완료 및 닫기
+            </button>
+        </div>
+    </div>
+
+    <!-- 특정 일자 상세 모달 -->
+    <div id="dayDetailModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-md p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                <h3 id="dayDetailTitle" class="text-sm font-bold text-slate-900">📅 특정 날짜 내역</h3>
+                <button onclick="closeDayDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="dayDetailContent" class="space-y-2 max-h-60 overflow-y-auto"></div>
+            <button onclick="closeDayDetailModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                닫기
             </button>
         </div>
     </div>
@@ -388,7 +453,43 @@
             </div>
         </section>
 
-        <!-- 🛒 Coupang Partners Dynamic Banner Section -->
+        <!-- Live Ledger History List & Calendar Section -->
+        <section class="ios-card space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-list-check text-blue-500"></i> 수입 및 지출 상세 내역
+                </h3>
+                <div class="flex gap-1">
+                    <button onclick="switchHistoryView('table')" id="subtab-table" class="sub-tab-btn active">
+                        <i class="fa-solid fa-table-list mr-1"></i>목록 보기
+                    </button>
+                    <button onclick="switchHistoryView('calendar')" id="subtab-calendar" class="sub-tab-btn">
+                        <i class="fa-solid fa-calendar-days mr-1"></i>달력 보기
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table View -->
+            <div id="history-table-view">
+                <div id="history-container"></div>
+            </div>
+
+            <!-- Calendar View -->
+            <div id="history-calendar-view" class="hidden">
+                <div class="calendar-grid mb-1">
+                    <div class="calendar-day-head text-rose-500">일</div>
+                    <div class="calendar-day-head">월</div>
+                    <div class="calendar-day-head">화</div>
+                    <div class="calendar-day-head">수</div>
+                    <div class="calendar-day-head">목</div>
+                    <div class="calendar-day-head">금</div>
+                    <div class="calendar-day-head text-blue-500">토</div>
+                </div>
+                <div id="calendar-grid-container" class="calendar-grid"></div>
+            </div>
+        </section>
+
+        <!-- 🛒 Coupang Partners Dynamic Banner Section (화면 최하단으로 이동) -->
         <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
             <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
@@ -415,17 +516,6 @@
                     이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
                 </p>
             </div>
-        </section>
-
-        <!-- Live Ledger History List -->
-        <section class="ios-card space-y-3">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
-                <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <i class="fa-solid fa-list-check text-blue-500"></i> 수입 및 지출 상세 내역
-                </h3>
-                <span id="historyCount" class="text-[11px] text-slate-400">0건</span>
-            </div>
-            <div id="history-container"></div>
         </section>
 
         <!-- Footer -->
@@ -473,6 +563,7 @@
         let storeConfig = null;
         let dbData = [];
         let currentTab = 'sales';
+        let currentHistoryView = 'table';
         let expenseChartObj = null;
         let recognition = null;
         let activeManageCategoryType = 'sales';
@@ -493,6 +584,22 @@
 
         function closeUserInfoModal() {
             document.getElementById('userInfoModal').classList.add('hidden');
+        }
+
+        function switchHistoryView(view) {
+            currentHistoryView = view;
+            if (view === 'table') {
+                document.getElementById('history-table-view').classList.remove('hidden');
+                document.getElementById('history-calendar-view').classList.add('hidden');
+                document.getElementById('subtab-table').classList.add('active');
+                document.getElementById('subtab-calendar').classList.remove('active');
+            } else {
+                document.getElementById('history-table-view').classList.add('hidden');
+                document.getElementById('history-calendar-view').classList.remove('hidden');
+                document.getElementById('subtab-table').classList.remove('active');
+                document.getElementById('subtab-calendar').classList.add('active');
+                renderCalendarView();
+            }
         }
 
         // 항목 커스텀 관리 모달
@@ -1146,15 +1253,16 @@
             document.getElementById('profitMargin').innerText = margin + '%';
 
             renderChart(categories);
-            renderHistorySection();
+            if (currentHistoryView === 'table') {
+                renderHistorySection();
+            } else {
+                renderCalendarView();
+            }
         }
 
         function renderHistorySection() {
             const container = document.getElementById('history-container');
-            const countEl = document.getElementById('historyCount');
             const filtered = getFilteredData();
-
-            countEl.innerText = `${filtered.length}건`;
 
             if (filtered.length === 0) {
                 container.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">등록된 내역이 없습니다.</p>`;
@@ -1197,6 +1305,96 @@
 
             html += `</tbody></table></div>`;
             container.innerHTML = html;
+        }
+
+        // 📅 달력 뷰 연동 함수
+        function renderCalendarView() {
+            const container = document.getElementById('calendar-grid-container');
+            const year = parseInt(document.getElementById('yearSelect').value);
+            const monthVal = document.getElementById('monthSelect').value;
+
+            if (monthVal === 'ALL') {
+                container.innerHTML = `<div class="col-span-7 text-center text-xs text-slate-400 py-8">월(1월~12월)을 선택하시면 달력이 활성화됩니다.</div>`;
+                return;
+            }
+
+            const month = parseInt(monthVal) - 1; // 0-indexed
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+
+            // 특정 날짜별 데이터 집계
+            const dayMap = {};
+            const filtered = getFilteredData();
+            filtered.forEach(item => {
+                const dayNum = parseInt(item.date.split('-')[2]);
+                if (!dayMap[dayNum]) dayMap[dayNum] = { sales: 0, expense: 0, items: [] };
+                if (item.type === 'sales') dayMap[dayNum].sales += item.amount;
+                else dayMap[dayNum].expense += item.amount;
+                dayMap[dayNum].items.push(item);
+            });
+
+            let html = '';
+
+            // 이전 달 빈 셀
+            for (let i = 0; i < firstDayIndex; i++) {
+                html += `<div class="calendar-cell other-month"></div>`;
+            }
+
+            // 현재 달 날짜 셀
+            for (let d = 1; d <= lastDate; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayData = dayMap[d];
+
+                let cellContent = '';
+                if (dayData) {
+                    if (dayData.sales > 0) {
+                        cellContent += `<div class="text-[9px] font-bold text-emerald-600 leading-tight">+${(dayData.sales/10000).toFixed(0)}만</div>`;
+                    }
+                    if (dayData.expense > 0) {
+                        cellContent += `<div class="text-[9px] font-bold text-rose-500 leading-tight">-${(dayData.expense/10000).toFixed(0)}만</div>`;
+                    }
+                }
+
+                html += `
+                    <div class="calendar-cell" onclick="openDayDetailModal('${dateStr}')">
+                        <div class="text-[11px] font-bold text-slate-700">${d}</div>
+                        <div class="space-y-0.5">${cellContent}</div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function openDayDetailModal(dateStr) {
+            const dayEntries = dbData.filter(item => item.date === dateStr);
+            document.getElementById('dayDetailTitle').innerText = `📅 ${dateStr} 상세 내역`;
+            
+            const container = document.getElementById('dayDetailContent');
+            if (dayEntries.length === 0) {
+                container.innerHTML = `<p class="text-center text-xs text-slate-400 py-4">등록된 수입/지출 내역이 없습니다.</p>`;
+            } else {
+                let html = '';
+                dayEntries.forEach(item => {
+                    const isSales = item.type === 'sales';
+                    html += `
+                        <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl text-xs">
+                            <div>
+                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isSales ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}">${isSales ? '수입' : '지출'}</span>
+                                <span class="font-bold text-slate-800 ml-1">${item.category}</span>
+                                ${item.memo ? `<span class="text-[10px] text-slate-400"> (${item.memo})</span>` : ''}
+                            </div>
+                            <span class="font-bold ${isSales ? 'text-emerald-600' : 'text-rose-600'}">${item.amount.toLocaleString()}원</span>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
+            document.getElementById('dayDetailModal').classList.remove('hidden');
+        }
+
+        function closeDayDetailModal() {
+            document.getElementById('dayDetailModal').classList.add('hidden');
         }
 
         function renderChart(categoryMap) {
