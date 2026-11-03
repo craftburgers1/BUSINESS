@@ -388,16 +388,27 @@
             </div>
         </section>
 
-        <!-- 🛒 Coupang Partners Banner Section -->
+        <!-- 🛒 Coupang Partners Dynamic Banner Section -->
         <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
             <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                    🛒 식자재 / 생필품 쿠팡 최저가 검색
+                    🛒 고객 관심 맞춤 상품 추천 (쿠팡)
                 </span>
                 <span class="text-[10px] text-slate-400">쿠팡 파트너스 연동</span>
             </div>
-            <div class="w-full flex justify-center items-center bg-white py-1">
-                <iframe src="https://coupa.ng/cqB5La" width="100%" height="75" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe>
+            <div class="w-full flex justify-center items-center bg-white py-2 overflow-x-auto">
+                <script src="https://ads-partners.coupang.com/g.js"></script>
+                <script>
+                    new PartnersCoupang.G({
+                        "id": 1046008,
+                        "template": "carousel",
+                        "trackingCode": "AF4185384",
+                        "subId": "craftburgers",
+                        "width": "680",
+                        "height": "140",
+                        "tsource": ""
+                    });
+                </script>
             </div>
             <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-center">
                 <p class="text-[9px] text-slate-400">
@@ -457,14 +468,14 @@
 
     <!-- Application Script -->
     <script>
-        const COUPANG_SUB_ID = "cqB5La";
+        const COUPANG_TRACKING_CODE = "AF4185384";
         let currentUser = null;
         let storeConfig = null;
         let dbData = [];
         let currentTab = 'sales';
         let expenseChartObj = null;
         let recognition = null;
-        let activeManageCategoryType = 'sales'; // 'sales', 'fixed', 'variable'
+        let activeManageCategoryType = 'sales';
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
 
@@ -484,7 +495,7 @@
             document.getElementById('userInfoModal').classList.add('hidden');
         }
 
-        // 항목 커스텀 관리 모달 (수입/고정비/변동비)
+        // 항목 커스텀 관리 모달
         function openCategoryModal(type) {
             activeManageCategoryType = type;
             const titleEl = document.getElementById('categoryModalTitle');
@@ -566,7 +577,7 @@
 
         function openCoupangSearch(keyword) {
             const cleanKeyword = encodeURIComponent(keyword);
-            const coupangUrl = `https://www.coupang.com/np/search?q=${cleanKeyword}&lptag=${COUPANG_SUB_ID}`;
+            const coupangUrl = `https://www.coupang.com/np/search?q=${cleanKeyword}&lptag=${COUPANG_TRACKING_CODE}&subid=craftburgers`;
             window.open(coupangUrl, '_blank');
         }
 
