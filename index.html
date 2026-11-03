@@ -121,7 +121,6 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
         }
 
-        /* Calendar grid layout */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -253,7 +252,7 @@
                 <textarea id="postContent" rows="2" placeholder="앱 사용 피드백, 불편한 점, 기능 추가 요청 등을 자유롭게 남겨주세요." required class="w-full text-xs rounded-xl p-2.5 resize-none"></textarea>
                 <div class="flex items-center justify-between pt-0.5">
                     <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-medium">
-                        <input type="checkbox" id="postIsPrivate" onchange="togglePwNotice()" class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5">
+                        <input type="checkbox" id="postIsPrivate" class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5">
                         <span>🔒 비공개글 (작성자/관리자만 보기)</span>
                     </label>
                     <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-sm transition">
@@ -428,7 +427,7 @@
             </div>
         </section>
 
-        <!-- 🔍 쿠팡 파트너스 최저가 검색 배너 (그래프 바로 밑 위치) -->
+        <!-- 🔍 쿠팡 파트너스 최저가 검색 배너 -->
         <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
             <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
@@ -446,7 +445,7 @@
             </div>
         </section>
 
-        <!-- 수입 및 지출 상세 내역 (📅 달력 보기가 기본으로 첫 화면 노출) -->
+        <!-- 수입 및 지출 상세 내역 -->
         <section class="ios-card space-y-3">
             <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-2.5 gap-2">
                 <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -454,7 +453,6 @@
                 </h3>
                 
                 <div class="flex items-center gap-2">
-                    <!-- 서브 탭 : 달력 기본 active 설정 -->
                     <div class="flex bg-slate-100 p-0.5 rounded-lg">
                         <button onclick="switchHistoryView('calendar')" id="subtab-calendar" class="sub-tab-btn active">
                             <i class="fa-solid fa-calendar-days mr-1"></i>달력
@@ -471,7 +469,7 @@
             <div id="history-container"></div>
         </section>
 
-        <!-- 🛒 Coupang Partners Dynamic Banner Section (화면 최하단 배치) -->
+        <!-- 🛒 Coupang Partners Dynamic Banner Section -->
         <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
             <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
@@ -597,6 +595,7 @@
 
         async function loadBoardPosts() {
             try {
+                if (!window.firebaseDb) return;
                 const snap = await window.getDocs(window.collection(window.firebaseDb, "community_board"));
                 boardPosts = [];
                 snap.forEach(docSnap => {
@@ -610,6 +609,8 @@
 
         function renderBoardList() {
             const container = document.getElementById('boardListContainer');
+            if (!container) return;
+            
             if (boardPosts.length === 0) {
                 container.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">등록된 게시글이 없습니다. 첫 의견을 남겨주세요!</p>`;
                 return;
