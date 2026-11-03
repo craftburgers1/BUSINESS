@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>가게손익앱 - 자영업 사장님 스마트 장부</title>
+    <title>스마트 장부 & 가계부 - 손익/수입지출 관리</title>
     
     <!-- iOS & PWA Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,7 +15,6 @@
     <!-- CSS & Icon CDNs -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Firebase SDK (v10 Modular) -->
@@ -97,6 +96,20 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
+        .sub-tab-btn {
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            background: #f1f5f9;
+            transition: all 0.15s ease;
+        }
+        .sub-tab-btn.active {
+            background-color: #0f172a;
+            color: #ffffff;
+        }
+
         input, select { 
             background-color: #f8fafc !important; 
             color: #0f172a !important; 
@@ -116,6 +129,12 @@
             70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
     </style>
 </head>
 <body>
@@ -127,8 +146,8 @@
                 📈
             </div>
             <div>
-                <h2 class="text-xl font-bold text-slate-900">가게손익앱 시작하기</h2>
-                <p class="text-xs text-slate-500 mt-1">로그인하시면 어느 기기에서나 사장님 전용 데이터가 실시간 연동됩니다.</p>
+                <h2 class="text-xl font-bold text-slate-900">손익장부 & 가계부 시작하기</h2>
+                <p class="text-xs text-slate-500 mt-1">로그인하시면 어느 기기에서나 전용 데이터가 실시간 연동됩니다.</p>
             </div>
 
             <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-left space-y-1.5">
@@ -160,7 +179,6 @@
             <div class="overflow-y-auto space-y-3 text-xs text-slate-600 pr-1 flex-1 leading-relaxed">
                 <p>1. 개인정보 수집 및 이용 목적: 사용자 식별 및 장부 데이터 실시간 동기화</p>
                 <p>2. 수집 항목: Google 이메일 주소 및 UID, 사용자가 작성한 지출/수입 내역</p>
-                <p>3. 개인정보의 보유 및 이용 기간: 회원 탈퇴 시까지 안전하게 보관되며 탈퇴 즉시 파기됩니다.</p>
             </div>
             <button onclick="closePrivacyModal()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md">
                 확인 및 닫기
@@ -168,39 +186,42 @@
         </div>
     </div>
 
-    <!-- Store Setup Wizard Modal -->
-    <div id="wizardModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
-        <div class="ios-card bg-white w-full max-w-sm p-6 space-y-4 shadow-2xl">
-            <div class="text-center">
-                <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto text-2xl mb-2">
-                    <i class="fa-solid fa-store"></i>
-                </div>
-                <h2 class="text-lg font-bold text-slate-900">가게 설정 및 맞춤 템플릿</h2>
-                <p class="text-xs text-slate-500 mt-1">상호명과 업종을 선택하시면 맞춤 지출 항목이 세팅됩니다.</p>
+    <!-- 👤 내정보 모달 -->
+    <div id="userInfoModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-sm p-6 space-y-5 text-center shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-user-gear text-blue-500 mr-1.5"></i>내정보 & 계정 관리</h3>
+                <button onclick="closeUserInfoModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-
-            <div class="space-y-3 pt-2">
-                <div>
-                    <label class="text-xs font-semibold text-slate-700 mb-1 block">가게 이름 (상호명)</label>
-                    <input type="text" id="setupStoreName" placeholder="예: 더크래프트버거 세종도담점" class="w-full text-xs rounded-xl p-3 border border-slate-300">
+            <div class="space-y-3">
+                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto text-3xl border-2 border-blue-200">
+                    <i class="fa-solid fa-user"></i>
                 </div>
                 <div>
-                    <label class="text-xs font-semibold text-slate-700 mb-1 block">업종 템플릿 선택</label>
-                    <select id="setupIndustry" class="w-full text-xs rounded-xl p-3 border border-slate-300">
-                        <option value="korean">🍱 한식 / 정식 / 식당</option>
-                        <option value="western">🍝 양식 / 파스타 / 버거</option>
-                        <option value="japanese">🍣 일식 / 초밥 / 돈까스</option>
-                        <option value="bunsik">떡 분식 / 야식 / 분식집</option>
-                        <option value="meat">🥩 고깃집 / 삼겹살 / 구이</option>
-                        <option value="hof">🍺 호프집 / 주점 / 포차</option>
-                        <option value="cafe">☕ 카페 / 디저트 / 베이커리</option>
-                        <option value="general">✂️ 미용 / 뷰티 / 일반 자영업</option>
-                    </select>
+                    <span class="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">Google 계정 로그인 중</span>
+                    <p id="modalUserEmail" class="text-sm font-bold text-slate-800 mt-1.5 break-all">user@gmail.com</p>
                 </div>
-                <button onclick="saveStoreOnboarding()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
-                    저장 및 장부 적용하기
+            </div>
+            <div class="space-y-2 pt-1">
+                <button onclick="handleLogout()" class="w-full py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-right-from-bracket"></i> 로그아웃
+                </button>
+                <button onclick="closeUserInfoModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                    닫기
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- 특정 날짜 상세내역 모달 -->
+    <div id="dayDetailModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                <h3 id="dayDetailTitle" class="text-xs font-bold text-slate-900">📅 날짜 상세 내역</h3>
+                <button onclick="closeDayDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="dayDetailList" class="overflow-y-auto flex-1 space-y-2 text-xs"></div>
+            <button onclick="closeDayDetailModal()" class="w-full py-2 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
         </div>
     </div>
 
@@ -213,38 +234,31 @@
 
     <!-- Header Navigation -->
     <header class="sticky top-0 z-30 ios-header px-4 py-3.5 flex justify-between items-center">
-        <div class="flex items-center gap-2.5 cursor-pointer" onclick="openWizardModal()">
+        <div class="flex items-center gap-2.5">
             <div class="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-base shadow-sm">
                 📈
             </div>
             <div>
-                <div class="flex items-center gap-1.5">
-                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight">가게손익앱</h1>
-                    <i class="fa-solid fa-pen text-[10px] text-slate-400"></i>
-                </div>
-                <p id="displayIndustry" class="text-xs text-slate-500">클릭하여 상호명/업종 변경</p>
+                <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight">스마트 장부</h1>
+                <p id="displayIndustry" class="text-xs text-slate-500">Gemini AI 연동 스마트 가계부</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <button onclick="startVoiceRecognition()" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 hover:bg-rose-100 transition flex items-center gap-1">
+            <button onclick="startVoiceRecognition()" id="micHeaderBtn" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 hover:bg-rose-100 transition flex items-center gap-1">
                 <i class="fa-solid fa-microphone"></i> 음성 AI
             </button>
-            <button onclick="handleLogout()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold border border-slate-200">
-                로그아웃
+            <button onclick="openUserInfoModal()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 flex items-center gap-1 transition">
+                <i class="fa-solid fa-circle-user text-blue-600 text-sm"></i> 내정보
             </button>
         </div>
     </header>
 
     <!-- Main Container -->
     <main class="max-w-4xl mx-auto px-4 pt-4 space-y-4">
-
         <!-- Date Selection Filter -->
         <section class="ios-card flex flex-wrap gap-2 justify-between items-center">
             <div class="flex items-center gap-2 w-full sm:w-auto">
-                <select id="yearSelect" onchange="renderDashboard()" class="text-xs font-semibold rounded-xl px-3 py-2">
-                    <option value="2026">2026년</option>
-                    <option value="2025">2025년</option>
-                </select>
+                <select id="yearSelect" onchange="renderDashboard()" class="text-xs font-semibold rounded-xl px-3 py-2"></select>
                 <select id="monthSelect" onchange="renderDashboard()" class="text-xs font-semibold rounded-xl px-3 py-2 flex-1">
                     <option value="ALL">📅 연간 전체 (1년 누적)</option>
                     <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option>
@@ -253,13 +267,13 @@
                     <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
                 </select>
             </div>
-            <span class="text-[11px] text-slate-500"><i class="fa-solid fa-cloud text-blue-500 mr-1"></i>클라우드 안전 동기화 중</span>
+            <span class="text-[11px] text-slate-500"><i class="fa-solid fa-cloud text-blue-500 mr-1"></i>Gemini AI 분석 탑재</span>
         </section>
 
         <!-- KPI Summary Cards -->
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="ios-card border-l-4 border-blue-500">
-                <p class="text-[11px] font-semibold text-slate-400">총 매출</p>
+                <p class="text-[11px] font-semibold text-slate-400">총 수입(매출)</p>
                 <p id="totalSales" class="text-lg font-bold text-slate-900 mt-1">0원</p>
             </div>
             <div class="ios-card border-l-4 border-rose-500">
@@ -267,24 +281,35 @@
                 <p id="totalExpense" class="text-lg font-bold text-rose-600 mt-1">0원</p>
             </div>
             <div class="ios-card border-l-4 border-emerald-500">
-                <p class="text-[11px] font-semibold text-slate-400">순이익</p>
+                <p class="text-[11px] font-semibold text-slate-400">순잔액(순이익)</p>
                 <p id="netProfit" class="text-lg font-bold text-emerald-600 mt-1">0원</p>
             </div>
             <div class="ios-card border-l-4 border-amber-500">
-                <p class="text-[11px] font-semibold text-slate-400">순이익률</p>
+                <p class="text-[11px] font-semibold text-slate-400">저축/이익률</p>
                 <p id="profitMargin" class="text-lg font-bold text-amber-600 mt-1">0%</p>
             </div>
         </section>
 
-        <!-- AI Quick Entry Bar (Voice & OCR) -->
+        <!-- 수동 입력 폼 -->
+        <section class="ios-card">
+            <div class="flex border-b border-slate-100 pb-3 gap-1 overflow-x-auto">
+                <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn active">수입/매출 입력</button>
+                <button onclick="switchTab('fixed')" id="tab-fixed" class="tab-btn">고정비 입력</button>
+                <button onclick="switchTab('variable')" id="tab-variable" class="tab-btn">변동비/생활비 입력</button>
+            </div>
+
+            <div id="form-container" class="mt-4"></div>
+        </section>
+
+        <!-- Gemini AI Quick Entry Bar -->
         <section class="ios-card bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between border-none shadow-md">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </div>
                 <div>
-                    <h3 class="text-xs font-bold">AI 음성 및 영수증 간편 입력</h3>
-                    <p class="text-[11px] text-blue-100">말씀하시거나 영수증 사진을 찍어 자동 등록하세요</p>
+                    <h3 class="text-xs font-bold">Gemini AI 빠른 입력</h3>
+                    <p class="text-[11px] text-blue-100">말하거나 영수증 촬영으로 자동 인식</p>
                 </div>
             </div>
             <div class="flex gap-1.5">
@@ -297,17 +322,6 @@
             </div>
         </section>
 
-        <!-- Entry Form Navigation Tabs -->
-        <section class="ios-card">
-            <div class="flex border-b border-slate-100 pb-3 gap-1 overflow-x-auto">
-                <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn active">매출 입력</button>
-                <button onclick="switchTab('fixed')" id="tab-fixed" class="tab-btn">고정비 입력</button>
-                <button onclick="switchTab('variable')" id="tab-variable" class="tab-btn">식자재/변동비 입력</button>
-            </div>
-
-            <div id="form-container" class="mt-4"></div>
-        </section>
-
         <!-- Chart Section -->
         <section class="ios-card space-y-2">
             <h3 id="chartTitle" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
@@ -318,66 +332,53 @@
             </div>
         </section>
 
-        <!-- 🛒 Coupang Partners Banner Section (Placed right after Chart) -->
-        <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
-            <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                    🛒 식자재/소모품 쿠팡 최저가 검색
-                </span>
-                <span class="text-[10px] text-slate-400">쿠팡 파트너스</span>
-            </div>
-            <div class="w-full flex justify-center items-center bg-white py-1">
-                <iframe src="https://coupa.ng/cqB5La" width="100%" height="75" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe>
-            </div>
-            <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-center">
-                <p class="text-[9px] text-slate-400">
-                    이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
-                </p>
-            </div>
-        </section>
-
-        <!-- Live Ledger History List -->
+        <!-- 상세 내역 -->
         <section class="ios-card space-y-3">
-            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+            <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-2.5 gap-2">
                 <h3 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <i class="fa-solid fa-list-check text-blue-500"></i> 매출 및 지출 상세 내역
+                    <i class="fa-solid fa-list-check text-blue-500"></i> 수입 및 지출 상세 내역
                 </h3>
-                <span id="historyCount" class="text-[11px] text-slate-400">0건</span>
+                
+                <div class="flex items-center gap-2">
+                    <div class="flex bg-slate-100 p-0.5 rounded-lg">
+                        <button onclick="switchHistoryView('calendar')" id="subtab-calendar" class="sub-tab-btn active">
+                            <i class="fa-solid fa-calendar-days mr-1"></i>달력
+                        </button>
+                        <button onclick="switchHistoryView('list')" id="subtab-list" class="sub-tab-btn">
+                            <i class="fa-solid fa-list mr-1"></i>목록
+                        </button>
+                    </div>
+                    <span id="historyCount" class="text-[11px] text-slate-400">0건</span>
+                </div>
             </div>
+
             <div id="history-container"></div>
         </section>
-
     </main>
 
-    <!-- Footer Policy Notice -->
-    <footer class="max-w-4xl mx-auto px-4 py-6 text-center text-slate-400 text-[10px] space-y-1">
-        <p>가게손익앱 | 자영업 사장님을 위한 스마트 클라우드 장부</p>
-        <p>이 앱의 쿠팡 링크 및 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>
-    </footer>
-
     <!-- OCR Receipt Modal -->
-    <div id="ocrModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div id="ocrModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-md p-5 space-y-4 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                <h3 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-receipt text-blue-500 mr-2"></i>AI 영수증 스캔</h3>
+                <h3 class="text-sm font-bold text-slate-900"><i class="fa-solid fa-receipt text-blue-500 mr-2"></i>Gemini 영수증 AI 스캔</h3>
                 <button onclick="closeOcrModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             
-            <input type="file" id="receiptInput" accept="image/*" capture="environment" class="hidden" onchange="processReceipt(event)">
+            <input type="file" id="receiptInput" accept="image/*" capture="environment" class="hidden" onchange="processReceiptWithGemini(event)">
             
             <div onclick="document.getElementById('receiptInput').click()" class="border-2 border-dashed border-slate-200 hover:border-blue-500 rounded-2xl p-6 text-center cursor-pointer bg-slate-50">
                 <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-400 mb-2"></i>
                 <p class="text-xs font-semibold text-slate-700">영수증 이미지 선택 또는 사진 촬영</p>
-                <p class="text-[10px] text-slate-400 mt-1">AI가 자동으로 금액과 날짜를 추출합니다</p>
+                <p class="text-[10px] text-slate-400 mt-1">Gemini AI가 날짜, 금액, 품목을 정확히 인식합니다</p>
             </div>
 
             <div id="ocrProgress" class="hidden space-y-2">
                 <div class="flex justify-between text-xs text-slate-500">
-                    <span>영수증 AI 분석 중...</span>
-                    <span id="ocrPercent">0%</span>
+                    <span>Gemini API 분석 중...</span>
+                    <span id="ocrPercent">인식 중</span>
                 </div>
                 <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                    <div id="ocrBar" class="bg-blue-600 h-2 rounded-full w-0 transition-all"></div>
+                    <div id="ocrBar" class="bg-blue-600 h-2 rounded-full w-full animate-pulse"></div>
                 </div>
             </div>
         </div>
@@ -385,13 +386,17 @@
 
     <!-- Application Script -->
     <script>
-        const COUPANG_TRACKING_ID = "cqB5La";
+        // 사용자 API 키 적용
+        const GEMINI_API_KEY = "AQ.Ab8RN6J6sswFt71S_szzxD7OTK9OW7L1u_pTjs2UqP5x1o7cWw";
+
         let currentUser = null;
-        let storeConfig = null;
         let dbData = [];
         let currentTab = 'sales';
+        let currentHistoryView = 'calendar';
         let expenseChartObj = null;
         let recognition = null;
+        let calendarYear = new Date().getFullYear();
+        let calendarMonth = new Date().getMonth() + 1;
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
 
@@ -399,8 +404,158 @@
         function closePrivacyModal() { document.getElementById('privacyModal').classList.add('hidden'); }
         function openOcrModal() { document.getElementById('ocrModal').classList.remove('hidden'); }
         function closeOcrModal() { document.getElementById('ocrModal').classList.add('hidden'); }
+        function openUserInfoModal() {
+            if (currentUser) {
+                document.getElementById('modalUserEmail').innerText = currentUser.email || '구글 계정 정보 없음';
+            }
+            document.getElementById('userInfoModal').classList.remove('hidden');
+        }
+        function closeUserInfoModal() { document.getElementById('userInfoModal').classList.add('hidden'); }
+        function closeDayDetailModal() { document.getElementById('dayDetailModal').classList.add('hidden'); }
 
-        // Speech Recognition Setup
+        function initYearAndMonthOptions() {
+            const yearSelect = document.getElementById('yearSelect');
+            const monthSelect = document.getElementById('monthSelect');
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonthStr = (now.getMonth() + 1).toString().padStart(2, '0');
+
+            yearSelect.innerHTML = '';
+            for (let y = 2020; y <= 2040; y++) {
+                const opt = document.createElement('option');
+                opt.value = y.toString();
+                opt.innerText = y + '년';
+                if (y === currentYear) opt.selected = true;
+                yearSelect.appendChild(opt);
+            }
+            monthSelect.value = currentMonthStr;
+        }
+
+        // Gemini API 호출 - 영수증 이미지 분석
+        async function processReceiptWithGemini(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('ocrProgress').classList.remove('hidden');
+
+            try {
+                const base64Data = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(file);
+                });
+
+                const promptText = `이 영수증 이미지를 분석하여 JSON 형식으로만 응답해줘. 
+                형식: {"date": "YYYY-MM-DD", "amount": 숫자, "category": "항목명", "memo": "적요/내용"}
+                날짜를 찾지 못하면 "${getTodayStr()}"를 사용해. 다른 설명 문구 없이 오직 유효한 JSON 문자열만 출력해.`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: promptText },
+                                { inline_data: { mime_type: file.type || "image/jpeg", data: base64Data } }
+                            ]
+                        }]
+                    })
+                });
+
+                const result = await response.json();
+                document.getElementById('ocrProgress').classList.add('hidden');
+                closeOcrModal();
+
+                const rawText = result.candidates[0].content.parts[0].text.replace(/```json|```/g, "").trim();
+                const parsed = JSON.parse(rawText);
+
+                if (confirm(`Gemini AI 영수증 분석 완료:\n- 날짜: ${parsed.date}\n- 금액: ${Number(parsed.amount).toLocaleString()}원\n- 항목: ${parsed.category}\n- 메모: ${parsed.memo}\n\n등록하시겠습니까?`)) {
+                    const newEntry = {
+                        id: Date.now().toString(),
+                        type: 'variable',
+                        date: parsed.date || getTodayStr(),
+                        category: parsed.category || '기타 변동비',
+                        amount: Number(parsed.amount) || 0,
+                        memo: parsed.memo || 'Gemini 영수증 등록'
+                    };
+
+                    if (currentUser) {
+                        await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
+                    }
+                    dbData.push(newEntry);
+                    renderDashboard();
+                    alert('저장되었습니다.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Gemini AI 인식 중 오류가 발생했습니다: ' + err.message);
+                document.getElementById('ocrProgress').classList.add('hidden');
+            }
+        }
+
+        // Gemini API 호출 - 음성/문장 텍스트 분석
+        async function processVoiceTranscriptWithGemini(text) {
+            try {
+                const promptText = `다음 입력 문장을 분석하여 지출/수입 데이터 JSON으로 반환해줘. 문장: "${text}"
+                형식: {"type": "sales" 또는 "variable" 또는 "fixed", "amount": 숫자, "category": "항목명", "memo": "메모 내용"}
+                다른 문장 없이 JSON 응답만 출력해.`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }]
+                    })
+                });
+
+                const result = await response.json();
+                const rawText = result.candidates[0].content.parts[0].text.replace(/```json|```/g, "").trim();
+                const parsed = JSON.parse(rawText);
+
+                if (confirm(`Gemini 음성 분석 결과:\n- 유형: ${parsed.type === 'sales' ? '수입' : '지출'}\n- 항목: ${parsed.category}\n- 금액: ${Number(parsed.amount).toLocaleString()}원\n- 메모: ${parsed.memo}\n\n등록할까요?`)) {
+                    const newEntry = {
+                        id: Date.now().toString(),
+                        type: parsed.type || 'variable',
+                        date: getTodayStr(),
+                        category: parsed.category || '기타',
+                        amount: Number(parsed.amount) || 0,
+                        memo: parsed.memo || text
+                    };
+
+                    if (currentUser) {
+                        await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
+                    }
+                    dbData.push(newEntry);
+                    renderDashboard();
+                    alert('저장되었습니다.');
+                }
+            } catch (err) {
+                console.error(err);
+                // Gemini 통신 오류 시 백업 룰 적용
+                const numMatch = text.match(/(\d+)\s*(만|천)?\s*원?/);
+                let amount = 50000;
+                if (numMatch) {
+                    let num = parseInt(numMatch[1]);
+                    if (numMatch[2] === '만') num *= 10000;
+                    else if (numMatch[2] === '천') num *= 1000;
+                    amount = num;
+                }
+                const newEntry = {
+                    id: Date.now().toString(),
+                    type: 'variable',
+                    date: getTodayStr(),
+                    category: '기타 변동비',
+                    amount: amount,
+                    memo: text
+                };
+                if (currentUser) {
+                    await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
+                }
+                dbData.push(newEntry);
+                renderDashboard();
+            }
+        }
+
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognition) {
@@ -415,7 +570,7 @@
                 recognition.onresult = function(event) {
                     const transcript = event.results[0][0].transcript;
                     stopVoiceRecognition();
-                    parseVoiceAndSave(transcript);
+                    processVoiceTranscriptWithGemini(transcript);
                 };
                 recognition.onerror = function(event) {
                     stopVoiceRecognition();
@@ -429,8 +584,8 @@
 
         function startVoiceRecognition() {
             if (!recognition) {
-                const input = prompt("음성 인식을 지원하지 않는 브라우저입니다. 내역을 직접 입력해주세요:\n(예: '식자재 마트 5만 원 결제')");
-                if (input) parseVoiceAndSave(input);
+                const input = prompt("음성 인식을 지원하지 않는 환경입니다. 내역을 직접 입력하세요:\n(예: '식자재 마트 5만 원 결제했어')");
+                if (input) processVoiceTranscriptWithGemini(input);
                 return;
             }
             try { recognition.start(); } catch (e) { recognition.stop(); }
@@ -441,48 +596,11 @@
             if (recognition) { try { recognition.stop(); } catch(e){} }
         }
 
-        async function parseVoiceAndSave(text) {
-            const numMatch = text.match(/(\d+)\s*(만|천)?\s*원?/);
-            let amount = 50000;
-            if (numMatch) {
-                let num = parseInt(numMatch[1]);
-                if (numMatch[2] === '만') num *= 10000;
-                else if (numMatch[2] === '천') num *= 1000;
-                amount = num;
-            }
-
-            let type = 'variable';
-            let category = '기타 변동비';
-            if (text.includes('매출') || text.includes('입금') || text.includes('판매')) {
-                type = 'sales';
-                category = '일일 총매출';
-            } else if (text.includes('월세') || text.includes('임대료') || text.includes('관리비')) {
-                type = 'fixed';
-                category = '가게 임대료';
-            }
-
-            if (confirm(`음성 분석 결과:\n- 유형: ${type === 'sales' ? '매출' : '지출'}\n- 항목: ${category}\n- 금액: ${amount.toLocaleString()}원\n- 메모: ${text}\n\n장부에 등록하시겠습니까?`)) {
-                const newEntry = {
-                    id: Date.now().toString(),
-                    type: type,
-                    date: getTodayStr(),
-                    category: category,
-                    amount: amount,
-                    memo: text
-                };
-
-                if (currentUser) {
-                    await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
-                }
-                dbData.push(newEntry);
-                renderDashboard();
-                alert('등록되었습니다.');
-            }
-        }
-
-        // Auth Observer
+        // Firebase Auth Observer
         window.addEventListener('load', () => {
+            initYearAndMonthOptions();
             initSpeechRecognition();
+
             const checkAuth = setInterval(() => {
                 if (window.onAuthStateChanged) {
                     clearInterval(checkAuth);
@@ -523,21 +641,6 @@
         async function loadUserDataFromCloud() {
             if (!currentUser) return;
 
-            const configSnap = await window.getDocs(window.collection(window.firebaseDb, "users", currentUser.uid, "settings"));
-            let foundConfig = false;
-            configSnap.forEach(docSnap => {
-                if (docSnap.id === 'config') {
-                    storeConfig = docSnap.data();
-                    foundConfig = true;
-                }
-            });
-
-            if (!foundConfig) {
-                openWizardModal();
-            } else {
-                applyStoreConfigUI();
-            }
-
             const ledgerRef = window.collection(window.firebaseDb, "users", currentUser.uid, "ledger");
             const ledgerSnap = await window.getDocs(ledgerRef);
             dbData = [];
@@ -547,53 +650,6 @@
 
             switchTab('sales');
             renderDashboard();
-        }
-
-        function openWizardModal() { document.getElementById('wizardModal').classList.remove('hidden'); }
-
-        async function saveStoreOnboarding() {
-            const nameInput = document.getElementById('setupStoreName').value.trim();
-            const indKey = document.getElementById('setupIndustry').value;
-
-            if (!nameInput) {
-                alert('가게 이름을 입력해주세요!');
-                return;
-            }
-
-            const industryTemplates = {
-                korean: { icon: '🍱', name: '한식 / 정식 / 식당', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], variable: ['쌀/잡곡 매입', '육류/정육 식자재', '포장 용기', '배달앱 수수료'] },
-                western: { icon: '🍝', name: '양식 / 파스타 / 버거', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], variable: ['원육/정육/패티', '파스타/버거번', '포장 용기', '배달 수수료'] },
-                japanese: { icon: '🍣', name: '일식 / 초밥 / 돈까스', fixed: ['가게 임대료', '상가 관리비', '가스/수도 요금', '세무사 수수료'], variable: ['초밥용 횟감', '돈까스용 생고기', '튀김유', '포장 용기'] },
-                bunsik: { icon: '떡', name: '분식 / 야식 / 분식집', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무사 수수료'], variable: ['떡볶이 떡/어묵', '튀김 재료/식용유', '순대/내장', '포장 용기'] },
-                meat: { icon: '🥩', name: '고깃집 / 삼겹살 / 구이', fixed: ['가게 임대료', '상가 관리비', '가스/전기 요금', '세무사 수수료'], variable: ['돼지고기/삼겹살', '소고기/갈비', '숯/불판 소모품', '음료/주류'] },
-                hof: { icon: '🍺', name: '호프집 / 주점 / 포차', fixed: ['가게 임대료', '상가 관리비', '전기/가스 공과금', '세무사 수수료'], variable: ['생맥주/병맥주', '소주/하이볼', '안주 식재료', '포장 용기'] },
-                cafe: { icon: '☕', name: '카페 / 디저트 / 베이커리', fixed: ['가게 임대료', '상가 관리비', '전기/수도 요금', '세무 회계비용'], variable: ['원두', '우유/시럽', '베이커리 디저트', '테이크아웃 컵/빨대'] },
-                general: { icon: '✂️', name: '미용 / 뷰티 / 일반 자영업', fixed: ['매장 임대료', '상가 관리비', '전기/가스 공과금', '세무사 비용'], variable: ['소모품', '마케팅/광고비', '카드 수수료', '기타 변동비'] }
-            };
-
-            const template = industryTemplates[indKey] || industryTemplates.korean;
-            storeConfig = {
-                name: nameInput,
-                industryKey: indKey,
-                icon: template.icon,
-                industryName: template.name,
-                fixed: [...template.fixed],
-                variable: [...template.variable]
-            };
-
-            if (currentUser) {
-                await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), storeConfig);
-            }
-
-            document.getElementById('wizardModal').classList.add('hidden');
-            applyStoreConfigUI();
-            switchTab('sales');
-        }
-
-        function applyStoreConfigUI() {
-            if (!storeConfig) return;
-            document.getElementById('displayStoreName').innerText = storeConfig.name;
-            document.getElementById('displayIndustry').innerText = `${storeConfig.icon} ${storeConfig.industryName}`;
         }
 
         async function handleSaveEntry(e, type) {
@@ -643,8 +699,8 @@
 
             const container = document.getElementById('form-container');
             if (tab === 'sales') renderSalesForm(container);
-            else if (tab === 'fixed') renderExpenseForm(container, 'fixed', storeConfig ? storeConfig.fixed : []);
-            else if (tab === 'variable') renderExpenseForm(container, 'variable', storeConfig ? storeConfig.variable : []);
+            else if (tab === 'fixed') renderExpenseForm(container, 'fixed', ['임대료', '공과금', '인건비', '보험료', '기타 고정비']);
+            else if (tab === 'variable') renderExpenseForm(container, 'variable', ['식자재/장보기', '외식/배달', '소모품', '교통비', '기타 변동비']);
         }
 
         function renderSalesForm(container) {
@@ -656,24 +712,24 @@
                             <input type="date" id="inputDate" value="${getTodayStr()}" required class="w-full text-xs rounded-xl p-2.5">
                         </div>
                         <div>
-                            <label class="text-[11px] text-slate-500 font-medium">매출 구분</label>
+                            <label class="text-[11px] text-slate-500 font-medium">수입/매출 구분</label>
                             <select id="salesType" class="w-full text-xs rounded-xl p-2.5">
-                                <option value="일일 총매출">일일 통합 매출</option>
-                                <option value="홀 매출">홀 매출</option>
-                                <option value="배달 매출">배달 매출</option>
+                                <option value="일일 총매출">일일 총매출</option>
+                                <option value="월급 / 급여">월급 / 급여</option>
+                                <option value="부수입">부수입</option>
                             </select>
                         </div>
                     </div>
                     <div>
-                        <label class="text-[11px] text-slate-500 font-medium">매출 금액 (원)</label>
-                        <input type="number" id="inputAmount" placeholder="예: 850000" required class="w-full text-xs font-bold text-emerald-600 rounded-xl p-2.5">
+                        <label class="text-[11px] text-slate-500 font-medium">금액 (원)</label>
+                        <input type="number" id="inputAmount" placeholder="예: 3000000" required class="w-full text-xs font-bold text-emerald-600 rounded-xl p-2.5">
                     </div>
                     <div>
                         <label class="text-[11px] text-slate-500 font-medium">메모</label>
-                        <input type="text" id="inputMemo" placeholder="예: 토요일 단체 주문 포함" class="w-full text-xs rounded-xl p-2.5">
+                        <input type="text" id="inputMemo" placeholder="예: 입금 완료" class="w-full text-xs rounded-xl p-2.5">
                     </div>
                     <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-md">
-                        <i class="fa-solid fa-plus mr-1"></i> 클라우드 장부에 등록하기
+                        <i class="fa-solid fa-plus mr-1"></i> 수입/매출 등록하기
                     </button>
                 </form>
             `;
@@ -681,7 +737,6 @@
 
         function renderExpenseForm(container, type, categories) {
             const options = categories.map(c => `<option value="${c}">${c}</option>`).join('');
-
             container.innerHTML = `
                 <form onsubmit="handleSaveEntry(event, '${type}')" class="space-y-3">
                     <div class="grid grid-cols-2 gap-2">
@@ -699,8 +754,8 @@
                         <input type="number" id="inputAmount" placeholder="예: 155000" required class="w-full text-xs font-bold text-rose-600 rounded-xl p-2.5">
                     </div>
                     <div>
-                        <label class="text-[11px] text-slate-500 font-medium">적요 / 거래처</label>
-                        <input type="text" id="inputMemo" placeholder="예: 식자재 구매건" class="w-full text-xs rounded-xl p-2.5">
+                        <label class="text-[11px] text-slate-500 font-medium">적요 / 사용처</label>
+                        <input type="text" id="inputMemo" placeholder="예: 사용처 작성" class="w-full text-xs rounded-xl p-2.5">
                     </div>
                     <button type="submit" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition shadow-md">
                         <i class="fa-solid fa-minus mr-1"></i> 지출 내역 저장
@@ -744,6 +799,15 @@
             renderHistorySection();
         }
 
+        function switchHistoryView(view) {
+            currentHistoryView = view;
+            document.getElementById('subtab-list').classList.remove('active');
+            document.getElementById('subtab-calendar').classList.remove('active');
+            document.getElementById(`subtab-${view}`).classList.add('active');
+
+            renderHistorySection();
+        }
+
         function renderHistorySection() {
             const container = document.getElementById('history-container');
             const countEl = document.getElementById('historyCount');
@@ -751,6 +815,14 @@
 
             countEl.innerText = `${filtered.length}건`;
 
+            if (currentHistoryView === 'calendar') {
+                renderCalendarView(container);
+            } else {
+                renderListView(container, filtered);
+            }
+        }
+
+        function renderListView(container, filtered) {
             if (filtered.length === 0) {
                 container.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">등록된 내역이 없습니다.</p>`;
                 return;
@@ -765,9 +837,9 @@
                             <tr class="text-slate-400 border-b border-slate-100">
                                 <th class="pb-2 font-medium">날짜</th>
                                 <th class="pb-2 font-medium">구분</th>
-                                <th class="pb-2 font-medium">항목 / 적요</th>
+                                <th class="pb-2 font-medium">항목</th>
                                 <th class="pb-2 text-right font-medium">금액</th>
-                                <th class="pb-2 text-center font-medium">관리</th>
+                                <th class="pb-2 text-center font-medium">삭제</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -775,16 +847,11 @@
 
             filtered.forEach(item => {
                 const isSales = item.type === 'sales';
-                const coupangSearchUrl = `https://www.coupang.com/np/search?q=${encodeURIComponent(item.category)}&lptag=${COUPANG_TRACKING_ID}`;
-                
                 html += `
                     <tr>
                         <td class="py-2.5 text-slate-600 font-medium">${item.date}</td>
-                        <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] ${isSales ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}">${isSales ? '매출' : '지출'}</span></td>
-                        <td class="py-2.5 text-slate-900 font-medium">
-                            ${item.category} <span class="text-[10px] text-slate-400">${item.memo ? '('+item.memo+')' : ''}</span>
-                            ${!isSales ? `<br><a href="${coupangSearchUrl}" target="_blank" class="inline-flex items-center gap-1 text-[10px] bg-blue-50 text-blue-600 hover:bg-blue-100 px-1.5 py-0.5 rounded mt-1 font-semibold border border-blue-200"><i class="fa-solid fa-cart-shopping"></i> 쿠팡 최저가 검색</a>` : ''}
-                        </td>
+                        <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] ${isSales ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}">${isSales ? '수입' : '지출'}</span></td>
+                        <td class="py-2.5 text-slate-900 font-medium">${item.category} <span class="text-[10px] text-slate-400">${item.memo ? '('+item.memo+')' : ''}</span></td>
                         <td class="py-2.5 text-right font-bold ${isSales ? 'text-emerald-600' : 'text-rose-600'}">${item.amount.toLocaleString()}원</td>
                         <td class="py-2.5 text-center"><button onclick="deleteEntry('${item.id}')" class="text-slate-400 hover:text-rose-600 px-2 py-1"><i class="fa-solid fa-trash-can"></i></button></td>
                     </tr>
@@ -792,6 +859,58 @@
             });
 
             html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderCalendarView(container) {
+            const firstDayIndex = new Date(calendarYear, calendarMonth - 1, 1).getDay();
+            const lastDate = new Date(calendarYear, calendarMonth, 0).getDate();
+
+            const dayMap = {};
+            dbData.forEach(item => {
+                if (!item.date) return;
+                const p = item.date.split('-');
+                if (parseInt(p[0]) === calendarYear && parseInt(p[1]) === calendarMonth) {
+                    const day = parseInt(p[2]);
+                    if (!dayMap[day]) dayMap[day] = { sales: 0, expense: 0 };
+                    if (item.type === 'sales') dayMap[day].sales += item.amount;
+                    else dayMap[day].expense += item.amount;
+                }
+            });
+
+            let html = `
+                <div class="space-y-3">
+                    <div class="calendar-grid text-center text-[11px] font-bold text-slate-400 py-1 border-b border-slate-100">
+                        <span class="text-rose-500">일</span>
+                        <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span>
+                        <span class="text-blue-500">토</span>
+                    </div>
+                    <div class="calendar-grid">
+            `;
+
+            for (let i = 0; i < firstDayIndex; i++) {
+                html += `<div class="h-16 bg-slate-50/50 rounded-lg"></div>`;
+            }
+
+            for (let d = 1; d <= lastDate; d++) {
+                const dayData = dayMap[d];
+                const dayOfWeek = (firstDayIndex + d - 1) % 7;
+                let textColor = 'text-slate-700';
+                if (dayOfWeek === 0) textColor = 'text-rose-500 font-bold';
+                else if (dayOfWeek === 6) textColor = 'text-blue-500 font-bold';
+
+                html += `
+                    <div class="h-16 p-1 border border-slate-100 rounded-lg bg-white shadow-2xs flex flex-col justify-between">
+                        <span class="text-[10px] ${textColor}">${d}</span>
+                        <div class="space-y-0.5 text-right">
+                            ${dayData && dayData.sales > 0 ? `<p class="text-[9px] font-bold text-emerald-600 truncate">+${(dayData.sales/10000).toFixed(0)}만</p>` : ''}
+                            ${dayData && dayData.expense > 0 ? `<p class="text-[9px] font-bold text-rose-500 truncate">-${(dayData.expense/10000).toFixed(0)}만</p>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div></div>`;
             container.innerHTML = html;
         }
 
@@ -807,16 +926,13 @@
                 return;
             }
 
-            const month = document.getElementById('monthSelect').value;
-            document.getElementById('chartTitle').innerText = month === 'ALL' ? '📅 연간 지출 항목별 분석' : '📊 월간 지출 항목별 분석';
-
             expenseChartObj = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
                     datasets: [{
                         data: dataValues,
-                        backgroundColor: ['#2563eb', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
+                        backgroundColor: ['#2563eb', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
                     }]
                 },
                 options: {
@@ -827,58 +943,6 @@
                     }
                 }
             });
-        }
-
-        // Tesseract OCR Receipt Scan
-        function processReceipt(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            document.getElementById('ocrProgress').classList.remove('hidden');
-
-            Tesseract.recognize(file, 'kor+eng', {
-                logger: m => {
-                    if (m.status === 'recognizing text') {
-                        const pct = Math.round(m.progress * 100);
-                        document.getElementById('ocrPercent').innerText = pct + '%';
-                        document.getElementById('ocrBar').style.width = pct + '%';
-                    }
-                }
-            }).then(({ data: { text } }) => {
-                document.getElementById('ocrProgress').classList.add('hidden');
-                closeOcrModal();
-
-                const numbers = text.match(/[\d,]{3,}/g);
-                let detectedAmount = 50000;
-                if (numbers) {
-                    const cleanNums = numbers.map(n => parseInt(n.replace(/,/g, ''))).filter(n => n > 100 && n < 10000000);
-                    if (cleanNums.length > 0) detectedAmount = Math.max(...cleanNums);
-                }
-
-                if (confirm(`영수증 스캔 완료:\n- 금액: ${detectedAmount.toLocaleString()}원\n\n지출 내역으로 바로 등록하시겠습니까?`)) {
-                    saveOcrAuto(detectedAmount, text);
-                }
-            }).catch(err => {
-                alert('OCR 인식 오류: ' + err.message);
-                document.getElementById('ocrProgress').classList.add('hidden');
-            });
-        }
-
-        async function saveOcrAuto(amount, fullText) {
-            if (!currentUser) return;
-            const newEntry = {
-                id: Date.now().toString(),
-                type: 'variable',
-                date: getTodayStr(),
-                category: storeConfig && storeConfig.variable.length > 0 ? storeConfig.variable[0] : '기타 변동비',
-                amount: amount,
-                memo: '영수증 AI 스캔'
-            };
-
-            await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
-            dbData.push(newEntry);
-            renderDashboard();
-            alert('영수증 지출 내역이 저장되었습니다.');
         }
     </script>
 </body>
