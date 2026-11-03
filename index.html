@@ -217,16 +217,16 @@
         </div>
     </div>
 
-    <!-- 지출 항목 커스텀 관리 모달 -->
+    <!-- 항목 커스텀 관리 모달 (수입/고정비/변동비 공용) -->
     <div id="categoryManageModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-5 space-y-4 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                <h3 id="categoryModalTitle" class="text-sm font-bold text-slate-900">⚙️ 지출 항목 관리</h3>
+                <h3 id="categoryModalTitle" class="text-sm font-bold text-slate-900">⚙️ 항목 관리</h3>
                 <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
 
             <div class="flex gap-2">
-                <input type="text" id="newCategoryInput" placeholder="새 항목 입력 (예: 경조사비)" class="flex-1 text-xs rounded-xl p-2.5 border border-slate-300">
+                <input type="text" id="newCategoryInput" placeholder="새 항목 입력 (예: 쿠팡이츠 매출)" class="flex-1 text-xs rounded-xl p-2.5 border border-slate-300">
                 <button onclick="addNewCategory()" class="px-3.5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">
                     추가
                 </button>
@@ -302,7 +302,6 @@
             <button onclick="startVoiceRecognition()" id="micHeaderBtn" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-200 hover:bg-rose-100 transition flex items-center gap-1">
                 <i class="fa-solid fa-microphone"></i> 음성 AI
             </button>
-            <!-- 👤 내정보 버튼 -->
             <button onclick="openUserInfoModal()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 flex items-center gap-1 transition">
                 <i class="fa-solid fa-circle-user text-blue-600 text-sm"></i> 내정보
             </button>
@@ -465,7 +464,7 @@
         let currentTab = 'sales';
         let expenseChartObj = null;
         let recognition = null;
-        let activeManageCategoryType = 'fixed';
+        let activeManageCategoryType = 'sales'; // 'sales', 'fixed', 'variable'
 
         const getTodayStr = () => new Date().toISOString().split('T')[0];
 
@@ -474,7 +473,6 @@
         function openOcrModal() { document.getElementById('ocrModal').classList.remove('hidden'); }
         function closeOcrModal() { document.getElementById('ocrModal').classList.add('hidden'); }
 
-        // 👤 내정보 모달 열기/닫기
         function openUserInfoModal() {
             if (currentUser) {
                 document.getElementById('modalUserEmail').innerText = currentUser.email || '구글 계정 정보 없음';
@@ -486,11 +484,14 @@
             document.getElementById('userInfoModal').classList.add('hidden');
         }
 
-        // 지출 항목 커스텀 관리 모달
+        // 항목 커스텀 관리 모달 (수입/고정비/변동비)
         function openCategoryModal(type) {
             activeManageCategoryType = type;
             const titleEl = document.getElementById('categoryModalTitle');
-            titleEl.innerText = type === 'fixed' ? '⚙️ 고정비 항목 추가 / 관리' : '⚙️ 변동비 항목 추가 / 관리';
+            if (type === 'sales') titleEl.innerText = '⚙️ 수입/매출 항목 추가 / 관리';
+            else if (type === 'fixed') titleEl.innerText = '⚙️ 고정비 항목 추가 / 관리';
+            else titleEl.innerText = '⚙️ 변동비 항목 추가 / 관리';
+
             renderCategoryManageList();
             document.getElementById('categoryManageModal').classList.remove('hidden');
         }
@@ -554,7 +555,7 @@
         }
 
         async function removeCategory(index) {
-            if (confirm('이 지출 항목을 삭제하시겠습니까?')) {
+            if (confirm('이 항목을 삭제하시겠습니까?')) {
                 storeConfig[activeManageCategoryType].splice(index, 1);
                 if (currentUser) {
                     await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), storeConfig);
@@ -790,15 +791,60 @@
             }
 
             const industryTemplates = {
-                home: { icon: '🏠', name: '일반가정 / 개인 가계부', fixed: ['아파트 관리비', '월세/대출이자', '통신비/인터넷', '보험료', 'OTT/구독료'], variable: ['식비/장보기', '외식/배달비', '교통/유류비', '생필품 구매', '문화/소비'] },
-                korean: { icon: '🍱', name: '한식 / 정식 / 식당', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], variable: ['쌀/잡곡 매입', '육류/정육 식자재', '포장 용기', '배달앱 수수료'] },
-                western: { icon: '🍝', name: '양식 / 파스타 / 버거', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], variable: ['원육/정육/패티', '파스타/버거번', '포장 용기', '배달 수수료'] },
-                japanese: { icon: '🍣', name: '일식 / 초밥 / 돈까스', fixed: ['가게 임대료', '상가 관리비', '가스/수도 요금', '세무사 수수료'], variable: ['초밥용 횟감', '돈까스용 생고기', '튀김유', '포장 용기'] },
-                bunsik: { icon: '떡', name: '분식 / 야식 / 분식집', fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무사 수수료'], variable: ['떡볶이 떡/어묵', '튀김 재료/식용유', '순대/내장', '포장 용기'] },
-                meat: { icon: '🥩', name: '고깃집 / 삼겹살 / 구이', fixed: ['가게 임대료', '상가 관리비', '가스/전기 요금', '세무사 수수료'], variable: ['돼지고기/삼겹살', '소고기/갈비', '숯/불판 소모품', '음료/주류'] },
-                hof: { icon: '🍺', name: '호프집 / 주점 / 포차', fixed: ['가게 임대료', '상가 관리비', '전기/가스 공과금', '세무사 수수료'], variable: ['생맥주/병맥주', '소주/하이볼', '안주 식재료', '포장 용기'] },
-                cafe: { icon: '☕', name: '카페 / 디저트 / 베이커리', fixed: ['가게 임대료', '상가 관리비', '전기/수도 요금', '세무 회계비용'], variable: ['원두', '우유/시럽', '베이커리 디저트', '테이크아웃 컵/빨대'] },
-                general: { icon: '✂️', name: '미용 / 뷰티 / 일반 자영업', fixed: ['매장 임대료', '상가 관리비', '전기/가스 공과금', '세무사 비용'], variable: ['소모품', '마케팅/광고비', '카드 수수료', '기타 변동비'] }
+                home: { 
+                    icon: '🏠', name: '일반가정 / 개인 가계부', 
+                    sales: ['월급 / 급여', '부수입 / 용돈', '금융 / 이자수익'],
+                    fixed: ['아파트 관리비', '월세/대출이자', '통신비/인터넷', '보험료', 'OTT/구독료'], 
+                    variable: ['식비/장보기', '외식/배달비', '교통/유류비', '생필품 구매', '문화/소비'] 
+                },
+                korean: { 
+                    icon: '🍱', name: '한식 / 정식 / 식당', 
+                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
+                    fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], 
+                    variable: ['쌀/잡곡 매입', '육류/정육 식자재', '포장 용기', '배달앱 수수료'] 
+                },
+                western: { 
+                    icon: '🍝', name: '양식 / 파스타 / 버거', 
+                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
+                    fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무 회계비용'], 
+                    variable: ['원육/정육/패티', '파스타/버거번', '포장 용기', '배달 수수료'] 
+                },
+                japanese: { 
+                    icon: '🍣', name: '일식 / 초밥 / 돈까스', 
+                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
+                    fixed: ['가게 임대료', '상가 관리비', '가스/수도 요금', '세무사 수수료'], 
+                    variable: ['초밥용 횟감', '돈까스용 생고기', '튀김유', '포장 용기'] 
+                },
+                bunsik: { 
+                    icon: '떡', name: '분식 / 야식 / 분식집', 
+                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
+                    fixed: ['가게 임대료', '상가 관리비', '도시가스 요금', '세무사 수수료'], 
+                    variable: ['떡볶이 떡/어묵', '튀김 재료/식용유', '순대/내장', '포장 용기'] 
+                },
+                meat: { 
+                    icon: '🥩', name: '고깃집 / 삼겹살 / 구이', 
+                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
+                    fixed: ['가게 임대료', '상가 관리비', '가스/전기 요금', '세무사 수수료'], 
+                    variable: ['돼지고기/삼겹살', '소고기/갈비', '숯/불판 소모품', '음료/주류'] 
+                },
+                hof: { 
+                    icon: '🍺', name: '호프집 / 주점 / 포차', 
+                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
+                    fixed: ['가게 임대료', '상가 관리비', '전기/가스 공과금', '세무사 수수료'], 
+                    variable: ['생맥주/병맥주', '소주/하이볼', '안주 식재료', '포장 용기'] 
+                },
+                cafe: { 
+                    icon: '☕', name: '카페 / 디저트 / 베이커리', 
+                    sales: ['일일 총매출', '홀 매출', '배달 매출'],
+                    fixed: ['가게 임대료', '상가 관리비', '전기/수도 요금', '세무 회계비용'], 
+                    variable: ['원두', '우유/시럽', '베이커리 디저트', '테이크아웃 컵/빨대'] 
+                },
+                general: { 
+                    icon: '✂️', name: '미용 / 뷰티 / 일반 자영업', 
+                    sales: ['일일 총매출', '시술/서비스 매출', '제품 판매 매출'],
+                    fixed: ['매장 임대료', '상가 관리비', '전기/가스 공과금', '세무사 비용'], 
+                    variable: ['소모품', '마케팅/광고비', '카드 수수료', '기타 변동비'] 
+                }
             };
 
             const template = industryTemplates[indKey] || industryTemplates.home;
@@ -807,6 +853,7 @@
                 industryKey: indKey,
                 icon: template.icon,
                 industryName: template.name,
+                sales: [...template.sales],
                 fixed: [...template.fixed],
                 variable: [...template.variable]
             };
@@ -864,7 +911,7 @@
             }
         }
 
-        // 지난달 고정비 복사 스마트 기능
+        // 지난달 고정비 복사 기능
         async function checkAndCopyPrevFixedExpenses() {
             const currentYearStr = document.getElementById('yearSelect').value;
             const currentMonthStr = document.getElementById('monthSelect').value;
@@ -976,9 +1023,18 @@
         }
 
         function renderSalesForm(container) {
-            const isHome = storeConfig && storeConfig.industryKey === 'home';
+            let salesCategories = (storeConfig && storeConfig.sales && storeConfig.sales.length > 0) 
+                ? storeConfig.sales 
+                : ['일일 총매출', '홀 매출', '배달 매출'];
+
+            const options = salesCategories.map(c => `<option value="${c}">${c}</option>`).join('');
             
             container.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <button type="button" onclick="openCategoryModal('sales')" class="text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-lg transition">
+                        <i class="fa-solid fa-gear mr-1"></i>수입/매출 항목 관리/추가
+                    </button>
+                </div>
                 <form onsubmit="handleSaveEntry(event, 'sales')" class="space-y-3">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
@@ -987,17 +1043,7 @@
                         </div>
                         <div>
                             <label class="text-[11px] text-slate-500 font-medium">수입/매출 구분</label>
-                            <select id="salesType" class="w-full text-xs rounded-xl p-2.5">
-                                ${isHome ? `
-                                    <option value="월급 / 급여">월급 / 급여</option>
-                                    <option value="부수입 / 용돈">부수입 / 용돈</option>
-                                    <option value="금융 / 이자수익">금융 / 이자수익</option>
-                                ` : `
-                                    <option value="일일 총매출">일일 통합 매출</option>
-                                    <option value="홀 매출">홀 매출</option>
-                                    <option value="배달 매출">배달 매출</option>
-                                `}
-                            </select>
+                            <select id="salesType" class="w-full text-xs rounded-xl p-2.5">${options}</select>
                         </div>
                     </div>
                     <div>
@@ -1006,7 +1052,7 @@
                     </div>
                     <div>
                         <label class="text-[11px] text-slate-500 font-medium">메모</label>
-                        <input type="text" id="inputMemo" placeholder="예: 11월 월급 입금" class="w-full text-xs rounded-xl p-2.5">
+                        <input type="text" id="inputMemo" placeholder="예: 11월 월급 / 토요일 매출" class="w-full text-xs rounded-xl p-2.5">
                     </div>
                     <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-md">
                         <i class="fa-solid fa-plus mr-1"></i> 수입/매출 등록하기
