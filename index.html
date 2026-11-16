@@ -21,7 +21,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAemJzk3V5hKH0cb0jP_XxtVRaYOZzL848",
@@ -49,6 +49,8 @@
         window.collection = collection;
         window.getDocs = getDocs;
         window.deleteDoc = deleteDoc;
+        window.query = query;
+        window.where = where;
     </script>
 
     <style>
@@ -258,8 +260,7 @@
                     <button type="button" onclick="togglePostForm(false)" class="text-[11px] text-slate-400 hover:text-slate-600">취소</button>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                    <input type="text" id="postAuthor" placeholder="작성자 닉네임" required class="text-xs rounded-xl p-2 font-medium">
-                    <input type="password" id="postPw" placeholder="글 비밀번호 (4자리)" maxlength="8" required class="text-xs rounded-xl p-2 font-medium">
+                    <input type="text" id="postAuthor" placeholder="작성자 닉네임" required class="col-span-2 text-xs rounded-xl p-2 font-medium">
                 </div>
                 <textarea id="postContent" rows="3" placeholder="앱 사용 피드백, 불편한 점, 기능 추가 요청 등을 자유롭게 남겨주세요." required class="w-full text-xs rounded-xl p-2.5 resize-none"></textarea>
                 <div class="flex items-center justify-between pt-0.5">
@@ -539,7 +540,7 @@
     <!-- Application Script -->
     <script>
         const COUPANG_TRACKING_CODE = "AF4185384";
-        const ADMIN_PASS = "2039";
+        const ADMIN_EMAIL = 'ADMIN_EMAIL_HERE@example.com'; // 화면 표시용. 실제 권한은 Firestore 규칙이 판단합니다.
         let currentUser = null;
         let storeConfig = null;
         let dbData = [];
@@ -593,28 +594,22 @@
             } else {
                 form.classList.add('hidden');
                 document.getElementById('postContent').value = '';
-                document.getElementById('postPw').value = '';
             }
         }
 
         function loginAdminMode() {
-            if (isAdmin) {
-                if (confirm('관리자 모드를 해제하시겠습니까?')) {
-                    isAdmin = false;
-                    document.getElementById('adminBadge').classList.add('hidden');
-                    renderBoardList();
-                }
-                return;
-            }
-            const input = prompt('관리자 비밀번호 4자리를 입력하세요:');
-            if (input === ADMIN_PASS) {
+            if (isAdmin) { isAdmin = false; document.getElementById('adminBadge').classList.add('hidden'); renderBoardList(); return; }
+            if (currentUser && currentUser.email && currentUser.email === ADMIN_EMAIL) {
                 isAdmin = true;
                 document.getElementById('adminBadge').classList.remove('hidden');
-                alert('관리자 인증이 완료되었습니다.');
-                renderBoardList();
-            } else if (input !== null) {
-                alert('비밀번호가 올바르지 않습니다.');
+                loadBoardPosts();
+            } else {
+                alert('관리자 계정으로 로그인한 경우에만 사용할 수 있습니다.');
             }
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         }
 
         async function loadBoardPosts() {
@@ -624,11 +619,13 @@
                     container.innerHTML = `<p class="text-center text-xs text-slate-400 py-6">데이터베이스 연결에 실패했습니다.</p>`;
                     return;
                 }
-                const snap = await window.getDocs(window.collection(window.firebaseDb, "community_board"));
-                boardPosts = [];
-                snap.forEach(docSnap => {
-                    boardPosts.push(docSnap.data());
-                });
+                const col = window.collection(window.firebaseDb, "community_board");
+                const queries = isAdmin ? [col] : [window.query(col, window.where("isPrivate", "==", false))];
+                if (!isAdmin && currentUser) queries.push(window.query(col, window.where("uid", "==", currentUser.uid)));
+                const snaps = await Promise.all(queries.map(q => window.getDocs(q)));
+                const map = {};
+                snaps.forEach(s => s.forEach(d => { const x = d.data(); map[x.id || d.id] = x; }));
+                boardPosts = Object.values(map);
                 renderBoardList();
             } catch(e) {
                 console.error("Board load error:", e);
@@ -660,18 +657,16 @@
                         <div class="flex justify-between items-center text-slate-500 text-[11px]">
                             <div class="flex items-center gap-1.5 font-bold text-slate-700">
                                 <i class="fa-solid fa-user-circle text-blue-500"></i>
-                                <span>${post.author}</span>
+                                <span>${escapeHtml(post.author)}</span>
                                 ${isPrivate ? `<span class="text-[10px] bg-amber-100 text-amber-700 font-bold px-1.5 py-0.2 rounded">🔒 비공개</span>` : ''}
                             </div>
                             <div class="flex items-center gap-2">
                                 <span>${post.dateStr || ''}</span>
-                                <button onclick="deleteBoardPost('${post.id}', '${post.pw}')" class="text-slate-400 hover:text-rose-600 transition" title="삭제">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                </button>
+                                ${(isAdmin || (currentUser && post.uid === currentUser.uid)) ? `<button onclick="deleteBoardPost('${escapeHtml(post.id)}')" class="text-slate-400 hover:text-rose-600 transition" title="삭제"><i class="fa-solid fa-trash-can"></i></button>` : ''}
                             </div>
                         </div>
                         <div class="text-slate-800 leading-relaxed pt-1">
-                            ${canView ? post.content : `<span class="text-slate-400 italic"><i class="fa-solid fa-lock mr-1"></i>비공개글입니다. (작성자 및 관리자만 조회 가능)</span>`}
+                            ${canView ? escapeHtml(post.content).replace(/\n/g, "<br>") : `<span class="text-slate-400 italic"><i class="fa-solid fa-lock mr-1"></i>비공개글입니다. (작성자 및 관리자만 조회 가능)</span>`}
                         </div>
                     </div>
                 `;
@@ -682,21 +677,20 @@
         async function handleSaveBoardPost(e) {
             e.preventDefault();
             const author = document.getElementById('postAuthor').value.trim();
-            const pw = document.getElementById('postPw').value.trim();
+            if (!currentUser) { alert('로그인 후 작성할 수 있습니다.'); return; }
             const content = document.getElementById('postContent').value.trim();
             const isPrivate = document.getElementById('postIsPrivate').checked;
 
-            if (!author || !pw || !content) {
+            if (!author || !content) {
                 alert('모든 항목을 작성해 주세요.');
                 return;
             }
 
             const newPost = {
                 id: Date.now().toString(),
-                uid: currentUser ? currentUser.uid : 'anonymous',
-                author: author,
-                pw: pw,
-                content: content,
+                uid: currentUser.uid,
+                author: author.slice(0, 30),
+                content: content.slice(0, 1000),
                 isPrivate: isPrivate,
                 createdAt: Date.now(),
                 dateStr: new Date().toLocaleDateString('ko-KR')
@@ -710,24 +704,14 @@
             renderBoardList();
         }
 
-        async function deleteBoardPost(id, postPw) {
-            if (isAdmin) {
-                if (confirm('[관리자 권한] 이 게시글을 삭제하시겠습니까?')) {
-                    await window.deleteDoc(window.doc(window.firebaseDb, "community_board", id));
-                    boardPosts = boardPosts.filter(p => p.id !== id);
-                    renderBoardList();
-                }
-                return;
-            }
-
-            const inputPw = prompt('글 작성 시 설정한 비밀번호를 입력해 주세요:');
-            if (inputPw === postPw) {
+        async function deleteBoardPost(id) {
+            if (!confirm('이 게시글을 삭제하시겠습니까?')) return;
+            try {
                 await window.deleteDoc(window.doc(window.firebaseDb, "community_board", id));
                 boardPosts = boardPosts.filter(p => p.id !== id);
-                alert('삭제되었습니다.');
                 renderBoardList();
-            } else if (inputPw !== null) {
-                alert('비밀번호가 일치하지 않습니다.');
+            } catch (e) {
+                console.error(e); alert('삭제 권한이 없거나 오류가 발생했습니다.');
             }
         }
 
