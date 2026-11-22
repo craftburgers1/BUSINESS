@@ -359,23 +359,26 @@
 
     <!-- Header Navigation -->
     <header class="sticky top-0 z-30 ios-header px-4 py-3.5 flex justify-between items-center">
-        <div class="flex items-center gap-2.5 cursor-pointer" onclick="openWizardModal()">
-            <div class="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-base shadow-sm">
+        <div class="flex items-center gap-2.5 cursor-pointer max-sm:min-w-0" onclick="openWizardModal()">
+            <div class="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-base shadow-sm max-sm:flex-shrink-0">
                 📈
             </div>
-            <div>
+            <div class="max-sm:min-w-0">
                 <div class="flex items-center gap-1.5">
-                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight">스마트 장부</h1>
+                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight max-sm:truncate">스마트 장부</h1>
                     <i class="fa-solid fa-pen text-[10px] text-slate-400"></i>
                 </div>
-                <p id="displayIndustry" class="text-xs text-slate-500">클릭하여 명칭/용도 변경</p>
+                <p id="displayIndustry" class="text-xs text-slate-500 max-sm:truncate">클릭하여 명칭/용도 변경</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <button onclick="openBoardModal()" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold border border-blue-200 flex items-center gap-1 transition">
+            <a id="staffAppExternalLink" href="https://craftburgers1.github.io/craftburger/" target="_blank" rel="noopener noreferrer" title="근태관리 앱 열기 (새 탭)" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 flex items-center gap-1 transition whitespace-nowrap flex-shrink-0 max-sm:px-2 max-sm:text-[11px] max-sm:gap-0.5 max-sm:whitespace-nowrap max-sm:flex-shrink-0">
+                <i class="fa-solid fa-users"></i> 근태관리<i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+            </a>
+            <button onclick="openBoardModal()" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold border border-blue-200 flex items-center gap-1 transition max-sm:px-2 max-sm:text-[11px] max-sm:gap-0.5 max-sm:whitespace-nowrap max-sm:flex-shrink-0">
                 <i class="fa-solid fa-comments"></i> 게시판
             </button>
-            <button onclick="openUserInfoModal()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 flex items-center gap-1 transition">
+            <button onclick="openUserInfoModal()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 flex items-center gap-1 transition max-sm:px-2 max-sm:text-[11px] max-sm:gap-0.5 max-sm:whitespace-nowrap max-sm:flex-shrink-0">
                 <i class="fa-solid fa-circle-user text-blue-600 text-sm"></i> 내정보
             </button>
         </div>
