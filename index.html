@@ -357,6 +357,37 @@
         </div>
     </div>
 
+    <!-- v6: 🤖 AI 비서(피클) 자동 입력 안내 모달 -->
+    <div id="pickleGuideModal" onclick="if (event.target === this) closePickleGuideModal()" role="dialog" aria-modal="true" aria-labelledby="pickleGuideTitle" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <h3 id="pickleGuideTitle" class="text-sm font-bold text-slate-900">🤖 AI 비서(피클)로 10초 자동 입력</h3>
+                <button type="button" onclick="closePickleGuideModal()" aria-label="닫기" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="overflow-y-auto space-y-3 text-xs text-slate-600 pr-1 flex-1 leading-relaxed">
+                <p class="text-[11px] text-slate-500">피클(Pickle) AI 비서 앱에 영수증 사진이나 정산·주문 내역을 보내면, 이 가계부에 대신 입력하도록 연결하는 방법입니다.</p>
+                <div class="bg-slate-50 p-3 rounded-xl space-y-2">
+                    <p class="font-bold text-slate-800">1단계 · 피클 앱 설치/열기</p>
+                    <div id="pickleStep1Action"></div>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl space-y-2">
+                    <p class="font-bold text-slate-800">2단계 · 피클에게 보낼 말 복사</p>
+                    <p id="pickleMessagePreview" class="text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg p-2 break-all"></p>
+                    <button type="button" id="pickleCopyBtn" onclick="copyPickleMessage()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-sm transition">📋 피클에게 보낼 말 복사</button>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
+                    <p class="font-bold text-slate-800">3단계 · 영수증 보내기</p>
+                    <p class="text-[11px] text-slate-500">처음 1번만 가계부 로그인 계정을 피클에게 알려 주면, 다음부터는 영수증·거래명세표 사진이나 정산 내역만 톡으로 보내도 알아서 입력해 줍니다. 쿠팡·네이버쇼핑·G마켓 등 자주 쓰는 쇼핑몰/매장 계정도 피클에 연결해 두면, 주문내역을 보고 매장 지출을 알아서 정리·입력해 줍니다.</p>
+                </div>
+            </div>
+
+            <button type="button" onclick="closePickleGuideModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">
+                닫기
+            </button>
+        </div>
+    </div>
+
     <!-- Header Navigation -->
     <header class="sticky top-0 z-30 ios-header px-4 py-3.5 flex justify-between items-center">
         <div class="flex items-center gap-2.5 cursor-pointer max-sm:min-w-0" onclick="openWizardModal()">
@@ -430,6 +461,10 @@
                 <button onclick="switchTab('variable')" id="tab-variable" class="tab-btn">변동비/생활비 입력</button>
             </div>
 
+            <!-- v6: 🤖 AI 자동 입력(피클) 안내 버튼 -->
+            <button type="button" id="pickleGuideBtn" onclick="openPickleGuideModal()" class="mt-3 w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                🤖 AI 자동 입력 <span class="font-medium text-blue-500">· 영수증을 피클로 보내기</span>
+            </button>
             <div id="form-container" class="mt-4"></div>
         </section>
 
@@ -544,6 +579,8 @@
     <script>
         const COUPANG_TRACKING_CODE = "AF4185384";
         const ADMIN_EMAIL = 'solojayoungup@gmail.com'; // 화면 표시용. 실제 권한은 Firestore 규칙이 판단합니다.
+        const PICKLE_INVITE_URL = 'https://pickle.com/i/5JKJY6M3FZ36'; // v6: 피클 초대 링크. 빈 문자열('')이면 1단계 버튼 대신 안내 문구가 나옵니다.
+        const PICKLE_MESSAGE = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인 정보는 내가 알려줄게.'; // v6: 2단계 복사 문장
         let currentUser = null;
         let storeConfig = null;
         let dbData = [];
@@ -1469,6 +1506,88 @@
                 }
             });
         }
+
+        /* ----- v6: 🤖 AI 비서(피클) 자동 입력 안내 ----- */
+        function renderPickleStep1(url) {
+            const box = document.getElementById('pickleStep1Action');
+            if (!box) return;
+            if (url) {
+                box.innerHTML = `<a id="pickleInviteLink" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">피클(Pickle) 시작하기 / 초대 링크 열기 <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>`;
+            } else {
+                box.innerHTML = `<p class="text-[11px] text-slate-500">공식 앱 스토어에서 '피클'을 검색해 설치해 주세요. (바로가기 링크는 추후 연결 예정입니다.)</p>`;
+            }
+        }
+
+        function openPickleGuideModal() {
+            renderPickleStep1(PICKLE_INVITE_URL);
+            document.getElementById('pickleMessagePreview').textContent = PICKLE_MESSAGE;
+            document.getElementById('pickleGuideModal').classList.remove('hidden');
+        }
+
+        function closePickleGuideModal() {
+            document.getElementById('pickleGuideModal').classList.add('hidden');
+        }
+
+        // 클립보드 API를 못 쓸 때(구형 브라우저·일부 인앱 브라우저) 쓰는 예비 복사. 화면 밖에 두어 iOS에서 화면이 튀지 않게 함
+        function pickleFallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.cssText = 'position:fixed;top:0;left:-9999px;width:1px;height:1px;opacity:0;font-size:16px;';
+            const prevFocus = document.activeElement;
+            document.body.appendChild(ta);
+            let ok = false;
+            try {
+                if (/ipad|iphone|ipod/i.test(navigator.userAgent)) {
+                    // iOS 사파리: 범위 선택 방식(키보드가 뜨지 않도록 readonly 유지)
+                    ta.contentEditable = 'true';
+                    const range = document.createRange();
+                    range.selectNodeContents(ta);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                    ta.setSelectionRange(0, text.length);
+                }
+                if (document.activeElement !== ta || ta.selectionStart === ta.selectionEnd) {
+                    // 실제로 선택(포커스)되지 않았으면 일반 방식으로 다시 선택(readonly라 키보드는 뜨지 않음)
+                    ta.focus({ preventScroll: true });
+                    ta.select();
+                    ta.setSelectionRange(0, text.length);
+                }
+                ok = document.execCommand('copy');
+            } catch (e) { ok = false; }
+            document.body.removeChild(ta);
+            if (window.getSelection) window.getSelection().removeAllRanges();
+            if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true });
+            return ok;
+        }
+
+        let pickleCopyTimer = null;
+        async function copyPickleMessage() {
+            let ok = false;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(PICKLE_MESSAGE);
+                    ok = true;
+                }
+            } catch (e) { ok = false; }
+            if (!ok) ok = pickleFallbackCopy(PICKLE_MESSAGE);
+
+            const btn = document.getElementById('pickleCopyBtn');
+            if (btn) {
+                if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+                btn.textContent = ok ? '✅ 복사 완료!' : '복사가 안 됐어요. 위 문장을 길게 눌러 복사해 주세요';
+                clearTimeout(pickleCopyTimer);
+                pickleCopyTimer = setTimeout(() => { btn.textContent = btn.dataset.label; }, 2000);
+            }
+            return ok;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const m = document.getElementById('pickleGuideModal');
+            if (m && !m.classList.contains('hidden')) closePickleGuideModal();
+        });
     </script>
 </body>
 </html>
