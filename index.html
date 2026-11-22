@@ -162,6 +162,16 @@
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4">
                 Google 계정으로 로그인
             </button>
+
+            <!-- v14: 👀 체험판 + 로그인 전에도 볼 수 있는 안내 -->
+            <button type="button" id="btnDemoMode" onclick="startDemoMode()" class="w-full py-3 px-4 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition">
+                👀 로그인 없이 먼저 둘러보기 (체험판)
+            </button>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" id="btnLoginManual" onclick="openManualModal()" class="flex-1 min-w-[8rem] py-2.5 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs whitespace-nowrap transition">📖 사용설명서</button>
+                <button type="button" id="btnLoginPickle" onclick="openPickleGuideModal()" class="flex-1 min-w-[8rem] py-2.5 px-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold rounded-xl text-xs whitespace-nowrap transition">🤖 AI 자동 입력(피클)</button>
+            </div>
+            <p class="text-[10px] text-slate-400 leading-relaxed break-keep">체험판은 샘플 데이터로만 움직이고 아무것도 저장되지 않아요. 내 장부를 저장하려면 구글로 로그인해 주세요.</p>
         </div>
     </div>
 
@@ -481,6 +491,16 @@
         </div>
     </header>
 
+    <!-- v14: 👀 체험판 배너 (체험판일 때만 보임) -->
+    <div id="demoBanner" class="hidden bg-amber-50 border-b border-amber-200 px-4 py-2.5">
+        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <p class="text-xs font-bold text-amber-800 break-keep">👀 체험판 둘러보기 중 <span class="font-medium text-amber-700">(샘플 데이터 · 저장되지 않음)</span></p>
+            <button type="button" id="btnDemoLogin" onclick="exitDemoToLogin()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-sm whitespace-nowrap transition">구글 로그인하기</button>
+        </div>
+    </div>
+    <!-- v14: 체험판 토스트 (모달보다 위) -->
+    <div id="demoToast" role="status" aria-live="polite" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 bg-slate-900/90 text-white text-xs font-bold rounded-xl shadow-lg max-w-[90vw] text-center break-keep"></div>
+
     <!-- Main Container -->
     <main class="max-w-4xl mx-auto px-4 pt-4 space-y-4">
 
@@ -501,7 +521,7 @@
                     <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
                 </select>
             </div>
-            <span class="text-[11px] text-slate-500"><i class="fa-solid fa-cloud text-blue-500 mr-1"></i>클라우드 안전 동기화 중</span>
+            <span id="syncStatusText" class="text-[11px] text-slate-500"><i class="fa-solid fa-cloud text-blue-500 mr-1"></i>클라우드 안전 동기화 중</span>
         </section>
 
         <!-- KPI Summary Cards -->
@@ -665,6 +685,7 @@
         let expenseChartObj = null;
         let activeManageCategoryType = 'sales';
         let isAdmin = false;
+        let isDemoMode = false; // v14: 👀 체험판(로그인 없이 샘플 데이터) 여부
 
         let currentActiveDetailDate = '';
         let calendarYear = getKstParts().year;   // v3: 한국시간 기준
@@ -961,11 +982,12 @@
                     window.onAuthStateChanged(window.firebaseAuth, async (user) => {
                         if (user) {
                             currentUser = user;
+                            if (isDemoMode) endDemoState(); // v14: 실제 로그인되면 체험판 종료 후 내 장부 불러오기
                             document.getElementById('loginModal').classList.add('hidden');
                             await loadUserDataFromCloud();
                         } else {
                             currentUser = null;
-                            document.getElementById('loginModal').classList.remove('hidden');
+                            if (!isDemoMode) document.getElementById('loginModal').classList.remove('hidden'); // v14: 체험판이면 다시 띄우지 않음
                         }
                     });
                 }
@@ -1733,6 +1755,255 @@
             }
             return ok;
         }
+
+        /* ===================== v14: 👀 체험 모드(둘러보기) ===================== */
+        // 체험판은 메모리에서만 움직입니다. Firestore 읽기·쓰기·삭제를 하지 않습니다.
+        const DEMO_TOAST_MSG = '체험판에서는 서버에 저장되지 않습니다';
+        const DEMO_STORE_CONFIG = {
+            name: '솔로운영 체험 매장', industryKey: 'western', icon: '🍔', industryName: '양식 / 버거',
+            sales: ['홀 매출', '배민 매출', '쿠팡이츠 매출'],
+            fixed: ['월세', '관리비', '통신비', '보험료'],
+            variable: ['식자재', '포장재', '소모품', '광고비']
+        };
+
+        // 샘플 장부: 한국시간 '이번 달' 1일부터(오늘-1일, 최대 22일)까지. 같은 달이면 항상 같은 숫자가 나오도록 고정 난수 사용
+        function buildDemoLedger() {
+            const k = getKstParts();
+            const y = k.year, m = k.month;
+            const mm = String(m).padStart(2, '0');
+            let endDay = Math.min(22, k.day - 1);
+            if (endDay < 14) endDay = Math.min(22, new Date(y, m, 0).getDate()); // 월초에는 22일치를 미리 보여 줌(샘플)
+            let seed = y * 100 + m;
+            const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+            const won = (min, span) => Math.round((min + rnd() * span) / 1000) * 1000;
+            const list = [];
+            const add = (d, type, category, amount, memo) => list.push({
+                id: `demo-${type}-${d}-${list.length + 1}`, type, date: `${y}-${mm}-${String(d).padStart(2, '0')}`, category, amount, memo
+            });
+            const foodMemos = ['식자재 도매 (패티·번)', '야채 도매 (양상추·토마토)', '정육 (다짐육)', '치즈·소스 일괄 구매'];
+            for (let d = 1; d <= endDay; d++) {
+                const wd = new Date(y, m - 1, d).getDay();
+                const weekend = (wd === 0 || wd === 6);
+                // 매출(주말은 범위 위쪽)
+                add(d, 'sales', '홀 매출', weekend ? won(560000, 160000) : won(380000, 260000), weekend ? '주말 홀 매출' : '홀 매출');
+                add(d, 'sales', '배민 매출', weekend ? won(250000, 80000) : won(120000, 170000), '배민 주문');
+                add(d, 'sales', '쿠팡이츠 매출', weekend ? won(160000, 50000) : won(70000, 110000), '쿠팡이츠 주문');
+                // 고정비
+                if (d === 1) add(d, 'fixed', '월세', 1500000, `${m}월 매장 월세`);
+                if (d === 5) add(d, 'fixed', '관리비', 180000, `${m}월 상가 관리비`);
+                if (d === 10) add(d, 'fixed', '통신비', 55000, '인터넷·포스 회선');
+                if (d === 15) add(d, 'fixed', '보험료', 92000, '화재·영업배상 보험');
+                // 변동비
+                if (d % 2 === 0) add(d, 'variable', '식자재', won(250000, 230000), foodMemos[(d / 2) % foodMemos.length]);
+                if (d === 3 || d === 10 || d === 17) add(d, 'variable', '포장재', won(30000, 40000), '포장 용기·봉투');
+                if (d === 7) add(d, 'variable', '소모품', won(15000, 25000), '세제·위생장갑');
+                if (d === 19) add(d, 'variable', '소모품', won(15000, 25000), '키친타월·물티슈');
+                if (d === 8) add(d, 'variable', '광고비', won(30000, 50000), '배달앱 광고 충전');
+                if (d === 20) add(d, 'variable', '광고비', won(30000, 50000), 'SNS 광고');
+            }
+            return list;
+        }
+        const DEMO_LEDGER = buildDemoLedger();
+
+        let demoToastTimer = null;
+        function showDemoToast(msg) {
+            const t = document.getElementById('demoToast');
+            if (!t) return;
+            t.textContent = msg || DEMO_TOAST_MSG;
+            t.classList.remove('hidden');
+            clearTimeout(demoToastTimer);
+            demoToastTimer = setTimeout(() => t.classList.add('hidden'), 2500);
+        }
+
+        // 공통 가드: 체험판이면 토스트를 띄우고 true(= 여기서 멈춤)
+        function demoGuard(msg) {
+            if (!isDemoMode) return false;
+            showDemoToast(msg || DEMO_TOAST_MSG);
+            return true;
+        }
+
+        // 마지막 안전망: 체험판 중에는 Firestore 함수 자체가 아무것도 하지 않음(읽기 포함)
+        function installDemoFirestoreShield() {
+            ['setDoc', 'deleteDoc', 'getDocs'].forEach(name => {
+                const fn = window[name];
+                if (typeof fn !== 'function' || fn.__v14Shield) return;
+                const shield = function (...args) {
+                    if (isDemoMode) {
+                        console.warn('[체험판] Firestore ' + name + ' 호출 차단');
+                        showDemoToast();
+                        return Promise.resolve(name === 'getDocs' ? { forEach() {}, docs: [], empty: true, size: 0 } : undefined);
+                    }
+                    return fn.apply(this, args);
+                };
+                shield.__v14Shield = true;
+                window[name] = shield;
+            });
+        }
+        window.addEventListener('load', installDemoFirestoreShield);
+
+        let syncStatusOriginalHtml = null;
+        function setDemoUi(on) {
+            const banner = document.getElementById('demoBanner');
+            if (banner) banner.classList.toggle('hidden', !on);
+            const sync = document.getElementById('syncStatusText');
+            if (sync) {
+                if (syncStatusOriginalHtml === null) syncStatusOriginalHtml = sync.innerHTML;
+                sync.innerHTML = on ? '<i class="fa-solid fa-flask text-amber-500 mr-1"></i>체험판 · 서버에 저장되지 않음' : syncStatusOriginalHtml;
+            }
+        }
+
+        function startDemoMode() {
+            installDemoFirestoreShield();
+            isDemoMode = true;
+            currentUser = null;
+            ['loginModal', 'wizardModal', 'privacyModal'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+            storeConfig = JSON.parse(JSON.stringify(DEMO_STORE_CONFIG));
+            dbData = DEMO_LEDGER.map(item => ({ ...item }));
+            initYearAndMonthOptions(); // 이번 달 선택
+            const k = getKstParts();
+            calendarYear = k.year;
+            calendarMonth = k.month;
+            setDemoUi(true);
+            applyStoreConfigUI();
+            switchTab('sales');
+            renderDashboard();
+            window.scrollTo(0, 0);
+        }
+
+        // 체험판 상태만 지움(로그인 모달은 건드리지 않음)
+        function endDemoState() {
+            isDemoMode = false;
+            storeConfig = null;
+            dbData = [];
+            setDemoUi(false);
+            document.getElementById('displayStoreName').innerText = '솔로운영';
+            document.getElementById('displayIndustry').innerText = '클릭하여 명칭/용도 변경';
+            ['dayDetailModal', 'categoryManageModal', 'boardModal', 'userInfoModal', 'manualModal', 'pickleGuideModal'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+            currentActiveDetailDate = '';
+            switchTab('sales');
+            renderDashboard();
+        }
+
+        // 배너 [구글 로그인하기]: 체험 종료 → 로그인 모달로
+        function exitDemoToLogin() {
+            endDemoState();
+            document.getElementById('loginModal').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        // ---- 래퍼: 원래 함수는 그대로 두고, 체험판일 때만 다른 길로 ----
+        const v14Orig = {
+            handleSaveEntry, deleteEntry, checkAndCopyPrevFixedExpenses, addNewCategory, removeCategory,
+            saveStoreOnboarding, openWizardModal, handleSaveBoardPost, deleteBoardPost, loadBoardPosts,
+            openBoardModal, openUserInfoModal, loginAdminMode, handleLogout, loadUserDataFromCloud
+        };
+
+        // 저장: 메모리에만 추가
+        handleSaveEntry = async function (e, type) {
+            if (!isDemoMode) return v14Orig.handleSaveEntry(e, type);
+            e.preventDefault();
+            const date = document.getElementById('inputDate').value;
+            const amount = parseInt(document.getElementById('inputAmount').value) || 0;
+            const memo = document.getElementById('inputMemo').value || '';
+            const category = type === 'sales' ? document.getElementById('salesType').value : document.getElementById('inputCategory').value;
+            dbData.push({ id: 'demo-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6), type, date, category, amount, memo });
+            document.getElementById('inputAmount').value = '';
+            document.getElementById('inputMemo').value = '';
+            renderDashboard();
+            showDemoToast();
+        };
+
+        // 삭제: 메모리에서만 지움
+        deleteEntry = async function (id) {
+            if (!isDemoMode) return v14Orig.deleteEntry(id);
+            if (!confirm('이 내역을 삭제하시겠습니까?')) return;
+            dbData = dbData.filter(item => item.id !== id);
+            if (currentActiveDetailDate) openDayDetailModal(currentActiveDetailDate);
+            renderDashboard();
+            showDemoToast();
+        };
+
+        // 지난달 고정비 불러오기: 메모리에서만
+        checkAndCopyPrevFixedExpenses = async function () {
+            if (!isDemoMode) return v14Orig.checkAndCopyPrevFixedExpenses();
+            const yStr = document.getElementById('yearSelect').value;
+            const mStr = document.getElementById('monthSelect').value;
+            if (mStr === 'ALL') { showDemoToast('특정 월을 선택한 뒤 지난달 고정비를 가져올 수 있어요'); return; }
+            const curM = parseInt(mStr);
+            let prevY = parseInt(yStr), prevM = curM - 1;
+            if (prevM < 1) { prevM = 12; prevY -= 1; }
+            const pY = String(prevY), pM = String(prevM).padStart(2, '0');
+            const prev = dbData.filter(item => item.type === 'fixed' && item.date && item.date.split('-')[0] === pY && item.date.split('-')[1] === pM);
+            if (prev.length === 0) { showDemoToast(`지난달(${prevM}월) 고정비 샘플이 없어요 · ${DEMO_TOAST_MSG}`); return; }
+            if (!confirm(`지난달(${prevM}월) 고정비 ${prev.length}건을 이번달(${curM}월)로 가져올까요? (체험판: 저장되지 않음)`)) return;
+            prev.forEach((item, i) => dbData.push({ id: 'demo-copy-' + Date.now() + '-' + i, type: 'fixed', date: `${yStr}-${mStr}-01`, category: item.category, amount: item.amount, memo: item.memo ? `(지난달 복사) ${item.memo}` : '(지난달 복사)' }));
+            renderDashboard();
+            showDemoToast();
+        };
+
+        // 항목 추가/삭제: 원래 함수는 로그인 상태에서만 저장하므로 메모리에만 반영됨 → 토스트만 덧붙임
+        addNewCategory = async function () {
+            if (!isDemoMode) return v14Orig.addNewCategory();
+            const before = (storeConfig && storeConfig[activeManageCategoryType] || []).length;
+            await v14Orig.addNewCategory();
+            const after = (storeConfig && storeConfig[activeManageCategoryType] || []).length;
+            if (after > before) showDemoToast();
+        };
+        removeCategory = async function (index) {
+            if (!isDemoMode) return v14Orig.removeCategory(index);
+            const before = (storeConfig && storeConfig[activeManageCategoryType] || []).length;
+            await v14Orig.removeCategory(index);
+            const after = (storeConfig && storeConfig[activeManageCategoryType] || []).length;
+            if (after < before) showDemoToast();
+        };
+
+        // 매장 설정(위저드): 체험판에서는 열지 않음
+        openWizardModal = function () {
+            if (demoGuard('체험판에서는 매장 이름·업종을 바꿀 수 없어요 (로그인 후 가능)')) return;
+            return v14Orig.openWizardModal();
+        };
+        saveStoreOnboarding = async function () {
+            if (isDemoMode) { document.getElementById('wizardModal').classList.add('hidden'); showDemoToast(); return; }
+            return v14Orig.saveStoreOnboarding();
+        };
+
+        // 게시판: 체험판에서는 읽기(getDocs)도 하지 않음
+        openBoardModal = function () {
+            if (demoGuard('게시판은 로그인 후 이용할 수 있어요 (체험판)')) return;
+            return v14Orig.openBoardModal();
+        };
+        loadBoardPosts = async function () {
+            if (demoGuard('게시판은 로그인 후 이용할 수 있어요 (체험판)')) return;
+            return v14Orig.loadBoardPosts();
+        };
+        handleSaveBoardPost = async function (e) {
+            if (isDemoMode) { if (e && e.preventDefault) e.preventDefault(); showDemoToast(); return; }
+            return v14Orig.handleSaveBoardPost(e);
+        };
+        deleteBoardPost = async function (id) {
+            if (demoGuard()) return;
+            return v14Orig.deleteBoardPost(id);
+        };
+        loginAdminMode = function () {
+            if (demoGuard('관리자 모드는 로그인 후 이용할 수 있어요')) return;
+            return v14Orig.loginAdminMode();
+        };
+
+        // 내정보·로그아웃: 체험판에는 계정이 없음
+        openUserInfoModal = function () {
+            if (demoGuard('체험판에는 내정보가 없어요. 위 [구글 로그인하기]로 시작해 주세요')) return;
+            return v14Orig.openUserInfoModal();
+        };
+        handleLogout = async function () {
+            if (isDemoMode) { exitDemoToLogin(); return; }
+            return v14Orig.handleLogout();
+        };
+
+        // 클라우드 불러오기: 체험판에서는 하지 않음
+        loadUserDataFromCloud = async function () {
+            if (isDemoMode) return;
+            return v14Orig.loadUserDataFromCloud();
+        };
     </script>
 </body>
 </html>
