@@ -1762,8 +1762,8 @@
         const DEMO_STORE_CONFIG = {
             name: '솔로운영 체험 매장', industryKey: 'western', icon: '🍔', industryName: '양식 / 버거',
             sales: ['홀 매출', '배민 매출', '쿠팡이츠 매출'],
-            fixed: ['월세', '관리비', '통신비', '보험료'],
-            variable: ['식자재', '포장재', '소모품', '광고비']
+            fixed: ['월세', '관리비', '통신비', '보험료', '인건비'],
+            variable: ['식자재', '포장재', '소모품', '광고비', '배달앱 수수료']
         };
 
         // 샘플 장부: 한국시간 '이번 달' 1일부터(오늘-1일, 최대 22일)까지. 같은 달이면 항상 같은 숫자가 나오도록 고정 난수 사용
@@ -1801,6 +1801,26 @@
                 if (d === 8) add(d, 'variable', '광고비', won(30000, 50000), '배달앱 광고 충전');
                 if (d === 20) add(d, 'variable', '광고비', won(30000, 50000), 'SNS 광고');
             }
+            // v15: 현실화 — 기존 샘플(위)은 그대로 두고 배달앱 비용·알바 급여를 끝에 추가(난수 사용 안 함)
+            const FEE_RATE = 0.15, RIDER_FEE = 3500, AVG_ORDER = 16000;
+            const dayOf = x => parseInt(x.date.slice(8, 10), 10);
+            const settleDays = [7, 14, 21].filter(w => w < endDay);
+            settleDays.push(endDay);
+            let fromDay = 1;
+            settleDays.forEach(w => {
+                const delivery = list.filter(x => x.type === 'sales' && x.category !== '홀 매출' && dayOf(x) >= fromDay && dayOf(x) <= w)
+                    .reduce((s, x) => s + x.amount, 0);
+                const orders = Math.round(delivery / AVG_ORDER);
+                const span = fromDay === w ? `${w}일분` : `${fromDay}~${w}일분`;
+                add(w, 'variable', '배달앱 수수료', Math.round(delivery * FEE_RATE / 1000) * 1000, `배민·쿠팡이츠 중개·결제 수수료 약 15% (${span})`);
+                add(w, 'variable', '배달앱 수수료', orders * RIDER_FEE, `가게 부담 배달비 ${orders}건×3,500원 (${span})`);
+                fromDay = w + 1;
+            });
+            let salesSum = 0, costSum = 0;
+            list.forEach(x => { if (x.type === 'sales') salesSum += x.amount; else costSum += x.amount; });
+            const payFloor = Math.round(4500000 * endDay / 22 / 10000) * 10000;
+            const pay = Math.min(5500000, Math.max(payFloor, Math.round((salesSum * 0.75 - costSum) / 10000) * 10000));
+            add(10, 'fixed', '인건비', pay, `${m === 1 ? 12 : m - 1}월 알바 급여 3명 (주휴 포함)`);
             return list;
         }
         const DEMO_LEDGER = buildDemoLedger();
@@ -2003,6 +2023,106 @@
         loadUserDataFromCloud = async function () {
             if (isDemoMode) return;
             return v14Orig.loadUserDataFromCloud();
+        };
+
+        /* ===================== v15: 매일 쓰기 편의 ===================== */
+        // ① ⚡ 최근 입력 다시 쓰기  ② 저장 알림창 → 토스트  ③ 원 그래프 색 보강
+        // 체험판·로그인 모두 같은 화면. 칸만 채우고 저장은 기존 [등록/저장] 버튼(= 기존 경로)으로만 함.
+        const V15_SAVE_ALERT_MSG = '클라우드에 안전하게 저장되었습니다.';
+        const V15_CHART_COLORS = ['#2563eb', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#14b8a6', '#a855f7', '#64748b'];
+        const v15Orig = { handleSaveEntry, switchTab, renderDashboard, renderChart };
+
+        function renderQuickFill() {
+            const container = document.getElementById('form-container');
+            if (!container) return;
+            const form = container.querySelector('form');
+            let box = document.getElementById('quickFillBox');
+            if (!form) { if (box) box.remove(); return; }
+            const type = currentTab;
+            const select = document.getElementById(type === 'sales' ? 'salesType' : 'inputCategory');
+            const allowed = select ? Array.from(select.options).map(o => o.value) : [];
+            const rows = (dbData || []).map((x, i) => ({ x, i }))
+                .filter(r => r.x && r.x.type === type && r.x.amount > 0 && allowed.includes(r.x.category));
+            rows.sort((a, b) => String(b.x.date || '').localeCompare(String(a.x.date || '')) || b.i - a.i);
+            const seen = new Set(), picks = [];
+            for (const r of rows) {
+                const key = r.x.category + '|' + r.x.amount + '|' + (r.x.memo || '');
+                if (seen.has(key)) continue;
+                seen.add(key); picks.push(r.x);
+                if (picks.length >= 4) break;
+            }
+            if (!box) { box = document.createElement('div'); box.id = 'quickFillBox'; box.className = 'mb-3'; }
+            if (box.parentNode !== container || box.nextElementSibling !== form) container.insertBefore(box, form);
+            if (picks.length === 0) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            box.classList.remove('hidden');
+            box.innerHTML = '<p class="text-[11px] text-slate-500 font-medium mb-1.5">⚡ 최근 입력 다시 쓰기 <span class="text-slate-400">· 누르면 칸만 채워져요 (저장은 아래 버튼)</span></p><div class="flex flex-wrap gap-1.5"></div>';
+            const wrap = box.lastElementChild;
+            picks.forEach(x => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'quick-fill-chip px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] text-slate-700 font-bold max-w-full truncate transition';
+                b.textContent = `${x.category} ${Number(x.amount).toLocaleString()}원`;
+                b.title = x.memo || '';
+                b.onclick = () => applyQuickFill(x);
+                wrap.appendChild(b);
+            });
+        }
+
+        function applyQuickFill(x) {
+            const select = document.getElementById(currentTab === 'sales' ? 'salesType' : 'inputCategory');
+            const amount = document.getElementById('inputAmount');
+            const memo = document.getElementById('inputMemo');
+            if (!select || !amount) return;
+            select.value = x.category;
+            amount.value = x.amount;
+            if (memo) memo.value = String(x.memo || '').replace(/^\(지난달 복사\)\s*/, '');
+            amount.classList.add('ring-2', 'ring-blue-400');
+            setTimeout(() => amount.classList.remove('ring-2', 'ring-blue-400'), 1200);
+        }
+
+        switchTab = function (tab) {
+            const r = v15Orig.switchTab(tab);
+            renderQuickFill();
+            return r;
+        };
+
+        renderDashboard = function () {
+            const r = v15Orig.renderDashboard();
+            renderQuickFill();
+            return r;
+        };
+
+        // 원 그래프: 항목이 8개를 넘으면 같은 색이 반복되지 않게
+        renderChart = function (categoryMap) {
+            const r = v15Orig.renderChart(categoryMap);
+            try {
+                const n = Object.keys(categoryMap || {}).length;
+                if (n > 8 && expenseChartObj && expenseChartObj.data && expenseChartObj.data.datasets && expenseChartObj.data.datasets[0]) {
+                    expenseChartObj.data.datasets[0].backgroundColor = V15_CHART_COLORS;
+                    if (typeof expenseChartObj.update === 'function') expenseChartObj.update();
+                }
+            } catch (err) { /* 그래프 색은 보조 기능 */ }
+            return r;
+        };
+
+        // 실제 로그인 저장: '확인'을 눌러야 하는 알림창 대신 2.5초 토스트(저장 경로는 원래 함수 그대로)
+        let v15AlertDepth = 0, v15NativeAlert = null;
+        handleSaveEntry = async function (e, type) {
+            if (isDemoMode) return v15Orig.handleSaveEntry(e, type); // 체험판: v14 경로(메모리 + 토스트)
+            if (v15AlertDepth === 0) {
+                v15NativeAlert = window.alert;
+                window.alert = function (msg) {
+                    if (msg === V15_SAVE_ALERT_MSG) { showDemoToast('✅ 저장했어요'); return; }
+                    return v15NativeAlert.apply(window, arguments);
+                };
+            }
+            v15AlertDepth++;
+            try {
+                return await v15Orig.handleSaveEntry(e, type);
+            } finally {
+                v15AlertDepth--;
+                if (v15AlertDepth === 0 && v15NativeAlert) { window.alert = v15NativeAlert; v15NativeAlert = null; }
+            }
         };
     </script>
 </body>
