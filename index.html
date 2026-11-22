@@ -373,7 +373,7 @@
                     <div id="pickleStep1Action"></div>
                     <div class="border-t border-slate-200 pt-2 space-y-1">
                         <p class="text-[11px] font-bold text-slate-700">(B) 이미 피클이 설치된 분</p>
-                        <p class="text-[11px] text-slate-500">이미 피클이 설치되어 있다면 위 (A) 버튼을 누르지 마세요. 아래 2단계의 문구를 복사한 뒤, 폰에서 피클 앱을 직접 열어 붙여넣어 주세요.</p>
+                        <p class="text-[11px] text-slate-500">이미 피클이 설치되어 있다면 위 (A) 버튼으로 연 스토어 화면에서 [열기]를 누르면 앱이 바로 실행됩니다. 아래 2단계의 문구를 복사한 뒤, 피클 앱에 붙여넣어 주세요.</p>
                         <p class="text-[10px] text-slate-400">※ 이 웹페이지에서 피클 앱의 대화창을 바로 여는 링크(딥링크)는 지원되지 않아요.</p>
                     </div>
                 </div>
@@ -635,6 +635,8 @@
         const COUPANG_TRACKING_CODE = "AF4185384";
         const ADMIN_EMAIL = 'solojayoungup@gmail.com'; // 화면 표시용. 실제 권한은 Firestore 규칙이 판단합니다.
         const PICKLE_INVITE_URL = 'https://pickle.com'; // v6: 피클 초대 링크. 빈 문자열('')이면 1단계 버튼 대신 안내 문구가 나옵니다.
+        const PICKLE_STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=com.pickle.client'; // v9: 안드로이드(Play 스토어)
+        const PICKLE_STORE_URL_IOS = 'https://apps.apple.com/kr/app/id6795790129'; // v9: 아이폰·아이패드(App Store). PC·기타는 PICKLE_INVITE_URL
         const PICKLE_MESSAGE = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v6: 2단계 복사 문장
         const PICKLE_MESSAGE_RESTAURANT = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출/수수료 내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v8: 식당·카페 토글 체크 시 문장
         let currentUser = null;
@@ -1568,14 +1570,14 @@
             const box = document.getElementById('pickleStep1Action');
             if (!box) return;
             if (url) {
-                box.innerHTML = `<a id="pickleInviteLink" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">피클(Pickle) 알아보기 / 설치하기 <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>`;
+                box.innerHTML = `<a id="pickleInviteLink" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">피클(Pickle) 앱 열기 / 설치하기 <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a><p class="mt-1.5 text-center text-[10px] text-slate-400"><a href="${escapeHtml(PICKLE_STORE_URL_ANDROID)}" target="_blank" rel="noopener noreferrer" class="underline">Android</a> · <a href="${escapeHtml(PICKLE_STORE_URL_IOS)}" target="_blank" rel="noopener noreferrer" class="underline">iPhone</a></p>`;
             } else {
                 box.innerHTML = `<p class="text-[11px] text-slate-500">공식 앱 스토어에서 '피클'을 검색해 설치해 주세요. (바로가기 링크는 추후 연결 예정입니다.)</p>`;
             }
         }
 
         function openPickleGuideModal() {
-            renderPickleStep1(PICKLE_INVITE_URL);
+            renderPickleStep1(getPickleStoreUrl()); // v9: 기기별 스토어(값이 비면 기존 안내 문구)
             const pickleToggle = document.getElementById('pickleRestaurantToggle');
             if (pickleToggle) pickleToggle.checked = false; // v8: 열 때마다 해제
             updatePicklePreview();
@@ -1679,6 +1681,14 @@
         function updatePicklePreview() {
             const p = document.getElementById('pickleMessagePreview');
             if (p) p.textContent = getCurrentPickleMessage();
+        }
+
+        /* ----- v9: 피클 기기별 스토어 링크 ----- */
+        function getPickleStoreUrl() {
+            const ua = navigator.userAgent || '';
+            if (/android/i.test(ua)) return PICKLE_STORE_URL_ANDROID;
+            if (/iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return PICKLE_STORE_URL_IOS;
+            return PICKLE_INVITE_URL;
         }
     </script>
 </body>
