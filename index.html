@@ -540,7 +540,7 @@
     <!-- Application Script -->
     <script>
         const COUPANG_TRACKING_CODE = "AF4185384";
-        const ADMIN_EMAIL = 'ADMIN_EMAIL_HERE@example.com'; // 화면 표시용. 실제 권한은 Firestore 규칙이 판단합니다.
+        const ADMIN_EMAIL = 'solojayoungup@gmail.com'; // 화면 표시용. 실제 권한은 Firestore 규칙이 판단합니다.
         let currentUser = null;
         let storeConfig = null;
         let dbData = [];
@@ -552,10 +552,26 @@
         let isAdmin = false;
 
         let currentActiveDetailDate = '';
-        let calendarYear = new Date().getFullYear();
-        let calendarMonth = new Date().getMonth() + 1;
+        let calendarYear = getKstParts().year;   // v3: 한국시간 기준
+        let calendarMonth = getKstParts().month; // v3: 한국시간 기준
 
-        const getTodayStr = () => new Date().toISOString().split('T')[0];
+        // v3: 한국시간(Asia/Seoul) 기준 날짜 도우미.
+        // 예전 toISOString()은 UTC라서 한국시간 00:00~08:59에는 하루 전 날짜가 나왔습니다.
+        function getKstParts(d) {
+            d = d || new Date();
+            try {
+                const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(d);
+                const pick = t => parseInt(parts.find(p => p.type === t).value, 10);
+                return { year: pick('year'), month: pick('month'), day: pick('day') };
+            } catch (e) {
+                // 아주 오래된 브라우저: 기기 시간 기준(한국 기기면 한국시간)
+                return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
+            }
+        }
+        const getTodayStr = () => {
+            const k = getKstParts();
+            return `${k.year}-${String(k.month).padStart(2, '0')}-${String(k.day).padStart(2, '0')}`;
+        };
 
         function openPrivacyModal() { document.getElementById('privacyModal').classList.remove('hidden'); }
         function closePrivacyModal() { document.getElementById('privacyModal').classList.add('hidden'); }
@@ -693,7 +709,7 @@
                 content: content.slice(0, 1000),
                 isPrivate: isPrivate,
                 createdAt: Date.now(),
-                dateStr: new Date().toLocaleDateString('ko-KR')
+                dateStr: new Date().toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })
             };
 
             await window.setDoc(window.doc(window.firebaseDb, "community_board", newPost.id), newPost);
@@ -804,9 +820,9 @@
         function initYearAndMonthOptions() {
             const yearSelect = document.getElementById('yearSelect');
             const monthSelect = document.getElementById('monthSelect');
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonthStr = (now.getMonth() + 1).toString().padStart(2, '0');
+            const nowK = getKstParts(); // v3: 한국시간 기준
+            const currentYear = nowK.year;
+            const currentMonthStr = nowK.month.toString().padStart(2, '0');
 
             yearSelect.innerHTML = '';
             for (let y = 2020; y <= 2040; y++) {
