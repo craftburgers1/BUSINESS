@@ -390,14 +390,14 @@
                 <div class="bg-slate-50 p-3 rounded-xl space-y-1">
                     <p class="font-bold text-slate-800">3단계 · 영수증 보내기</p>
                     <p class="text-[11px] text-slate-500">처음 한 번만 피클 브라우저에서 직접 로그인해 주면, 다음부터는 영수증·거래명세표 사진이나 정산 내역만 톡으로 보내도 알아서 입력해 줍니다. 쿠팡·네이버쇼핑·G마켓 등 자주 쓰는 쇼핑몰/매장 계정도 피클에 연결해 두면, 주문내역을 보고 매장 지출을 알아서 정리·입력해 줍니다.</p>
-                    <p class="text-[11px] text-slate-500">식당·카페라면 배민·쿠팡이츠·요기요·포스까지 연결해 매출·수수료 정산도 맡길 수 있습니다.</p>
+                    <p class="text-[11px] text-slate-500">식당·카페라면 배민·쿠팡이츠·요기요·포스까지 연결해 매일 매출 기록과 월말 수수료 정산도 맡길 수 있습니다.</p>
                 </div>
                 <!-- v10: 🚀 자영업자 풀세팅(전체 자동화) 안내 -->
                 <div class="border-t border-slate-200 pt-3 space-y-2">
                     <p class="font-bold text-slate-800">🚀 더 많이 자동화하고 싶다면? <span class="text-blue-600">(자영업자 풀세팅)</span></p>
                     <p class="text-[11px] text-slate-500">배민·쿠팡·포스·네이버를 연결하면 이런 일을 루틴으로 맡길 수 있어요.</p>
                     <div class="bg-slate-50 p-3 rounded-xl space-y-1.5">
-                        <p class="text-[11px] text-slate-600 leading-relaxed">💰 <b class="text-slate-800">매출·수수료 자동 기입</b> — 포스·배달앱 매출과 수수료·배달비를 매일 정해진 시간에 가계부로 자동 기록</p>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">💰 <b class="text-slate-800">매출·월말 정산 자동 기입</b> — 포스·배달앱 전날 매출은 매일 자동 기록, 배달앱 수수료·배달비는 매월 1일 정산서 기준으로 한 번에 정리</p>
                         <p class="text-[11px] text-slate-600 leading-relaxed">💬 <b class="text-slate-800">매일 리뷰 답글 자동화</b> — 긍정 리뷰(4~5점)는 매장 톤으로 답글 작성, 부정 리뷰(1~3점)는 답글 보류 후 즉시 알림</p>
                         <p class="text-[11px] text-slate-600 leading-relaxed">🧾 <b class="text-slate-800">식자재·지출 자동 정리</b> — 영수증 사진과 쿠팡·네이버쇼핑·G마켓 주문내역을 항목별로 자동 분류</p>
                         <p class="text-[11px] text-slate-600 leading-relaxed">📅 <b class="text-slate-800">예약·매장 챙김</b> — 네이버 예약 메일 알림 및 캘린더 일정 자동 등록</p>
@@ -652,8 +652,8 @@
         const PICKLE_STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=com.pickle.client'; // v9: 안드로이드(Play 스토어)
         const PICKLE_STORE_URL_IOS = 'https://apps.apple.com/kr/app/id6795790129'; // v9: 아이폰·아이패드(App Store). PC·기타는 PICKLE_INVITE_URL
         const PICKLE_MESSAGE = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v6: 2단계 복사 문장
-        const PICKLE_MESSAGE_RESTAURANT = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출/수수료 내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v8: 식당·카페 토글 체크 시 문장
-        const PICKLE_FULL_ROUTINE_PROMPT = '너는 내 매장 전담 비서야. 내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)와 근태관리(https://craftburgers1.github.io/craftburger/)를 연결해 두고 아래 4가지를 루틴으로 맡아 줘. (계정 연결은 내가 하나씩 도와줄게!)\n1. 매일 새벽 3시: 포스·배달앱(배민·쿠팡이츠·요기요·땡겨요) 전날 매출·수수료·배달비를 가계부에 자동 기록\n2. 매일 자정: 배민·쿠팡이츠·네이버 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)\n3. 지출 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력\n4. 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.'; // v10: 자영업자 풀세팅 루틴 프롬프트
+        const PICKLE_MESSAGE_RESTAURANT = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v8: 식당·카페 토글 체크 시 문장
+        const PICKLE_FULL_ROUTINE_PROMPT = '너는 내 매장 전담 비서야. 내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)와 근태관리(https://craftburgers1.github.io/craftburger/)를 연결해 두고 아래 4가지를 루틴으로 맡아 줘. (계정 연결은 내가 하나씩 도와줄게!)\n1. 매일 새벽 3시: 포스·배달앱(배민·쿠팡이츠·요기요·땡겨요) 전날 매출만 가계부에 자동 기록 (수수료·배달비는 매일 넣으면 정산이 안 맞으니 매월 1일 월말 정산내역서 기준으로 한 번에 정리)\n2. 매일 자정: 배민·쿠팡이츠·네이버 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)\n3. 지출 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력\n4. 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.'; // v10: 자영업자 풀세팅 루틴 프롬프트
         let currentUser = null;
         let storeConfig = null;
         let dbData = [];
