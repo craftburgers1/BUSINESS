@@ -159,6 +159,9 @@ body{-webkit-touch-callout:none}
 .lt{grid-column:1;grid-row:1;justify-self:start;display:flex;align-items:center;gap:6px;min-width:0}
 .twod{display:flex;align-items:center;gap:2px;height:30px;padding:0 11px;border-radius:999px;background:#fff;font-size:12px;font-weight:800;color:var(--ink);text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(110,70,40,.13)}
 .twod em{font-style:normal}
+.quick .zb{padding:0 10px;min-width:40px}
+.tourdots{display:flex;gap:6px;justify-content:center;margin:12px 0 4px}.tourdots i{width:7px;height:7px;border-radius:50%;background:var(--line2)}.tourdots i.on{background:var(--coral);width:18px;border-radius:4px}
+.tourbig{font-size:54px;text-align:center;line-height:1.2;margin:4px 0 6px}.tourt{font-size:17px;font-weight:800;text-align:center;margin:0 0 6px;color:var(--ink)}.tourp{font-size:13.5px;line-height:1.6;text-align:center;color:var(--muted);margin:0;word-break:keep-all}
 button.twod{border:0;cursor:pointer;margin-left:6px}
 #hud .lt a.twod{margin-left:auto}
 body.standalone #instBtn{display:none}
@@ -422,6 +425,7 @@ body.sm-open #xh,body.sm-open #tags{opacity:0}
 
 <div id="bar">
   <div class="quick glass" role="group" aria-label="빠른 시점">
+    <button type="button" data-zoom="-1" class="zb" aria-label="뒤로 물러나기(축소)">➖</button><button type="button" data-zoom="1" class="zb" aria-label="앞으로 다가가기(확대)">➕</button>
     <button type="button" data-view="seat" class="on" aria-label="내 자리로">🔄 내 자리</button>
   </div>
   <button id="face" type="button" aria-label="사장님에게 말 걸기">🧑‍🍳</button>
@@ -3672,12 +3676,43 @@ function zoomBy(m) { // m>0: 앞으로
 cv.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; PTS.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (PTS.size === 2) { const [a, b] = [...PTS.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) }; if (drag) { drag = null; cv.classList.remove('dragging'); } vel.yaw = vel.pitch = 0; } }, true);
 cv.addEventListener('pointermove', e => { if (!PTS.has(e.pointerId)) return; PTS.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (pinch && PTS.size >= 2) { const [a, b] = [...PTS.values()], d = Math.hypot(a.x - b.x, a.y - b.y); zoomBy((d - pinch.d) * 0.0042); pinch.d = d; e.stopImmediatePropagation(); } }, true);
+  if (pinch && PTS.size >= 2) { const [a, b] = [...PTS.values()], d = Math.hypot(a.x - b.x, a.y - b.y); zoomBy((d - pinch.d) * 0.03); pinch.d = d; e.stopImmediatePropagation(); } }, true);
 const ptEnd = e => { PTS.delete(e.pointerId); if (PTS.size < 2 && pinch) { pinch = null; if (drag) drag = null; } };
 cv.addEventListener('pointerup', ptEnd, true); cv.addEventListener('pointercancel', ptEnd, true);
 document.querySelectorAll('[data-view="seat"]').forEach(b => b.addEventListener('pointerdown', () => { b._wasSeat = view === 'seat' && !activeKey && !camTween; }));
 document.querySelectorAll('[data-view="seat"]').forEach(b => b.addEventListener('click', () => { if (!b._wasSeat || (!ZM.x && !ZM.z)) return; ZM.x = ZM.z = 0; try { localStorage.removeItem('solo3d_zoom'); } catch (e) {} moveTo(seatPose(), 0.6); toast('🔄 처음 자리로 돌아왔어요'); }));
-cv.addEventListener('wheel', e => { e.preventDefault(); const k = e.ctrlKey ? 0.012 : (e.deltaMode === 1 ? 0.045 : 0.0012); zoomBy(THREE.MathUtils.clamp(-e.deltaY * k, -0.35, 0.35)); }, { passive: false });
+cv.addEventListener('wheel', e => { e.preventDefault(); const k = e.ctrlKey ? 0.04 : (e.deltaMode === 1 ? 0.15 : 0.005); zoomBy(THREE.MathUtils.clamp(-e.deltaY * k, -1, 1)); }, { passive: false });
+/* ---- ➕➖ 줌 버튼: 한 번에 1.3m 부드럽게, 꾹 누르면 계속 ---- */
+let zAnim = null;
+function zoomStep(dir) { const t0 = performance.now(), total = 1.3 * dir; let done = 0; const my = zAnim = {};
+  const f = now => { if (zAnim !== my) return; const t = Math.min(1, (now - t0) / 220), want = total * (1 - (1 - t) * (1 - t)); zoomBy(want - done); done = want; if (t < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); }
+document.querySelectorAll('[data-zoom]').forEach(b => { let hold = 0, rep = 0; const stop = () => { clearTimeout(hold); clearInterval(rep); };
+  b.addEventListener('pointerdown', () => { stop(); firstUse(); if (activeKey) return; if (view !== 'seat') { setView('seat'); return; } zoomStep(+b.dataset.zoom); hold = setTimeout(() => { rep = setInterval(() => zoomStep(+b.dataset.zoom), 230); }, 380); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => b.addEventListener(t, stop));
+  b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); zoomStep(+b.dataset.zoom); } }); });
+
+/* ---- 👋 처음 온 사람용 30초 안내 (한 번만, 내정보에서 다시 보기) ---- */
+const TOUR_KEY = 'solo3d_tour'; let tourI = 0;
+const TOUR = () => { const c = MC(), home = MODE === 'home'; return [
+  ['👋', '솔로운영 3D에 오신 걸 환영해요', '가게 안을 둘러보며 쓰는 가계부예요. 30초만 보면 바로 쓸 수 있어요.'],
+  ['👆', '둘러보기 · 줌', '화면을 <b>드래그</b>하면 고개를 돌려요. <b>두 손가락</b>을 벌리거나 오므리면(PC는 휠) 앞뒤로 움직이고, 아래 <b>➖ ➕</b> 버튼으로도 돼요.'],
+  ['🎯', '물건·사람을 탭하세요', `<b>${OBJ.pos.emoji} ${OBJ.pos.name}</b>는 이번 달 요약, <b>🧊 냉장고</b>는 ${esc(c.varW)}, <b>${OBJ.safe.emoji} ${OBJ.safe.name}</b>는 고정비, <b>📅 달력</b>은 날짜별 내역이에요.`],
+  ['🧑‍💼', '입력은 세무담당 직원에게', '<b>AI 자동입력</b>(영수증 사진·주문내역), <b>직접 입력</b>, ' + (home ? '정산표' : '세무회계 장부(복식부기)') + ', 영수증함, 홈택스 엑셀을 모두 맡아요.'],
+  ['☁️', '내 장부로 쓰려면 로그인', '지금은 <b>체험 데이터</b>예요. 오른쪽 위 <b>Google 로그인</b>을 하면 내 장부가 저장되고 2D 가계부와 똑같이 연동돼요. 📲 버튼으로 홈 화면에 앱처럼 추가할 수 있어요.']]; };
+function renderTour() { const T = TOUR(), [ic, t, d] = T[tourI], last = tourI === T.length - 1;
+  smTitle.textContent = `처음 안내 ${tourI + 1} / ${T.length}`;
+  smBody.innerHTML = `<div class="tourbig">${ic}</div><p class="tourt">${t}</p><p class="tourp">${d}</p><div class="tourdots">${T.map((x, i) => `<i class="${i === tourI ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="factions" style="margin-top:12px">${tourI ? '<button type="button" class="cancel" data-tour="-1">← 이전</button>' : '<button type="button" class="cancel" data-tour="skip">건너뛰기</button>'}<button type="button" class="save" data-tour="${last ? 'done' : '1'}">${last ? '시작하기 🎉' : '다음 →'}</button></div>`; }
+function tourSeen() { try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) {} }
+function openTour() { tourI = 0; if (activeKey) closePanel(); openSm('tour'); }
+const _renderSm_tour = renderSm; renderSm = function () { if (smOpen === 'tour') return renderTour(); _renderSm_tour(); };
+const _closeSm_tour = closeSm; closeSm = function () { if (smOpen === 'tour') tourSeen(); _closeSm_tour(); };
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+  if (smOpen === 'tour' && b.dataset.tour) { const v = b.dataset.tour; if (v === 'skip' || v === 'done') { closeSm(); return; } tourI = Math.max(0, tourI + +v); renderSm(); return; }
+  if (smOpen === 'me' && b.dataset.act === 'tour-again') { smOpen = null; openTour(); } });
+const _renderMe_tour = renderMe; renderMe = function () { _renderMe_tour(); const f = smBody.querySelector('.factions'); if (f) f.insertAdjacentHTML('afterend', '<button type="button" class="ghost" data-act="tour-again" style="margin-top:8px">👋 처음 안내 다시 보기</button>'); };
+{ let seen = false; try { seen = !!localStorage.getItem(TOUR_KEY); } catch (e) { seen = true; }
+  if (!seen) { const tryOpen = n => setTimeout(() => { if (!started || camTween || switching) { if (n < 40) tryOpen(n + 1); return; } if (!smOpen && !aiOpen && !activeKey) openTour(); }, n ? 400 : 2600); tryOpen(0); } }
 // 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
 const _applyCam_far = applyCam;
 applyCam = function () { _applyCam_far(); const out = cam.pos.z > ROOM.z1 - 0.45; if (back.visible === out) back.visible = !out; };
