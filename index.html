@@ -3107,8 +3107,8 @@ function allEntries() {
 }
 const CAL = { y: kst().y, m: kst().m, day: null, delArm: null };
 // 3D 벽걸이 달력
-const CAL_AT = [1.88, 1.55, ROOM.z0 + 0.04];
-const wallCal = new THREE.Group(); wallCal.position.set(CAL_AT[0], CAL_AT[1], CAL_AT[2]); scene.add(wallCal);
+const CAL_AT = [ROOM.x1 - 0.04, 1.78, 0.2], CAL_S = 1.6; // 오른쪽 벽, 세무담당 직원 옆(가까워서 잘 눌림) · 크게
+const wallCal = new THREE.Group(); wallCal.position.set(CAL_AT[0], CAL_AT[1], CAL_AT[2]); wallCal.rotation.y = -Math.PI / 2; wallCal.scale.setScalar(CAL_S); scene.add(wallCal);
 const calTex = decoTex(384, 480), calFaceM = new THREE.MeshStandardMaterial({ color: 0xffffff, map: calTex, emissive: 0xffffff, emissiveMap: calTex, emissiveIntensity: 0.08, roughness: 0.8 });
 add(wallCal, RB(0.5, 0.64, 0.02, 0.01), S(0xd8b48a, 0.6), 0, 0, 0, false);
 add(wallCal, new THREE.PlaneGeometry(0.46, 0.575), calFaceM, 0, -0.01, 0.0115, false);
@@ -3127,7 +3127,7 @@ function drawWallCal() {
   }
   calTex.needsUpdate = true;
 }
-register('calendar', wallCal, { emoji: '📅', name: '달력', short: '달력', chip: '탭해서 달력 보기', anchor: V3(CAL_AT[0], CAL_AT[1] + 0.42, CAL_AT[2]), focus: null });
+register('calendar', wallCal, { emoji: '📅', name: '달력', short: '달력', chip: '탭해서 달력 보기', anchor: V3(CAL_AT[0] - 0.08, CAL_AT[1] + 0.42 * CAL_S, CAL_AT[2]), focus: null });
 { const o = OBJ.calendar, el = document.createElement('button'); el.type = 'button'; el.className = 'tg';
   el.innerHTML = `<span class="b">📅</span><span class="e"><span class="ee"></span>📅 달력</span>`; el.setAttribute('aria-label', '달력 보기');
   el.addEventListener('click', e => { e.stopPropagation(); firstUse(); if (el.classList.contains('edge')) { lookAt(o.anchor); setTimeout(() => interact('calendar'), RM ? 320 : 650); } else interact('calendar'); });
