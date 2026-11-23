@@ -9,7 +9,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#f8fafc">
-    <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/analytics.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <!-- v18: 📲 홈 화면에 앱 추가(PWA) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-title" content="솔로운영">
+    <!-- v18: 꾸미기 폰트(손글씨체 Gaegu · 둥근체 Jua). 화면을 막지 않게 늦게 적용, 실패하면 Pretendard -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap" media="print" onload="this.media='all'">
     <link rel="icon" type="image/png" href="https://img.icons8.com/color/192/analytics.png">
 
     <!-- CSS & Icon CDNs -->
@@ -128,6 +134,44 @@
             grid-template-columns: repeat(7, 1fr);
             gap: 2px;
         }
+    </style>
+    <!-- v18: 🎨 테마·폰트. 기본값(white·gothic)에는 규칙이 없어서 v17 화면 그대로 -->
+    <style id="v18DecoStyle">
+        body[data-theme="peach"] { background-color: #fdf2f5; }
+        body[data-theme="peach"] .ios-header { background: rgba(255, 245, 248, 0.92); border-bottom-color: #f9d3de; }
+        body[data-theme="peach"] .ios-card:not(.bg-white):not(.bg-gradient-to-br) { background-color: rgba(255, 249, 251, 0.97); }
+        body[data-theme="peach"] .ios-card:not(.bg-white):not(.bg-gradient-to-br):not(.border-l-4) { border-color: #f9d3de; }
+        body[data-theme="peach"] .ios-card.border-l-4 { border-top-color: #f9d3de; border-right-color: #f9d3de; border-bottom-color: #f9d3de; } /* KPI 왼쪽 4색 보더는 그대로 */
+        body[data-theme="peach"] input, body[data-theme="peach"] select, body[data-theme="peach"] textarea { background-color: #fff6f9 !important; border-color: #f2c4d2 !important; }
+        body[data-theme="peach"] .tab-btn.active { background-color: #db2777; border-color: #db2777; box-shadow: 0 4px 12px rgba(219, 39, 119, 0.22); }
+        body[data-theme="peach"] .sub-tab-btn.active { background-color: #9d174d; }
+        body[data-theme="peach"] #decoRow button:hover { background-color: #fff1f5; }
+
+        body[data-theme="mint"] { background-color: #ecf8f3; }
+        body[data-theme="mint"] .ios-header { background: rgba(243, 252, 248, 0.92); border-bottom-color: #c5ebdb; }
+        body[data-theme="mint"] .ios-card:not(.bg-white):not(.bg-gradient-to-br) { background-color: rgba(247, 253, 250, 0.97); }
+        body[data-theme="mint"] .ios-card:not(.bg-white):not(.bg-gradient-to-br):not(.border-l-4) { border-color: #c5ebdb; }
+        body[data-theme="mint"] .ios-card.border-l-4 { border-top-color: #c5ebdb; border-right-color: #c5ebdb; border-bottom-color: #c5ebdb; } /* KPI 왼쪽 4색 보더는 그대로 */
+        body[data-theme="mint"] input, body[data-theme="mint"] select, body[data-theme="mint"] textarea { background-color: #f3fbf7 !important; border-color: #b9e3d1 !important; }
+        body[data-theme="mint"] .tab-btn.active { background-color: #0f766e; border-color: #0f766e; box-shadow: 0 4px 12px rgba(15, 118, 110, 0.22); }
+        body[data-theme="mint"] .sub-tab-btn.active { background-color: #115e59; }
+        body[data-theme="mint"] #decoRow button:hover { background-color: #effaf5; }
+
+        body[data-theme="butter"] { background-color: #fdf8e7; }
+        body[data-theme="butter"] .ios-header { background: rgba(255, 252, 240, 0.92); border-bottom-color: #f3e3a8; }
+        body[data-theme="butter"] .ios-card:not(.bg-white):not(.bg-gradient-to-br) { background-color: rgba(255, 253, 245, 0.97); }
+        body[data-theme="butter"] .ios-card:not(.bg-white):not(.bg-gradient-to-br):not(.border-l-4) { border-color: #f3e3a8; }
+        body[data-theme="butter"] .ios-card.border-l-4 { border-top-color: #f3e3a8; border-right-color: #f3e3a8; border-bottom-color: #f3e3a8; } /* KPI 왼쪽 4색 보더는 그대로 */
+        body[data-theme="butter"] input, body[data-theme="butter"] select, body[data-theme="butter"] textarea { background-color: #fffbeb !important; border-color: #eedc96 !important; }
+        body[data-theme="butter"] .tab-btn.active { background-color: #a16207; border-color: #a16207; box-shadow: 0 4px 12px rgba(161, 98, 7, 0.22); }
+        body[data-theme="butter"] .sub-tab-btn.active { background-color: #854d0e; }
+        body[data-theme="butter"] #decoRow button:hover { background-color: #fffbeb; }
+
+        body[data-font="hand"] { font-family: 'Gaegu', 'Pretendard', -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
+        body[data-font="cute"] { font-family: 'Jua', 'Pretendard', -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
+        body[data-font="hand"] input, body[data-font="hand"] select, body[data-font="hand"] textarea, body[data-font="hand"] button,
+        body[data-font="cute"] input, body[data-font="cute"] select, body[data-font="cute"] textarea, body[data-font="cute"] button { font-family: inherit; }
+        body[data-font="hand"] .font-medium, body[data-font="hand"] .font-semibold { font-weight: 700; } /* 손글씨체는 굵게 써야 숫자가 잘 읽힘 */
     </style>
 </head>
 <body>
@@ -301,6 +345,11 @@
             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
                 <h3 id="dayDetailTitle" class="text-xs font-bold text-slate-900">📅 날짜 상세 내역</h3>
                 <button onclick="closeDayDetailModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <!-- v18: 🏷️ 그날 기분 스티커 -->
+            <div id="dayStickerRow" class="space-y-1.5">
+                <p class="text-[11px] font-bold text-slate-500">그날 기분</p>
+                <div id="dayStickerButtons" class="flex flex-wrap gap-1"></div>
             </div>
             <div id="dayDetailList" class="overflow-y-auto flex-1 space-y-2 text-xs"></div>
             <button onclick="closeDayDetailModal()" class="w-full py-2 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
@@ -502,6 +551,59 @@
         </div>
     </div>
 
+    <!-- v18: 🎨 꾸미기 모달 -->
+    <div id="decoModal" onclick="if (event.target === this) closeDecoModal()" role="dialog" aria-modal="true" aria-labelledby="decoTitle" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <h3 id="decoTitle" class="text-sm font-bold text-slate-900">🎨 꾸미기</h3>
+                <button type="button" onclick="closeDecoModal()" aria-label="닫기" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="overflow-y-auto space-y-4 flex-1 p-0.5">
+                <div class="space-y-2">
+                    <p class="text-[11px] font-bold text-slate-500">테마 · 누르면 바로 바뀌어요</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" data-theme-pick="white" onclick="setDecoTheme('white')" class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white text-left min-w-0 transition"><span class="w-7 h-7 rounded-lg flex-shrink-0" style="background:#f1f5f9;border:1px solid #cbd5e1"></span><span class="min-w-0 text-xs font-bold text-slate-800 leading-tight break-keep">심플 화이트<span class="block text-[10px] font-medium text-slate-500">기본</span></span></button>
+                        <button type="button" data-theme-pick="peach" onclick="setDecoTheme('peach')" class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white text-left min-w-0 transition"><span class="w-7 h-7 rounded-lg flex-shrink-0" style="background:#fdf2f5;border:1px solid #f2c4d2"></span><span class="min-w-0 text-xs font-bold text-slate-800 leading-tight break-keep">피치 블라썸<span class="block text-[10px] font-medium text-slate-500">파스텔 핑크</span></span></button>
+                        <button type="button" data-theme-pick="mint" onclick="setDecoTheme('mint')" class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white text-left min-w-0 transition"><span class="w-7 h-7 rounded-lg flex-shrink-0" style="background:#ecf8f3;border:1px solid #b9e3d1"></span><span class="min-w-0 text-xs font-bold text-slate-800 leading-tight break-keep">민트 라떼<span class="block text-[10px] font-medium text-slate-500">파스텔 민트</span></span></button>
+                        <button type="button" data-theme-pick="butter" onclick="setDecoTheme('butter')" class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white text-left min-w-0 transition"><span class="w-7 h-7 rounded-lg flex-shrink-0" style="background:#fdf8e7;border:1px solid #eedc96"></span><span class="min-w-0 text-xs font-bold text-slate-800 leading-tight break-keep">버터 크림<span class="block text-[10px] font-medium text-slate-500">파스텔 옐로우</span></span></button>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-[11px] font-bold text-slate-500">폰트</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" data-font-pick="gothic" onclick="setDecoFont('gothic')" class="px-1.5 py-2 rounded-xl border border-slate-200 bg-white text-center min-w-0 transition"><span class="block text-[10px] font-bold text-slate-500 break-keep">기본 고딕</span><span class="block text-sm text-slate-900 truncate" style="font-family:'Pretendard', sans-serif">가나다 123</span></button>
+                        <button type="button" data-font-pick="hand" onclick="setDecoFont('hand')" class="px-1.5 py-2 rounded-xl border border-slate-200 bg-white text-center min-w-0 transition"><span class="block text-[10px] font-bold text-slate-500 break-keep">손글씨체</span><span class="block text-sm text-slate-900 truncate" style="font-family:'Gaegu', 'Pretendard', sans-serif">가나다 123</span></button>
+                        <button type="button" data-font-pick="cute" onclick="setDecoFont('cute')" class="px-1.5 py-2 rounded-xl border border-slate-200 bg-white text-center min-w-0 transition"><span class="block text-[10px] font-bold text-slate-500 break-keep">둥근 귀여운체</span><span class="block text-sm text-slate-900 truncate" style="font-family:'Jua', 'Pretendard', sans-serif">가나다 123</span></button>
+                    </div>
+                </div>
+            </div>
+            <button type="button" onclick="resetDeco()" class="self-center text-[11px] font-bold text-slate-500 underline underline-offset-2">기본으로 되돌리기</button>
+            <button type="button" onclick="closeDecoModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+        </div>
+    </div>
+
+    <!-- v18: 📲 홈 화면 추가 안내 모달 -->
+    <div id="installGuideModal" onclick="if (event.target === this) closeInstallGuide()" role="dialog" aria-modal="true" aria-labelledby="installGuideTitle" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <h3 id="installGuideTitle" class="text-sm font-bold text-slate-900">📲 홈 화면에 앱처럼 추가하기</h3>
+                <button type="button" onclick="closeInstallGuide()" aria-label="닫기" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="overflow-y-auto space-y-3 text-xs text-slate-600 flex-1 leading-relaxed">
+                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
+                    <p class="font-bold text-slate-800">🍎 아이폰 · 아이패드</p>
+                    <p class="text-[11px] text-slate-600 break-keep">Safari에서 ⬆️ <b>공유</b> → 아래로 내려 <b>홈 화면에 추가</b> → <b>추가</b></p>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl space-y-1">
+                    <p class="font-bold text-slate-800">🤖 안드로이드 크롬</p>
+                    <p class="text-[11px] text-slate-600 break-keep">오른쪽 위 ⋮ → <b>앱 설치</b> 또는 <b>홈 화면에 추가</b></p>
+                </div>
+                <p class="text-[11px] text-slate-600 break-keep">설치하면 주소창 없이 전체 화면으로 열리고, 아이콘만 눌러 바로 시작할 수 있어요.</p>
+            </div>
+            <button type="button" onclick="closeInstallGuide()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+        </div>
+    </div>
+
     <!-- Header Navigation -->
     <header class="sticky top-0 z-30 ios-header px-4 py-3.5 flex justify-between items-center">
         <div class="flex items-center gap-2.5 cursor-pointer max-sm:min-w-0" onclick="openWizardModal()">
@@ -546,6 +648,12 @@
         <button type="button" id="manualBtn" onclick="openManualModal()" class="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">
             📖 사용설명서 <span class="font-medium text-slate-500">· 처음이라면 1분만 읽어 보세요</span>
         </button>
+
+        <!-- v18: 🎨 꾸미기 · 📲 홈 화면 추가 -->
+        <div id="decoRow" class="grid grid-cols-2 gap-2">
+            <button type="button" id="decoBtn" onclick="openDecoModal()" class="py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">🎨 꾸미기</button>
+            <button type="button" id="installBtn" onclick="installApp()" class="py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">📲 홈 화면 추가</button>
+        </div>
 
         <!-- v16: 🧾 영수증함(모아보기) -->
         <button type="button" id="receiptBoxBtn" onclick="openReceiptBox()" class="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">
@@ -2888,6 +2996,174 @@
             v17DecoratePersonal(document.getElementById('dayDetailList'));
             return r;
         };
+
+        /* ===================== v18: 🎨 꾸미기 · 🏷️ 날짜 스티커 · 📲 홈 화면 추가 ===================== */
+        // 기본값(심플 화이트 + 기본 고딕)일 때는 CSS 규칙이 하나도 걸리지 않아 v17 화면 그대로.
+        // 테마·폰트는 기기 설정(localStorage)만, Firebase 쓰기 0. 스티커는 로컬 우선 + 로그인 시 best-effort 동기화.
+        const V18_THEMES = ['white', 'peach', 'mint', 'butter'];
+        const V18_FONTS = ['gothic', 'hand', 'cute'];
+        const V18_THEME_KEY = 'soloGagebuTheme', V18_FONT_KEY = 'soloGagebuFont';
+        const V18_STICKERS = ['😊', '🔥', '💸', '🎉', '☕', '🌧️', '💪', '🍻', '🛍️', '❤️'];
+        const v18Mem = {};   // localStorage를 못 쓸 때 쓰는 메모리 저장소
+
+        function v18Get(key) {
+            try { const v = localStorage.getItem(key); if (v !== null) return v; } catch (e) { /* 사생활 보호 모드 등 */ }
+            return Object.prototype.hasOwnProperty.call(v18Mem, key) ? v18Mem[key] : null;
+        }
+        function v18Set(key, value) {
+            v18Mem[key] = value;
+            try { localStorage.setItem(key, value); } catch (e) { /* 메모리 값만 사용 */ }
+        }
+
+        // ---- 🎨 테마·폰트 ----
+        function v18ApplyDeco() {
+            const t = v18Get(V18_THEME_KEY), f = v18Get(V18_FONT_KEY);
+            document.body.dataset.theme = V18_THEMES.includes(t) ? t : 'white';
+            document.body.dataset.font = V18_FONTS.includes(f) ? f : 'gothic';
+            document.querySelectorAll('#decoModal [data-theme-pick]').forEach(b => {
+                const on = b.dataset.themePick === document.body.dataset.theme;
+                b.classList.toggle('ring-2', on); b.classList.toggle('ring-blue-500', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+            document.querySelectorAll('#decoModal [data-font-pick]').forEach(b => {
+                const on = b.dataset.fontPick === document.body.dataset.font;
+                b.classList.toggle('ring-2', on); b.classList.toggle('ring-blue-500', on); b.classList.toggle('bg-blue-50', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+        }
+        function setDecoTheme(t) { v18Set(V18_THEME_KEY, V18_THEMES.includes(t) ? t : 'white'); v18ApplyDeco(); }
+        function setDecoFont(f) { v18Set(V18_FONT_KEY, V18_FONTS.includes(f) ? f : 'gothic'); v18ApplyDeco(); }
+        function resetDeco() { v18Set(V18_THEME_KEY, 'white'); v18Set(V18_FONT_KEY, 'gothic'); v18ApplyDeco(); }
+        function openDecoModal() { v18ApplyDeco(); document.getElementById('decoModal').classList.remove('hidden'); }
+        function closeDecoModal() { document.getElementById('decoModal').classList.add('hidden'); }
+        v18ApplyDeco();
+
+        // ---- 🏷️ 날짜 스티커 ----
+        function v18StickerKey() { return 'soloGagebuStickers:' + (isDemoMode ? 'demo' : (currentUser ? currentUser.uid : 'guest')); }
+        function v18LoadStickers(key) {
+            try { const m = JSON.parse(v18Get(key || v18StickerKey()) || '{}'); return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; }
+            catch (e) { return {}; }
+        }
+        function v18SaveStickers(map, key) { v18Set(key || v18StickerKey(), JSON.stringify(map)); }
+        function v18CloudSaveStickers(map) {
+            if (isDemoMode || !currentUser || !window.setDoc || !window.firebaseDb) return;
+            try {
+                Promise.resolve(window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "stickers"), { map, updatedAt: Date.now() }))
+                    .catch(err => console.warn('[스티커] 클라우드 저장 실패(로컬만 사용)', err));
+            } catch (err) { console.warn('[스티커] 클라우드 저장 실패(로컬만 사용)', err); }
+        }
+
+        function renderStickerRow(dateStr) {
+            const box = document.getElementById('dayStickerButtons');
+            if (!box || !dateStr) return;
+            const cur = v18LoadStickers()[dateStr] || '';
+            box.innerHTML = '';
+            V18_STICKERS.concat(['✖']).forEach(s => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                const on = s !== '✖' && s === cur;
+                b.className = 'sticker-btn w-8 h-8 rounded-lg border text-base leading-none flex items-center justify-center transition ' + (on ? 'bg-blue-50 border-blue-300' : 'bg-white border-slate-200 hover:bg-slate-50');
+                if (s === '✖') { b.className = 'sticker-btn h-8 px-2 rounded-lg border bg-white border-slate-200 hover:bg-slate-50 text-[11px] font-bold text-slate-500 transition'; b.textContent = '✖ 지우기'; b.setAttribute('aria-label', '스티커 지우기'); }
+                else { b.textContent = s; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.setAttribute('aria-label', '스티커 ' + s); }
+                b.onclick = () => setDaySticker(s === '✖' ? '' : s);
+                box.appendChild(b);
+            });
+        }
+
+        function setDaySticker(emoji) {
+            const dateStr = currentActiveDetailDate;
+            if (!dateStr) return;
+            const map = v18LoadStickers();
+            if (!emoji || map[dateStr] === emoji) delete map[dateStr]; else map[dateStr] = emoji;
+            v18SaveStickers(map);
+            v18CloudSaveStickers(map);
+            renderStickerRow(dateStr);
+            if (currentHistoryView === 'calendar') renderCalendarView(document.getElementById('history-container')); // 모달은 그대로 두고 달력만 다시
+        }
+
+        // 달력 칸: 스티커가 있는 날만 날짜 숫자 줄 오른쪽에 작게 1개(없는 날은 v17 그대로)
+        function v18DecorateCalendar(container) {
+            if (!container) return;
+            const map = v18LoadStickers();
+            if (!Object.keys(map).length) return;
+            container.querySelectorAll('.calendar-grid > div[onclick^="openDayDetailModal("]').forEach(cell => {
+                const m = /openDayDetailModal\('([0-9-]+)'\)/.exec(cell.getAttribute('onclick') || '');
+                const s = m && map[m[1]];
+                const num = cell.firstElementChild;
+                if (!s || !num || num.tagName !== 'SPAN') return;
+                const row = document.createElement('div');
+                row.className = 'flex items-start justify-between gap-0.5';
+                cell.insertBefore(row, num);
+                row.appendChild(num);
+                const st = document.createElement('span');
+                st.className = 'day-sticker text-[11px] leading-none';
+                st.textContent = s;
+                row.appendChild(st);
+            });
+        }
+
+        const v18Orig = { renderCalendarView, openDayDetailModal, loadUserDataFromCloud };
+        renderCalendarView = function (container) {
+            const r = v18Orig.renderCalendarView(container);
+            v18DecorateCalendar(container);
+            return r;
+        };
+        openDayDetailModal = function (dateStr) {
+            const r = v18Orig.openDayDetailModal(dateStr);
+            renderStickerRow(dateStr);
+            return r;
+        };
+
+        // 로그인 후: 클라우드 스티커와 로컬 병합(같은 날짜는 클라우드 우선, 클라우드에 없는 날짜는 로컬 유지)
+        loadUserDataFromCloud = async function () {
+            const r = await v18Orig.loadUserDataFromCloud();
+            if (isDemoMode || !currentUser) return r;
+            const uid = currentUser.uid, key = 'soloGagebuStickers:' + uid;
+            try {
+                const snap = await window.getDocs(window.collection(window.firebaseDb, "users", uid, "settings"));
+                let cloud = null;
+                snap.forEach(d => { if (d.id === 'stickers') { const x = d.data(); if (x && x.map && typeof x.map === 'object') cloud = x.map; } });
+                if (!currentUser || currentUser.uid !== uid) return r;
+                if (cloud) {
+                    const local = v18LoadStickers(key);
+                    const merged = Object.assign({}, local, cloud);
+                    v18SaveStickers(merged, key);
+                    if (Object.keys(local).some(k => !(k in cloud))) v18CloudSaveStickers(merged); // 로컬에만 있던 날짜를 클라우드에도
+                }
+            } catch (err) { console.warn('[스티커] 클라우드 읽기 실패(로컬만 사용)', err); }
+            if (currentHistoryView === 'calendar') renderCalendarView(document.getElementById('history-container'));
+            return r;
+        };
+
+        // ---- 📲 홈 화면에 앱 추가 ----
+        let v18InstallEvent = null;
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); v18InstallEvent = e; });
+        window.addEventListener('appinstalled', () => { v18InstallEvent = null; showDemoToast('홈 화면에 추가됐어요'); });
+        function v18IsStandalone() {
+            try { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
+            catch (e) { return false; }
+        }
+        function installApp() {
+            if (v18IsStandalone()) { showDemoToast('이미 홈 화면 앱으로 열려 있어요'); return; }
+            if (v18InstallEvent) {
+                const ev = v18InstallEvent; v18InstallEvent = null;
+                try { const p = ev.prompt(); if (p && p.catch) p.catch(() => {}); if (ev.userChoice && ev.userChoice.catch) ev.userChoice.catch(() => {}); return; }
+                catch (e) { /* 아래 안내로 */ }
+            }
+            document.getElementById('installGuideModal').classList.remove('hidden');
+        }
+        function closeInstallGuide() { document.getElementById('installGuideModal').classList.add('hidden'); }
+        try {
+            if ('serviceWorker' in navigator && location.protocol === 'https:') {
+                navigator.serviceWorker.register('./sw.js').catch(() => { /* 실패해도 앱 동작 영향 없음 */ });
+            }
+        } catch (e) { /* 무시 */ }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const d = document.getElementById('decoModal');
+            if (d && !d.classList.contains('hidden')) closeDecoModal();
+            const g = document.getElementById('installGuideModal');
+            if (g && !g.classList.contains('hidden')) closeInstallGuide();
+        });
     </script>
 </body>
 </html>
