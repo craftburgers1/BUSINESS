@@ -1,0 +1,2165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>솔로운영 3D · 매장 카운터</title>
+<meta name="theme-color" content="#f6ead9">
+<meta name="description" content="카운터 안쪽 내 자리에서 둘러보는 1인칭 3D 가계부 시제품">
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --cream:#fff8ef; --butter:#ffe6a3; --mint:#3fa58a; --mint-l:#bfe9dc; --apricot:#ffc9a3; --coral:#ef8a74; --coral-d:#d9674f;
+  --ink:#4a3b30; --muted:#8f7a69; --line:rgba(120,88,60,.13); --line2:rgba(120,88,60,.22);
+  --glass:rgba(255,250,243,.8); --pos:#2f9e78; --neg:#dd5e47;
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;background:#f6ead9;color:var(--ink);overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input{font:inherit;color:inherit;user-select:text;-webkit-user-select:text}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3);border:1px solid rgba(255,255,255,.7);box-shadow:0 6px 24px rgba(110,70,40,.12)}
+[hidden]{display:none!important}
+
+#stage{position:fixed;inset:0;opacity:0;transition:opacity .9s ease}
+#stage.ready{opacity:1}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none;outline:none;cursor:grab}
+#stage canvas.dragging{cursor:grabbing}
+
+#loader,#fallback{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#f6ead9;transition:opacity .6s}
+#loader.hide{opacity:0;pointer-events:none}
+#loader p,#fallback p{font-size:14px;color:var(--muted);text-align:center;line-height:1.6;padding:0 24px}
+#fallback b{font-size:16px}
+.blob{width:44px;height:44px;border-radius:50%;background:var(--butter);position:relative;animation:bob 1s ease-in-out infinite alternate}
+.blob::before,.blob::after{content:"";position:absolute;top:16px;width:6px;height:8px;border-radius:50%;background:var(--ink)}
+.blob::before{left:13px}.blob::after{right:13px}
+@keyframes bob{to{transform:translateY(-8px) scale(1.04,.96)}}
+
+/* HUD */
+#hud{position:fixed;z-index:20;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;right:12px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;pointer-events:none;transition:right .35s}
+#hud>*{pointer-events:auto}
+.mark{justify-self:start;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--ink);padding:6px 11px;border-radius:999px;background:rgba(255,250,243,.7)}
+.mark i{width:9px;height:9px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 3px rgba(239,138,116,.22)}
+.hudbar{display:flex;align-items:center;border-radius:18px;padding:7px 7px 7px 4px;min-width:0}
+.stat{flex:1 0 auto;min-width:0;padding:0 15px;display:flex;flex-direction:column;gap:1px;border-left:1px dashed var(--line2)}
+.stat:first-child{border-left:0}
+.stat span{font-size:11px;color:var(--muted);white-space:nowrap}
+.stat b{font-size:18px;font-weight:700;white-space:nowrap;transition:transform .25s,color .3s}
+.stat b.bump{transform:scale(1.08);color:var(--coral-d)}
+#hNet.pos{color:var(--pos)} #hNet.neg{color:var(--neg)}
+.homebtn{flex:none;height:38px;padding:0 13px;border-radius:13px;background:var(--butter);font-size:13px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:5px;box-shadow:inset 0 -2px 0 rgba(160,110,30,.18);transition:transform .12s}
+.homebtn:active{transform:scale(.95)}
+.homebtn em{font-style:normal}
+
+/* 크로스헤어 + 안내 칩 */
+#xh{position:fixed;left:50%;top:50%;z-index:12;pointer-events:none;transition:opacity .25s}
+#xh .ring{position:absolute;left:0;top:0;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:50%;border:2px solid rgba(255,255,255,.8);box-shadow:0 0 0 1px rgba(90,60,40,.15),0 2px 6px rgba(90,60,40,.18);transition:all .22s cubic-bezier(.3,1.6,.5,1);opacity:.75}
+#xh .dot{position:absolute;left:0;top:0;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px rgba(90,60,40,.25);transition:all .2s}
+#xh.aim .ring{width:44px;height:44px;margin:-22px 0 0 -22px;border-color:var(--coral);border-width:3px;opacity:1;box-shadow:0 0 0 4px rgba(239,138,116,.18)}
+#xh.aim .dot{background:var(--coral);transform:scale(1.3)}
+#chip{position:absolute;left:0;top:34px;transform:translateX(-50%) translateY(6px) scale(.9);opacity:0;white-space:nowrap;padding:8px 14px;border-radius:999px;font-size:13.5px;font-weight:700;background:#fffaf2;color:var(--ink);box-shadow:0 6px 18px rgba(110,70,40,.18);transition:all .22s cubic-bezier(.3,1.5,.5,1)}
+#xh.aim #chip{opacity:1;transform:translateX(-50%) scale(1)}
+#chip small{font-weight:600;color:var(--coral-d)}
+body.panel-open #xh,body.moving #xh{opacity:0}
+
+/* 오브젝트 배지 / 화면 밖 방향 표시 */
+#tags,#fx{position:fixed;inset:0;pointer-events:none;z-index:10;overflow:hidden}
+.tg{position:absolute;left:0;top:0;will-change:transform;transition:opacity .25s;pointer-events:auto}
+.tg .b{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(255,250,243,.92);font-size:15px;box-shadow:0 3px 10px rgba(110,70,40,.2);animation:float 2.2s ease-in-out infinite}
+.tg .e{display:none;align-items:center;gap:4px;padding:6px 10px;border-radius:999px;background:rgba(255,250,243,.94);font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px rgba(110,70,40,.2)}
+.tg.edge .b{display:none} .tg.edge .e{display:flex}
+.tg.hide{opacity:0;pointer-events:none}
+.tg .e i{font-style:normal;color:var(--coral-d);font-size:14px}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+.ftext{position:absolute;left:0;top:0;font-size:24px;font-weight:800;color:#fff;white-space:nowrap;-webkit-text-stroke:1px rgba(150,80,40,.25);text-shadow:0 3px 0 var(--coral),0 6px 14px rgba(150,80,40,.3);will-change:transform,opacity}
+.ftext.cool{text-shadow:0 3px 0 var(--mint),0 6px 14px rgba(40,110,90,.3)}
+
+/* 하단: 퀵 시점 + 사장님 아이콘 */
+#bar{position:fixed;z-index:18;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;justify-content:space-between;align-items:flex-end;gap:10px;pointer-events:none;transition:opacity .3s,right .35s}
+#bar>*{pointer-events:auto}
+.quick{display:flex;gap:6px;padding:6px;border-radius:18px}
+.quick button{height:38px;padding:0 13px;border-radius:12px;font-size:13px;font-weight:700;white-space:nowrap;color:var(--ink);transition:background .2s,transform .12s}
+.quick button:hover{background:rgba(255,230,163,.6)}
+.quick button.on{background:var(--butter);box-shadow:inset 0 -2px 0 rgba(160,110,30,.18)}
+.quick button:active{transform:scale(.95)}
+#face{width:56px;height:56px;border-radius:50%;background:var(--butter);font-size:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(160,100,30,.25),inset 0 -3px 0 rgba(160,110,30,.18);transition:transform .15s}
+#face:active{transform:scale(.92)}
+#face.wiggle{animation:wig .6s ease}
+@keyframes wig{20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}
+#bubble{position:fixed;z-index:19;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 82px);max-width:250px;padding:12px 14px;border-radius:18px 18px 6px 18px;background:#fffaf2;font-size:13.5px;line-height:1.55;box-shadow:0 8px 24px rgba(110,70,40,.2);opacity:0;transform:translateY(8px) scale(.95);transform-origin:100% 100%;transition:all .25s cubic-bezier(.3,1.5,.5,1);pointer-events:none}
+#bubble.show{opacity:1;transform:none}
+#bubble b{color:var(--coral-d)}
+#hint{position:fixed;z-index:17;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 26px);font-size:12.5px;color:var(--ink);background:rgba(255,250,243,.82);padding:7px 14px;border-radius:999px;white-space:nowrap;box-shadow:0 3px 12px rgba(110,70,40,.12);pointer-events:none;transition:opacity .5s}
+#hint.gone{opacity:0}
+body.panel-open #hint{opacity:0}
+
+/* 패널 */
+#panel{position:fixed;z-index:30;top:calc(env(safe-area-inset-top,0px) + 118px);right:16px;bottom:16px;width:360px;border-radius:24px;display:flex;flex-direction:column;background:rgba(255,250,243,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.8);box-shadow:0 18px 50px rgba(110,70,40,.22);
+  transform:translateX(calc(100% + 30px));opacity:0;transition:transform .45s cubic-bezier(.2,.9,.25,1.05),opacity .3s}
+#panel.open{transform:none;opacity:1}
+.grab{display:none}
+.phead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:18px 18px 8px}
+.ptag{display:inline-block;font-size:11px;font-weight:700;color:var(--coral-d);background:rgba(239,138,116,.13);padding:3px 8px;border-radius:999px;margin-bottom:6px}
+.phead h2{font-size:19px;font-weight:800}
+#pClose{width:36px;height:36px;flex:none;border-radius:12px;background:rgba(120,88,60,.07);font-size:15px}
+.pbody{flex:1;overflow:auto;padding:4px 14px 18px;-webkit-overflow-scrolling:touch}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 16px}
+.card{border-radius:14px;padding:9px 8px 8px;background:#fff;box-shadow:0 2px 8px rgba(110,70,40,.07);min-width:0}
+.card:nth-child(1){background:#fff3d6}.card:nth-child(2){background:#ffe9e1}.card:nth-child(3){background:#e5f6ef}
+.card span{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.card b{display:block;font-size:13px;font-weight:800;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.big{margin:6px 0 16px;padding:14px 16px;border-radius:18px;background:linear-gradient(135deg,#e5f6ef,#fff7e2)}
+.big span{font-size:12px;color:var(--muted)}
+.big b{display:block;font-size:27px;font-weight:800;margin-top:2px}
+.big em{font-style:normal;font-size:12px;color:var(--muted)}
+.sec{font-size:12px;font-weight:700;color:var(--muted);margin:4px 2px 6px;display:flex;justify-content:space-between}
+.rows{background:#fff;border-radius:16px;padding:2px 12px;box-shadow:0 2px 8px rgba(110,70,40,.06)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.row:last-child{border-bottom:0}
+.row .l{display:flex;align-items:center;gap:8px;min-width:0}
+.row .l span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .d{font-size:12px;color:var(--muted);white-space:nowrap}
+.row b{font-weight:700;white-space:nowrap}
+.row.new{animation:rowin .9s ease}
+@keyframes rowin{from{background:rgba(255,230,163,.8)}to{background:transparent}}
+.row.total b{font-size:16px;font-weight:800}
+.row b.pos{color:var(--pos)} .row b.neg{color:var(--neg)}
+.chip{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.c-매장{background:#e5f6ef;color:#2c8a6e}.c-배달{background:#ffe9e1;color:#c85a43}.c-예약{background:#efe8fb;color:#7a5fc0}
+.empty{font-size:13px;color:var(--muted);padding:14px 0}
+.primary{width:100%;margin-top:14px;height:50px;border-radius:16px;background:var(--coral);color:#fff;font-size:15.5px;font-weight:800;box-shadow:inset 0 -3px 0 rgba(150,60,40,.2),0 6px 16px rgba(239,138,116,.3);transition:transform .12s}
+.primary:active{transform:scale(.97)}
+.form{margin-top:14px;padding:14px;border-radius:18px;background:#fff;box-shadow:0 2px 10px rgba(110,70,40,.08);animation:fin .3s ease}
+@keyframes fin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.form label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:0 0 6px}
+.form .field{margin-bottom:12px}
+.form input{width:100%;height:48px;border-radius:13px;border:2px solid #f1e4d4;background:#fffaf3;padding:0 12px;font-size:18px;font-weight:700;outline:none;transition:border-color .2s}
+.form input:focus{border-color:var(--coral)}
+.form input.err{border-color:var(--neg);animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;min-width:0;height:38px;border-radius:11px;background:#f7efe4;font-size:13px;font-weight:700;color:var(--muted)}
+.seg button.on{background:var(--butter);color:var(--ink);box-shadow:inset 0 -2px 0 rgba(160,110,30,.18)}
+.qk{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.qk button{height:30px;padding:0 10px;border-radius:9px;background:#f7efe4;font-size:12px;font-weight:700;color:var(--ink)}
+.factions{display:flex;gap:8px;margin-top:4px}
+.factions button{flex:1;height:46px;border-radius:13px;font-size:15px;font-weight:800}
+.factions .save{background:var(--mint);color:#fff;box-shadow:inset 0 -3px 0 rgba(20,80,60,.2)}
+.factions .cancel{background:#f7efe4;color:var(--muted)}
+.hintp{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.55}
+.reset{display:block;margin:14px auto 0;font-size:12px;color:var(--muted);padding:6px 10px;border-radius:8px;text-decoration:underline;text-underline-offset:3px}
+.reset.warn{color:var(--coral-d)}
+
+.heart{position:absolute;left:0;top:0;font-size:20px;pointer-events:none;opacity:0;will-change:transform,opacity;animation:heartUp var(--d,1.3s) ease-out var(--dl,0s) forwards}
+@keyframes heartUp{0%{opacity:0;transform:translate(var(--x),var(--y)) translate(-50%,-50%) scale(.3)}18%{opacity:1;transform:translate(var(--x),var(--y)) translate(-50%,-50%) scale(1.1)}100%{opacity:0;transform:translate(calc(var(--x) + var(--dx)),calc(var(--y) + var(--dy))) translate(-50%,-50%) scale(.85) rotate(var(--r))}}
+#catBubble{position:absolute;left:0;top:0;padding:7px 12px;border-radius:16px 16px 16px 6px;background:#fffaf2;font-size:13px;font-weight:700;white-space:nowrap;box-shadow:0 6px 18px rgba(110,70,40,.18);opacity:0;transition:opacity .2s;will-change:transform}
+#catBubble.show{opacity:1}
+button,.tg,#hud,#bar{touch-action:manipulation}
+.pbody{overscroll-behavior:contain}
+body{-webkit-touch-callout:none}
+/* 업종 스위처 + 전환 커튼 */
+.hudbar{grid-column:2;grid-row:1;flex-wrap:wrap}
+.lt{grid-column:1;grid-row:1;justify-self:start;display:flex;align-items:center;gap:6px;min-width:0}
+.twod{display:flex;align-items:center;gap:2px;height:30px;padding:0 11px;border-radius:999px;background:#fff;font-size:12px;font-weight:800;color:var(--ink);text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(110,70,40,.13)}
+.twod em{font-style:normal}
+.auth{grid-column:3;grid-row:1;justify-self:end;display:flex;align-items:center;gap:6px;min-width:0}
+.badge{height:30px;display:flex;align-items:center;gap:3px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+.badge em{font-style:normal}
+.badge.demo{background:#fff1d6;color:#9a6a12}.badge.live{background:#e5f6ef;color:#2c8a6e}.badge.err{background:#ffe9e1;color:#c85a43}
+.gbtn{height:30px;display:flex;align-items:center;gap:6px;padding:0 11px;border-radius:999px;background:#fff;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(110,70,40,.16)}
+.gbtn .g{width:14px;height:14px;border-radius:50%;flex:none;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0);box-shadow:inset 0 0 0 3.5px #fff}
+.obtn{height:30px;padding:0 10px;border-radius:999px;background:rgba(255,250,243,.9);font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(110,70,40,.1)}
+.hsub{flex:1 0 100%;padding:3px 15px 0;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toast{position:fixed;z-index:55;left:0;right:0;margin:0 auto;width:max-content;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);transform:translateY(10px);opacity:0;pointer-events:none;max-width:calc(100vw - 24px);padding:10px 15px;border-radius:14px;background:#3f6f5f;color:#fff;font-size:13px;font-weight:700;line-height:1.45;text-align:center;box-shadow:0 8px 24px rgba(40,60,50,.25);transition:opacity .25s,transform .25s}
+#toast.bad{background:#b9543f}
+#toast.show{opacity:1;transform:none}
+.seg.wrap{flex-wrap:wrap}.seg.wrap button{flex:1 0 30%}
+.c-live{background:#eef6ff;color:#3b6aa8}
+.linkbtn{display:flex;align-items:center;justify-content:center;text-decoration:none;background:#6c8fd6;box-shadow:inset 0 -3px 0 rgba(30,50,110,.2),0 6px 16px rgba(80,110,190,.25)}
+.modes{grid-column:2;grid-row:2;justify-self:center;display:flex;gap:3px;padding:4px;border-radius:15px}
+.modes button{height:30px;padding:0 13px;border-radius:11px;font-size:12.5px;font-weight:800;color:var(--muted);white-space:nowrap;transition:background .2s,color .2s}
+.modes button.on{background:var(--butter);color:var(--ink);box-shadow:inset 0 -2px 0 rgba(160,110,30,.18)}
+#curtain{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:rgba(255,248,239,.9);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:opacity .28s ease}
+#curtain.show{opacity:1;pointer-events:auto}
+#curtain .cv{display:flex;flex-direction:column;align-items:center;gap:8px;transform:scale(.85);transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+#curtain.show .cv{transform:none}
+#curtain .cv span{font-size:54px}
+#curtain .cv b{font-size:14px;color:var(--ink)}
+/* 가계 정산표 막대 */
+.cat{padding:9px 0;border-bottom:1px dashed var(--line)}
+.cat:last-child{border-bottom:0}
+.cat .ct{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;margin-bottom:5px}
+.cat .ct span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cat .ct b{white-space:nowrap;font-weight:700}
+.cat .ct small{font-size:11px;color:var(--muted);font-weight:700}
+.cat .bar{height:9px;border-radius:9px;background:#f4ece1;overflow:hidden}
+.cat .bar i{display:block;height:100%;border-radius:9px}
+/* 근태 */
+.att{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:11px 0;border-bottom:1px dashed var(--line)}
+.att:last-child{border-bottom:0}
+.att .who{display:flex;align-items:center;gap:7px;min-width:0;flex-wrap:wrap}
+.att .who b{font-size:15px}
+.att .tm{grid-column:1;font-size:12px}
+.att .clk{grid-row:1/3;grid-column:2;height:40px;padding:0 13px;border-radius:12px;background:var(--mint);color:#fff;font-size:13px;font-weight:800;box-shadow:inset 0 -3px 0 rgba(20,80,60,.2);white-space:nowrap}
+.att .clk.out{background:#f7efe4;color:var(--ink);box-shadow:none}
+.att.new{animation:rowin .9s ease}
+.pay{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.pay .l{display:flex;flex-direction:column;gap:2px;min-width:0}
+.pay .l .d{font-size:11.5px}
+.pay>b{font-weight:800;white-space:nowrap}
+.d{color:var(--muted)}
+.fam{gap:8px}
+.fam .ck{font-size:18px;width:30px;height:30px;flex:none}
+.fam .l{flex:1}
+.fam.done .l span{text-decoration:line-through;color:var(--muted)}
+/* 복식장부 */
+.mode{display:flex;gap:4px;padding:4px;border-radius:14px;background:#f7efe4;margin:2px 0 12px}
+.mode button{flex:1;height:36px;border-radius:11px;font-size:13px;font-weight:800;color:var(--muted)}
+.mode button.on{background:#fff;color:var(--ink);box-shadow:0 2px 6px rgba(110,70,40,.12)}
+.pnote{font-size:12px;color:#7a5fc0;background:#f3eefc;border-radius:12px;padding:8px 11px;margin:-6px 0 14px;line-height:1.5}
+.jt,.tb{background:#fff;border-radius:16px;box-shadow:0 2px 8px rgba(110,70,40,.06);overflow:hidden}
+.jh,.jr{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px;gap:10px;align-items:center;padding:9px 12px}
+.jh{font-size:11px;font-weight:800;color:var(--muted);background:#fbf5ec}
+.jr{border-top:1px dashed var(--line);font-size:13px}
+.jr .dm{display:flex;align-items:baseline;gap:8px;min-width:0}
+.jr .dm .d{font-size:12px;color:var(--muted);white-space:nowrap}
+.jr .dm .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.jr .side{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;padding:4px 8px;border-radius:9px}
+.jr .side .a{font-size:11.5px;font-weight:800;white-space:nowrap}
+.jr .side b{font-weight:700;white-space:nowrap;font-size:13px}
+.jr .dr{background:#eaf7f1}.jr .dr .a{color:#2c8a6e}
+.jr .cr{background:#fff1e9}.jr .cr .a{color:#c85a43}
+.jr .side .lb{display:none;font-size:10px;font-weight:800;opacity:.7;margin-right:2px}
+.jr.personal{background:#faf6ff}.jr.personal .dr{background:#efe8fb}.jr.personal .dr .a{color:#7a5fc0}
+.jr.new{animation:rowin .9s ease}
+.more{display:block;width:100%;height:40px;font-size:13px;font-weight:700;color:var(--coral-d);border-top:1px dashed var(--line)}
+.tr{display:grid;grid-template-columns:minmax(0,1fr) 92px 92px 104px;gap:6px;align-items:center;padding:8px 12px;font-size:13px;border-top:1px dashed var(--line)}
+.tr:first-child{border-top:0;font-size:11px;font-weight:800;color:var(--muted);background:#fbf5ec}
+.tr>span{text-align:right;white-space:nowrap}
+.tr>span:first-child{text-align:left;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+.tr .z{color:#c9b8a8}
+.tr.sum{background:#fff7e2;font-weight:800;border-top:2px solid #f1e4d4}
+.tr small{font-size:10px;font-weight:800;color:var(--muted);margin-right:2px}
+.bal{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 2px;padding:9px;border-radius:12px;font-size:13px;font-weight:800;background:#e5f6ef;color:#2c8a6e}
+.bal.bad{background:#ffe9e1;color:var(--neg)}
+.fx-edit .row input{width:130px;height:38px;border-radius:10px;border:2px solid #f1e4d4;background:#fffaf3;padding:0 10px;font-size:15px;font-weight:700;text-align:right;outline:none}
+.fx-edit .row input:focus{border-color:var(--coral)}
+.ghost{display:block;width:100%;margin-top:10px;height:42px;border-radius:13px;background:#f7efe4;font-size:13.5px;font-weight:800;color:var(--ink)}
+@media (max-width:719px){
+  .jh{display:none}
+  .jr{grid-template-columns:1fr 1fr;gap:6px 8px;padding:10px 12px}
+  .jr .dm{grid-column:1/-1}
+  .jr .side .lb{display:inline}
+  .tr{grid-template-columns:minmax(0,1fr) 66px 66px 80px;gap:5px;padding:8px 10px;font-size:11.5px}
+  .tr:first-child{font-size:10.5px}
+  #panel.wide{max-height:75vh;max-height:calc(100dvh - var(--hudb,200px) - 8px)}
+}
+@media (min-width:720px){
+  body.panel-open #hud{right:392px}
+  body.panel-open #bar{right:392px}
+  #panel.wide{width:580px}
+  body.panel-wide #hud,body.panel-wide #bar{right:612px}
+  .mark{white-space:nowrap}
+  body.panel-open #face,body.panel-open #bubble{opacity:0;pointer-events:none}
+  body.panel-open .auth,body.panel-open .mark{display:none}
+  body.panel-wide .twod em{display:none}
+}
+@media (max-width:719px){
+  #hud{grid-template-columns:1fr;gap:6px;left:8px;right:8px;top:calc(env(safe-area-inset-top,0px) + 8px)}
+  .mark{font-size:11px;padding:4px 9px}
+  .hudbar{padding:5px 5px 5px 2px;border-radius:15px}
+  .stat{padding:0 8px;flex:1 1 0}
+  .stat span{font-size:10px}
+  .stat b{font-size:13.5px}
+  .homebtn{height:34px;padding:0 10px;font-size:15px}
+  .homebtn em{display:none}
+  .lt,.hudbar,.auth,.modes{grid-column:1;grid-row:auto}
+  .lt{justify-self:stretch;justify-content:space-between}
+  .auth{justify-self:stretch;justify-content:flex-start}
+  .hsub{padding:2px 8px 0}
+  .modes{justify-self:stretch;padding:3px}
+  .modes button{flex:1;min-width:0;padding:0 4px;font-size:12px;height:30px}
+  #bar{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);justify-content:center}
+  .quick{padding:5px;gap:4px}
+  .quick button{height:36px;padding:0 10px;font-size:12.5px}
+  #face{width:50px;height:50px;font-size:25px}
+  #bubble{right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);max-width:230px}
+  #hint{bottom:calc(env(safe-area-inset-bottom,0px) + 72px);font-size:12px}
+  body.panel-open #bar,body.panel-open #bubble{opacity:0;pointer-events:none}
+  #panel{top:auto;left:0;right:0;bottom:0;width:auto;max-height:58vh;max-height:min(58dvh,calc(100dvh - var(--hudb,200px) - 8px));border-radius:26px 26px 0 0;transform:translateY(105%);padding-bottom:env(safe-area-inset-bottom,0px)}
+  #panel.open{transform:none}
+  .grab{display:block;width:40px;height:5px;border-radius:5px;background:rgba(120,88,60,.18);margin:8px auto 0}
+  .phead{padding:8px 14px 6px}
+  .phead h2{font-size:17px}
+  .pbody{padding:2px 14px 16px}
+  .big b{font-size:23px}
+}
+@media (min-width:720px) and (max-width:1420px){ body.panel-wide .mark{display:none} }
+@media (max-width:340px){ .badge em{display:none} .gbtn{padding:0 9px} }
+@media (max-width:350px){ .stat b{font-size:12.5px} .stat{padding:0 6px} .quick button{padding:0 8px;font-size:12px} }
+@media (prefers-reduced-motion:reduce){ .tg .b,.blob{animation:none} }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage" aria-label="1인칭 3D 매장 카운터"></div>
+
+<header id="hud">
+  <div class="lt"><div class="mark"><i></i>솔로운영 3D</div><a class="twod" href="index.html" title="2D 가계부로 가기">📊<em> 2D 가계부</em></a></div>
+  <div class="hudbar glass" role="group" aria-label="이번 달 요약">
+    <div class="stat"><span id="hL0">총매출</span><b id="hSales" class="num">₩0</b></div>
+    <div class="stat"><span id="hL1">지출</span><b id="hExp" class="num">₩0</b></div>
+    <div class="stat"><span id="hL2">순익</span><b id="hNet" class="num">₩0</b></div>
+    <button id="homeBtn" class="homebtn" type="button" aria-label="내 자리로" title="내 자리로">🔄<em>내 자리로</em></button>
+    <div class="hsub num" id="hSub" hidden></div>
+  </div>
+  <div class="auth" id="auth" aria-live="polite"></div>
+  <div class="modes glass" role="tablist" aria-label="업종 선택">
+    <button type="button" role="tab" data-m="restaurant">🍔 식당·카페</button><button type="button" role="tab" data-m="salon">✂️ 미용실</button><button type="button" role="tab" data-m="home">🏠 주부·가정</button>
+  </div>
+</header>
+<div id="curtain" aria-hidden="true"><div class="cv"><span id="cvIcon">🍔</span><b id="cvText"></b></div></div>
+
+<div id="tags"></div>
+<div id="fx"><div id="catBubble" role="status" aria-live="polite"></div></div>
+<div id="xh" aria-hidden="true"><div class="ring"></div><div class="dot"></div><div id="chip"></div></div>
+<div id="hint">드래그로 둘러보고, 가운데 ◎로 겨눠서 탭!</div>
+
+<div id="bar">
+  <div class="quick glass" role="group" aria-label="빠른 시점">
+    <button type="button" data-view="pos">포스 앞</button>
+    <button type="button" data-view="fridge">냉장고 앞</button>
+    <button type="button" data-view="seat" class="on">내 자리</button>
+  </div>
+  <button id="face" type="button" aria-label="사장님에게 말 걸기">🧑‍🍳</button>
+</div>
+<div id="bubble" role="status" aria-live="polite"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<aside id="panel" role="dialog" aria-hidden="true" aria-labelledby="pTitle">
+  <div class="grab"></div>
+  <div class="phead"><div><div class="ptag" id="pTag"></div><h2 id="pTitle"></h2></div><button id="pClose" type="button" aria-label="패널 닫기">✕</button></div>
+  <div class="pbody" id="pBody"></div>
+</aside>
+
+<div id="loader"><div class="blob"></div><p>솔로운영 3D 불러오는 중…</p></div>
+<div id="fallback" hidden><b>3D 화면을 열 수 없어요</b><p id="fallbackMsg">이 기기·브라우저는 WebGL(3D 그래픽)을 지원하지 않아요.<br>최신 크롬·사파리·삼성 인터넷에서 다시 열어 주세요.</p></div>
+
+<script>
+(function(){
+  var ok = false;
+  try { var c = document.createElement('canvas'); ok = !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl'))); } catch (e) {}
+  function fail(msg){
+    var l = document.getElementById('loader'); if (l) l.hidden = true;
+    var f = document.getElementById('fallback'); if (f) f.hidden = false;
+    if (msg) document.getElementById('fallbackMsg').innerHTML = msg;
+  }
+  window.__solo3dFail = fail;
+  if (!ok) { window.__solo3dNoGL = true; fail(); return; }
+  setTimeout(function(){ if (!window.__solo3dStarted) fail('3D 엔진을 불러오지 못했어요.<br>인터넷 연결을 확인하고 새로고침해 주세요.'); }, 15000);
+})();
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+if (!window.__solo3dNoGL) {
+window.__solo3dStarted = true;
+
+/* =========================================================
+   1. 업종 설정 + 데이터 (localStorage: 방마다 따로)
+   ========================================================= */
+const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const COARSE = window.matchMedia('(pointer: coarse)').matches;
+function kst(d = new Date()) {
+  const o = {};
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+    .formatToParts(d).forEach(p => { o[p.type] = p.value; });
+  if (o.hour === '24') o.hour = '00';
+  return { y: +o.year, m: +o.month, d: +o.day, ym: `${o.year}-${o.month}`, date: `${o.year}-${o.month}-${o.day}`, time: `${o.hour}:${o.minute}` };
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const MODE_KEY = 'solo3d_mode', OLD_KEY = 'solo3d_v1';
+const dkey = m => 'solo3d_v1_' + m;
+
+// 업종별 문구·계정·라벨 (3D 라벨, 패널, 장부 이름이 모두 여기서 바뀜)
+const MODES = {
+  restaurant: {
+    icon: '🍔', label: '식당·카페', short: '식당', face: '🧑‍🍳', boss: '사장님',
+    hud: ['총매출', '지출', '순익'], inc: '매출', incAcc: '매출', varW: '식자재', varAcc: '식자재비', varTotal: '식자재비', fixW: '고정비', netW: '순익',
+    channels: ['매장', '배달', '예약'], quickVar: ['채소', '육류', '빵·유제품', '소스·양념', '음료'],
+    views: ['포스 앞', '냉장고 앞'], screen: '오늘 매출', ledger: true,
+    obj: {
+      pos: ['🖥️', '포스기', '탭해서 열기', '포스'], fridge: ['🧊', '냉장고', '탭해서 열기', '냉장고'], safe: ['💰', '금고', '탭해서 열기', '금고'],
+      ledger: ['📚', '세무회계 장부', '탭해서 복식장부 열기', '장부'], cat: ['🐱', '점장 고양이', '쓰다듬기', '고양이'],
+      owner: ['🙋', '사장님', '말 걸기', '사장님'], staff: ['🧑‍🍳', '직원', '근태·급여 보기', '직원']
+    }
+  },
+  salon: {
+    icon: '✂️', label: '미용실', short: '미용실', face: '💇', boss: '원장님',
+    hud: ['시술매출', '지출', '순익'], inc: '시술매출', incAcc: '시술매출', varW: '재료비', varAcc: '재료비', varTotal: '재료비', fixW: '고정비', netW: '순익',
+    channels: ['커트', '펌', '염색', '클리닉'], quickVar: ['염색약', '샴푸', '트리트먼트', '펌약', '소모품'],
+    views: ['포스 앞', '재료장 앞'], screen: '오늘 시술매출', ledger: true,
+    obj: {
+      pos: ['💇', '시술 포스', '탭해서 열기', '포스'], fridge: ['🧴', '재료 선반', '탭해서 열기', '재료'], safe: ['💰', '금고', '탭해서 열기', '금고'],
+      ledger: ['📚', '세무 장부', '탭해서 복식장부 열기', '장부'], cat: ['🎀', '리본 고양이', '쓰다듬기', '고양이'],
+      owner: ['🙋', '원장님', '말 걸기', '원장님'], staff: ['💁', '스태프', '근태·급여 보기', '스태프']
+    }
+  },
+  home: {
+    icon: '🏠', label: '주부·가정', short: '가정', face: '🏠', boss: '우리집',
+    hud: ['수입', '지출', '남은 돈'], inc: '수입', incAcc: '수입', varW: '장보기·식비', varAcc: '식비', varTotal: '식비', fixW: '고정 지출', netW: '남은 돈',
+    channels: ['월급', '용돈', '부수입'], quickVar: ['마트', '시장', '온라인 장보기', '과일', '간식'],
+    views: ['노트북 앞', '냉장고 앞'], screen: '이번 달 남은 돈', ledger: false,
+    obj: {
+      pos: ['💻', '가계부 노트', '탭해서 열기', '가계부'], fridge: ['🧊', '냉장고', '탭해서 장보기 기록', '냉장고'], safe: ['🗄️', '서랍장', '고정 지출 보기', '서랍장'],
+      ledger: ['📚', '가계부 책장', '탭해서 정산표 열기', '정산표'], cat: ['🐱', '소파 고양이', '쓰다듬기', '고양이'],
+      owner: ['🙋', '우리집', '말 걸기', '우리집'], staff: ['🗓️', '가족 일정 보드', '일정·알림 보기', '일정']
+    }
+  }
+};
+let MODE = (() => { try { const m = localStorage.getItem(MODE_KEY); return MODES[m] ? m : 'restaurant'; } catch (e) { return 'restaurant'; } })();
+const MC = () => MODES[MODE];
+
+function makeSample(mode = MODE) {
+  const k = kst(), day = n => `${k.ym}-${String(Math.max(1, k.d - n)).padStart(2, '0')}`;
+  const rec = (rows, f) => rows.map(f);
+  const S_ = {
+    restaurant: {
+      sales: [[6, '11:40', 412000, '매장'], [5, '19:20', 186500, '배달'], [4, '12:10', 240000, '예약'], [3, '20:30', 468000, '매장'], [2, '18:50', 351500, '배달'], [1, '13:05', 584000, '매장']],
+      ing: [[6, '채소', 38000], [5, '육류', 120000], [4, '빵·유제품', 64000], [2, '소스·양념', 32000], [1, '음료', 45000]],
+      fixed: [['임차료', 1200000], ['공과금(전기·수도)', 180000], ['통신비', 55000], ['세금과공과', 90000]],
+      personal: [[5, '편의점', 8400], [3, '주유', 62000], [2, '생활용품', 23500]],
+      staff: [['민지', '홀', 10320], ['준호', '주방', 10800]]
+    },
+    salon: {
+      sales: [[6, '11:20', 380000, '커트'], [5, '14:00', 520000, '펌'], [4, '16:30', 460000, '염색'], [3, '12:40', 410000, '커트'], [2, '15:10', 590000, '염색'], [1, '17:00', 330000, '클리닉']],
+      ing: [[6, '염색약', 96000], [4, '샴푸', 54000], [3, '펌약', 72000], [1, '트리트먼트', 48000]],
+      fixed: [['월세', 1500000], ['전기·수도', 160000], ['통신비', 50000], ['부가세', 300000]],
+      personal: [[5, '편의점', 8400], [3, '주유', 62000], [1, '카페', 5800]],
+      staff: [['수아', '디자이너 보조', 11000], ['하린', '인턴', 10320]]
+    },
+    home: {
+      sales: [[8, '09:00', 3200000, '월급'], [5, '20:10', 150000, '부수입'], [2, '18:30', 100000, '용돈']],
+      ing: [[7, '마트', 128000], [5, '시장', 46000], [4, '온라인 장보기', 89000], [2, '과일', 32000], [1, '간식', 18500]],
+      fixed: [['관리비', 250000], ['공과금', 120000], ['교육비', 400000], ['통신비', 90000], ['보험', 210000]],
+      personal: [[6, '생활용품', 42000], [4, '교통', 55000], [3, '병원', 23000], [1, '외식', 64000]],
+      staff: []
+    }
+  }[mode];
+  const d = {
+    v: 2, mode,
+    sales: rec(S_.sales, ([n, time, amount, channel]) => ({ id: uid(), date: day(n), time, amount, channel })),
+    ingredients: rec(S_.ing, ([n, name, amount]) => ({ id: uid(), date: day(n), name, amount })),
+    fixed: S_.fixed.map(([name, amount]) => ({ name, amount })),
+    personal: rec(S_.personal, ([n, name, amount]) => ({ id: uid(), date: day(n), name, amount })),
+    opening: mode === 'home' ? 0 : 2000000,
+    staff: S_.staff.map(([name, role, wage], i) => ({ id: 's' + i, name, role, wage })),
+    att: [], family: []
+  };
+  // 근태 샘플: 이번 달 지난 날짜 + 오늘
+  if (d.staff.length) {
+    const nowMin = toMin(k.time);
+    for (let dd = 1; dd < k.d; dd++) {
+      const date = `${k.ym}-${String(dd).padStart(2, '0')}`;
+      if (dd % 2 === 0) d.att.push({ id: uid(), sid: 's0', date, in: '10:00', out: '16:00' });
+      if (dd % 3 !== 0) d.att.push({ id: uid(), sid: 's1', date, in: '17:00', out: '22:00' });
+    }
+    if (nowMin >= 10 * 60) d.att.push({ id: uid(), sid: 's0', date: k.date, in: '10:00', out: nowMin >= 16 * 60 ? '16:00' : null });
+  } else {
+    d.family = [['아이 학원 픽업', '오늘 16:30'], ['관리비 납부', '매달 25일'], ['보험료 자동이체', '매달 27일'], ['가족 외식', '이번 주 토요일'], ['분리수거', '매주 수요일']]
+      .map(([text, when], i) => ({ id: uid(), text, when, done: i === 4 }));
+  }
+  return d;
+}
+function toMin(t) { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); }
+function saveData(d = DATA) { try { localStorage.setItem(dkey(MODE), JSON.stringify(d)); } catch (e) {} }
+function loadData(mode = MODE) {
+  try {
+    let raw = localStorage.getItem(dkey(mode));
+    if (!raw && mode === 'restaurant') raw = localStorage.getItem(OLD_KEY); // 이전 버전(식당) 데이터 이어 쓰기
+    const d = JSON.parse(raw || 'null');
+    if (d && Array.isArray(d.sales) && Array.isArray(d.ingredients) && Array.isArray(d.fixed)) {
+      const s = makeSample(mode);
+      if (!Array.isArray(d.personal)) d.personal = s.personal;
+      if (typeof d.opening !== 'number') d.opening = s.opening;
+      if (!Array.isArray(d.staff)) { d.staff = s.staff; d.att = s.att; }
+      if (!Array.isArray(d.att)) d.att = [];
+      if (!Array.isArray(d.family)) d.family = s.family;
+      localStorage.setItem(dkey(mode), JSON.stringify(d));
+      return d;
+    }
+  } catch (e) {}
+  const s = makeSample(mode);
+  try { localStorage.setItem(dkey(mode), JSON.stringify(s)); } catch (e) {}
+  return s;
+}
+let DATA = loadData();
+const sum = a => a.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+function month() {
+  const k = kst(), ym = k.ym;
+  const sales = DATA.sales.filter(x => String(x.date).startsWith(ym)), ing = DATA.ingredients.filter(x => String(x.date).startsWith(ym));
+  const pers = (DATA.personal || []).filter(x => String(x.date).startsWith(ym));
+  const s = sum(sales), i = sum(ing), f = sum(DATA.fixed), p = sum(pers);
+  const home = MODE === 'home';
+  const exp = i + f + (home ? p : 0); // 가정: 생활비까지 지출 / 사업: 개인 지출은 순익에서 제외
+  return { k, sales, ing, pers, s, i, f, p, exp, net: s - exp, today: sum(DATA.sales.filter(x => x.date === k.date)) };
+}
+/* ---- 복식장부: 자동 분개 + 시산표 ---- */
+function fixedAcc(name) {
+  const n = String(name);
+  if (/임차|월세|임대/.test(n)) return '임차료';
+  if (/공과금|전기|수도|가스|광열/.test(n)) return '수도광열비';
+  if (/통신|인터넷|전화/.test(n)) return '통신비';
+  if (/세금|공과|부가세|부가가치/.test(n)) return '세금과공과';
+  if (/인건|급여|알바|직원/.test(n)) return '인건비';
+  return '기타경비';
+}
+function journal(all) {
+  const mo = month(), ym = mo.k.ym, E = [], c = MC();
+  E.push({ id: 'open', date: ym + '-01', t: '00:00', memo: '월초 시재 (기초 현금)', dr: '현금', cr: '자본금', amt: Number(DATA.opening) || 0 });
+  DATA.fixed.forEach((f, i) => E.push({ id: 'fx' + i, date: ym + '-01', t: '00:0' + (i + 1), memo: f.name + ' · 월 고정비', dr: fixedAcc(f.name), cr: '현금', amt: Number(f.amount) || 0 }));
+  mo.sales.forEach(x => E.push({ id: x.id, date: x.date, t: x.time || '', memo: c.inc + ' · ' + x.channel, dr: '현금', cr: c.incAcc, amt: x.amount }));
+  mo.ing.forEach(x => E.push({ id: x.id, date: x.date, t: '', memo: c.varW + ' · ' + x.name, dr: c.varAcc, cr: '현금', amt: x.amount }));
+  if (all) mo.pers.forEach(x => E.push({ id: x.id, date: x.date, t: '', memo: '개인 · ' + x.name, dr: '개인인출', cr: '현금', amt: x.amount, personal: true }));
+  return E.filter(e => e.amt > 0);
+}
+const accOrder = () => ['현금', MC().incAcc, MC().varAcc, '임차료', '수도광열비', '통신비', '세금과공과', '인건비', '기타경비', '개인인출', '자본금'];
+const isCredit = a => a === '자본금' || a === MC().incAcc;
+function trialBalance(E, all) {
+  const m = new Map(accOrder().filter(a => all || a !== '개인인출').filter(a => a !== '기타경비').map(a => [a, { dr: 0, cr: 0 }]));
+  E.forEach(e => { if (!m.has(e.dr)) m.set(e.dr, { dr: 0, cr: 0 }); if (!m.has(e.cr)) m.set(e.cr, { dr: 0, cr: 0 }); m.get(e.dr).dr += e.amt; m.get(e.cr).cr += e.amt; });
+  const rows = [...m.entries()].map(([acc, v]) => ({ acc, dr: v.dr, cr: v.cr, bal: isCredit(acc) ? v.cr - v.dr : v.dr - v.cr, side: isCredit(acc) ? '대' : '차' }));
+  return { rows, drT: rows.reduce((s, r) => s + r.dr, 0), crT: rows.reduce((s, r) => s + r.cr, 0) };
+}
+/* ---- 근태: 근무시간·예상 급여 ---- */
+function shiftMin(r, nowK) {
+  if (!r.in) return 0;
+  const end = r.out ? toMin(r.out) : (r.date === nowK.date ? toMin(nowK.time) : toMin(r.in));
+  let m = end - toMin(r.in); if (m < 0) m += 24 * 60; return m;
+}
+function staffSummary(src = DATA) {
+  const k = kst();
+  return (src.staff || []).map(st => {
+    const recs = (src.att || []).filter(a => a.sid === st.id && String(a.date).startsWith(k.ym));
+    const today = recs.filter(a => a.date === k.date);
+    const last = today[today.length - 1];
+    const mins = recs.reduce((s, r) => s + shiftMin(r, k), 0);
+    return { st, today, last, working: !!(last && !last.out), mins, days: new Set(recs.map(r => r.date)).size, pay: Math.round(mins / 60 * st.wage) };
+  });
+}
+/* ---- 실데이터(가계부 Firestore) : 계정 분류는 가계부 v19.1과 같은 규칙 ---- */
+const ACCOUNT_RULES = [
+  ['식자재비', ['식자재','재료','도매','마트','정육','야채','채소','과일','번','패티','치즈','소스','베스트코','코스트코','이마트','노브랜드','감자튀김','베이컨','케찹','마요네즈','음료','식재료']],
+  ['임차료', ['월세','임대','임차','렌트']],
+  ['인건비', ['인건비','급여','알바','직원','시급','4대보험','퇴직','아르바이트']],
+  ['지급수수료', ['수수료','배달','배민','쿠팡이츠','요기요','땡겨요','정산','pg','카드']],
+  ['소모품비', ['포장','용기','소모품','비닐','봉투','위생','장갑','세제','키친타올','화장지']],
+  ['광고선전비', ['광고','홍보','마케팅','전단','현수막','배너','sns']],
+  ['통신비', ['통신','인터넷','핸드폰','휴대폰','전화','kt','skt','lgu','알뜰폰','sk텔레콤','lg유플러스','lgu+','전화요금']],
+  ['수도광열비', ['관리비','수도','가스','전기','냉난방','상하수도']],
+  ['보험료', ['보험']],
+  ['세금과공과', ['세금','공과금','재산세','면허세','인지세','부가세','부가가치세','종합소득세','지방세','원천세']],
+  ['차량유지비', ['차량','주유','기름','주차','톨게이트','택시','버스','운반']],
+  ['접대비', ['접대','기프티콘','선물']]
+];
+const normT = s => String(s == null ? '' : s).toLowerCase().replace(/\s+/g, '');
+const RULES_N = ACCOUNT_RULES.map(([a, ks]) => [a, ks.map(normT)]);
+// 카테고리 먼저(모든 규칙 순서대로) → 안 걸리면 메모 → 그래도 없으면 기타비용
+function accountOf(cat, memo) {
+  for (const t of [normT(cat), normT(memo)]) { if (!t) continue; for (const [a, ks] of RULES_N) if (ks.some(k => t.includes(k))) return a; }
+  return '기타비용';
+}
+const LIVE_CH = ['홀 매출', '배민 매출', '쿠팡이츠 매출', '요기요 매출', '땡겨요 매출', '일일 총매출'];
+const LIVE_FIX = ['임차료', '관리비', '통신비', '세금과공과', '기타'];
+const LIVE_ORDER = ['보통예금', '매출액', '식자재비', '임차료', '인건비', '지급수수료', '소모품비', '광고선전비', '통신비', '수도광열비', '보험료', '세금과공과', '차량유지비', '접대비', '기타비용', '개인출금'];
+const REAL = { on: false, uid: null, status: 'idle', docs: [], unsub: null, db: null, staff: null, staffState: 'idle' };
+const isLive = () => REAL.on && REAL.status === 'ok' && MODE !== 'home';
+const byDateId = (a, b) => (String(a.date) + String(a.id)).localeCompare(String(b.date) + String(b.id));
+function liveMonth() {
+  const k = kst(), ym = k.ym;
+  const docs = REAL.docs.filter(d => String(d.date || '').startsWith(ym));
+  const sales = [], ing = [], fx = [], etc = [], pers = [];
+  docs.forEach(d => {
+    const amount = Number(d.amount) || 0;
+    if (d.type === 'sales') { sales.push({ id: String(d.id), date: d.date, time: '', amount, channel: d.category || '매출', memo: d.memo || '' }); return; }
+    const it = { id: String(d.id), date: d.date, amount, category: d.category || '', memo: d.memo || '', type: d.type, name: d.memo || d.category || '지출', acc: accountOf(d.category, d.memo) };
+    if (d.scope === 'personal') { it.acc = '개인출금'; pers.push(it); }
+    else if (it.acc === '식자재비') ing.push(it);
+    else if (d.type === 'fixed') fx.push(it); else etc.push(it);
+  });
+  [sales, ing, fx, etc, pers].forEach(a => a.sort(byDateId));
+  const s = sum(sales), i = sum(ing), f = sum(fx), o = sum(etc), p = sum(pers);
+  return { k, live: true, sales, ing, fx, etc, pers, s, i, f, o, p, exp: i + f + o, net: s - i - f - o, count: docs.length, today: sum(sales.filter(x => x.date === k.date)) };
+}
+const M = () => isLive() ? liveMonth() : month();
+function journalLive(all) {
+  const mo = liveMonth(), E = [];
+  mo.sales.forEach(x => E.push({ id: x.id, date: x.date, t: '', memo: x.channel + (x.memo ? ' · ' + x.memo : ''), dr: '보통예금', cr: '매출액', amt: x.amount }));
+  [...mo.ing, ...mo.fx, ...mo.etc].forEach(x => E.push({ id: x.id, date: x.date, t: '', memo: (x.category || '지출') + (x.memo ? ' · ' + x.memo : ''), dr: x.acc, cr: '보통예금', amt: x.amount }));
+  if (all) mo.pers.forEach(x => E.push({ id: x.id, date: x.date, t: '', memo: '개인 · ' + (x.category || '') + (x.memo ? ' · ' + x.memo : ''), dr: '개인출금', cr: '보통예금', amt: x.amount, personal: true }));
+  return E.filter(e => e.amt !== 0);
+}
+function trialLive(E) {
+  const m = new Map(LIVE_ORDER.map(a => [a, { dr: 0, cr: 0 }]));
+  E.forEach(e => { if (!m.has(e.dr)) m.set(e.dr, { dr: 0, cr: 0 }); if (!m.has(e.cr)) m.set(e.cr, { dr: 0, cr: 0 }); m.get(e.dr).dr += e.amt; m.get(e.cr).cr += e.amt; });
+  const rows = [...m.entries()].filter(([, v]) => v.dr || v.cr).map(([acc, v]) => { const c = acc === '매출액'; return { acc, dr: v.dr, cr: v.cr, bal: c ? v.cr - v.dr : v.dr - v.cr, side: c ? '대' : '차' }; });
+  return { rows, drT: rows.reduce((s, r) => s + r.dr, 0), crT: rows.reduce((s, r) => s + r.cr, 0) };
+}
+const won = n => (n < 0 ? '-' : '') + '₩' + Math.abs(Math.round(n)).toLocaleString('ko-KR');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const md = d => { const p = String(d).split('-'); return p.length === 3 ? `${+p[1]}/${+p[2]}` : ''; };
+const recent = a => a.slice().sort((x, y) => (y.date + (y.time || '') + y.id).localeCompare(x.date + (x.time || '') + x.id)).slice(0, 5);
+const hm = m => `${Math.floor(m / 60)}시간${m % 60 ? ' ' + (m % 60) + '분' : ''}`;
+
+/* =========================================================
+   2. 렌더러 · 장면
+   ========================================================= */
+const stage = document.getElementById('stage');
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); }
+catch (e) { window.__solo3dFail && window.__solo3dFail(); throw e; }
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, COARSE ? 1.5 : 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.92;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf3e6d6);
+scene.fog = new THREE.Fog(0xf3e6d6, 9, 22);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+pmrem.dispose();
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.05, 60);
+camera.rotation.order = 'YXZ';
+
+/* ---- 도우미 ---- */
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const geoCache = new Map();
+const RB = (w, h, d, r = 0.03, s = 3) => { const k = [w, h, d, r, s].join(); if (!geoCache.has(k)) geoCache.set(k, new RoundedBoxGeometry(w, h, d, s, Math.min(r, w / 2, h / 2, d / 2))); return geoCache.get(k); };
+const CYL = (rt, rb, h, seg = 20) => { const k = ['c', rt, rb, h, seg].join(); if (!geoCache.has(k)) geoCache.set(k, new THREE.CylinderGeometry(rt, rb, h, seg)); return geoCache.get(k); };
+const SPH = (r, w = 16, h = 12) => { const k = ['s', r, w, h].join(); if (!geoCache.has(k)) geoCache.set(k, new THREE.SphereGeometry(r, w, h)); return geoCache.get(k); };
+const S = (color, rough = 0.7, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: rough, metalness: 0, envMapIntensity: 0.4 }, o));
+const P = (color, rough = 0.45, o = {}) => new THREE.MeshPhysicalMaterial(Object.assign({ color, roughness: rough, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.35, envMapIntensity: 0.5 }, o));
+// 업종 테마: 재질 색을 방마다 바꿈 [식당, 미용실, 가정]
+const THEMED = [];
+const TM = (mat, r, sa, ho) => { THEMED.push([mat, { restaurant: r, salon: sa, home: ho }]); return mat; };
+function add(parent, geo, mat, x = 0, y = 0, z = 0, cast = true, recv = true) {
+  const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = recv; parent.add(m); return m;
+}
+function canvasTex(w, h, draw, rep) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); }
+  return t;
+}
+let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const FONT = '-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+
+/* ---- 텍스처(절차 생성) ---- */
+const floorTex = canvasTex(512, 512, (g, w, h) => {
+  const tones = ['#d9a877', '#d29f6d', '#dfb183', '#cf9a66', '#d6a573'];
+  const ph = h / 6;
+  for (let r = 0; r < 6; r++) {
+    let x = -(r % 2) * 120;
+    while (x < w) {
+      const len = 180 + rnd() * 160; g.fillStyle = tones[(rnd() * tones.length) | 0]; g.fillRect(x, r * ph, len, ph);
+      for (let i = 0; i < 6; i++) { g.strokeStyle = `rgba(120,70,30,${0.05 + rnd() * 0.08})`; g.lineWidth = 1; g.beginPath(); const y = r * ph + rnd() * ph; g.moveTo(x, y); g.bezierCurveTo(x + len * 0.3, y + 3, x + len * 0.6, y - 3, x + len, y); g.stroke(); }
+      g.fillStyle = 'rgba(110,65,30,.25)'; g.fillRect(x, r * ph, 2, ph); x += len;
+    }
+    g.fillStyle = 'rgba(110,65,30,.22)'; g.fillRect(0, r * ph, w, 2);
+  }
+}, [3, 4]);
+const woodTop = canvasTex(512, 128, (g, w, h) => {
+  g.fillStyle = '#e2b886'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 70; i++) { const y = rnd() * h; g.strokeStyle = `rgba(150,90,40,${0.08 + rnd() * 0.16})`; g.lineWidth = 0.6 + rnd() * 1.8; g.beginPath(); g.moveTo(0, y); for (let x = 0; x <= w; x += 32) g.lineTo(x, y + Math.sin(x * 0.01 + i) * 2.4); g.stroke(); }
+});
+const skyTex = canvasTex(256, 256, (g, w, h) => {
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#9fd3ef'); gr.addColorStop(0.55, '#cfe8f3'); gr.addColorStop(0.85, '#ffe3cc'); gr.addColorStop(1, '#ffd2b8');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+});
+
+/* ---- 조명: 창가 자연광(그림자) + 따뜻한 펜던트 + 코랄/민트 포인트 ---- */
+scene.add(new THREE.HemisphereLight(0xfff6ea, 0xd9b896, 0.85));
+const sun = new THREE.DirectionalLight(0xfff0d8, 1.9);
+sun.position.set(-2.8, 6.5, -8.5); sun.target.position.set(0, 0.4, -0.8);
+sun.castShadow = true; const SM = COARSE ? 1024 : 2048; sun.shadow.mapSize.set(SM, SM);
+Object.assign(sun.shadow.camera, { left: -4.2, right: 4.2, top: 4.2, bottom: -4.2, near: 2, far: 22 });
+sun.shadow.camera.updateProjectionMatrix(); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.02; sun.shadow.radius = 5;
+scene.add(sun, sun.target);
+const pend = new THREE.PointLight(0xffcf96, 4, 6, 1.4); pend.position.set(-0.1, 2.15, -0.35); scene.add(pend);
+const coralL = new THREE.PointLight(0xff9e8a, 3, 5.5, 1.5); coralL.position.set(-2.6, 1.9, -2.6); scene.add(coralL);
+const mintL = new THREE.PointLight(0x9fe3cf, 2.6, 5, 1.5); mintL.position.set(1.9, 2.0, -2.8); scene.add(mintL);
+
+/* =========================================================
+   3. 매장 (방 · 창밖 · 손님석)
+   ========================================================= */
+const ROOM = { x0: -3.6, x1: 2.4, z0: -4.6, z1: 2.4, h: 2.9 };
+const floor = add(scene, new THREE.PlaneGeometry(ROOM.x1 - ROOM.x0, ROOM.z1 - ROOM.z0), TM(S(0xffffff, 0.62, { map: floorTex, envMapIntensity: 0.3 }), 0xffffff, 0xf7dde4, 0xfff2e0), (ROOM.x0 + ROOM.x1) / 2, 0, (ROOM.z0 + ROOM.z1) / 2, false);
+floor.rotation.x = -Math.PI / 2;
+const wallM = TM(S(0xfbefe0, 0.9), 0xfbefe0, 0xfce6ee, 0xf8f4ea), wallL = TM(S(0xfbe2d2, 0.9), 0xfbe2d2, 0xf2e6fa, 0xf1efe4), wallR = TM(S(0xfdf1d2, 0.9), 0xfdf1d2, 0xfdeef4, 0xf6f1e3), wainM = TM(S(0xc7e8da, 0.75), 0xc7e8da, 0xe0d0f5, 0xcfdcc4), wainC = TM(S(0xffd9c4, 0.75), 0xffd9c4, 0xf9cfe0, 0xe8dcc6);
+function wall(w, h, x, y, z, ry, mat) { const m = add(scene, new THREE.PlaneGeometry(w, h), mat, x, y, z, false); m.rotation.y = ry; return m; }
+// 앞벽(창문 구멍)
+const WIN = { x0: -2.3, x1: 1.3, y0: 0.85, y1: 2.3 };
+wall(WIN.x0 - ROOM.x0, ROOM.h, (ROOM.x0 + WIN.x0) / 2, ROOM.h / 2, ROOM.z0, 0, wallM);
+wall(ROOM.x1 - WIN.x1, ROOM.h, (WIN.x1 + ROOM.x1) / 2, ROOM.h / 2, ROOM.z0, 0, wallM);
+wall(WIN.x1 - WIN.x0, WIN.y0, (WIN.x0 + WIN.x1) / 2, WIN.y0 / 2, ROOM.z0, 0, wallM);
+wall(WIN.x1 - WIN.x0, ROOM.h - WIN.y1, (WIN.x0 + WIN.x1) / 2, (WIN.y1 + ROOM.h) / 2, ROOM.z0, 0, wallM);
+wall(ROOM.z1 - ROOM.z0, ROOM.h, ROOM.x0, ROOM.h / 2, (ROOM.z0 + ROOM.z1) / 2, Math.PI / 2, wallL);
+wall(ROOM.z1 - ROOM.z0, ROOM.h, ROOM.x1, ROOM.h / 2, (ROOM.z0 + ROOM.z1) / 2, -Math.PI / 2, wallR);
+wall(ROOM.x1 - ROOM.x0, ROOM.h, (ROOM.x0 + ROOM.x1) / 2, ROOM.h / 2, ROOM.z1, Math.PI, wallM);
+const ceil = add(scene, new THREE.PlaneGeometry(ROOM.x1 - ROOM.x0, ROOM.z1 - ROOM.z0), S(0xfff6ea, 0.95), (ROOM.x0 + ROOM.x1) / 2, ROOM.h, (ROOM.z0 + ROOM.z1) / 2, false);
+ceil.rotation.x = Math.PI / 2;
+// 걸레받이·징두리(민트/살구)
+add(scene, RB(0.04, 0.85, ROOM.z1 - ROOM.z0, 0.015), wainC, ROOM.x0 + 0.02, 0.425, (ROOM.z0 + ROOM.z1) / 2, false);
+add(scene, RB(0.04, 0.85, ROOM.z1 - ROOM.z0, 0.015), wainM, ROOM.x1 - 0.02, 0.425, (ROOM.z0 + ROOM.z1) / 2, false);
+add(scene, RB(ROOM.x1 - ROOM.x0, 0.12, 0.03, 0.01), wainM, (ROOM.x0 + ROOM.x1) / 2, 0.06, ROOM.z0 + 0.015, false);
+// 창틀
+const frameM = P(0xffffff, 0.4);
+const wcx = (WIN.x0 + WIN.x1) / 2, wcy = (WIN.y0 + WIN.y1) / 2, ww = WIN.x1 - WIN.x0, wh = WIN.y1 - WIN.y0;
+add(scene, RB(ww + 0.12, 0.08, 0.1, 0.03), frameM, wcx, WIN.y1, ROOM.z0, false);
+add(scene, RB(ww + 0.24, 0.07, 0.24, 0.03), frameM, wcx, WIN.y0 - 0.02, ROOM.z0 + 0.06, true);
+add(scene, RB(0.08, wh, 0.1, 0.03), frameM, WIN.x0, wcy, ROOM.z0, false);
+add(scene, RB(0.08, wh, 0.1, 0.03), frameM, WIN.x1, wcy, ROOM.z0, false);
+add(scene, RB(0.05, wh, 0.06, 0.02), frameM, wcx, wcy, ROOM.z0, false);
+// 창가 화분들
+[[-1.6, 0x8fd0b4], [-1.25, 0xb6dd8f], [0.7, 0x8fd0b4]].forEach(([x, c]) => {
+  const g = new THREE.Group(); g.position.set(x, WIN.y0 + 0.015, ROOM.z0 + 0.08); scene.add(g);
+  add(g, CYL(0.06, 0.045, 0.1), S(0xf2a48e, 0.6), 0, 0.05, 0);
+  const lm = S(c, 0.65); add(g, SPH(0.075, 12, 10), lm, 0, 0.16, 0).scale.set(1, 1.2, 1); add(g, SPH(0.05, 10, 8), lm, 0.05, 0.2, 0.01);
+});
+// 창밖: 하늘·건물·나무·구름 (조명/안개 영향 없음)
+const outside = new THREE.Group(); scene.add(outside);
+const B_ = (c) => new THREE.MeshBasicMaterial({ color: c, fog: false });
+add(outside, new THREE.PlaneGeometry(16, 9), new THREE.MeshBasicMaterial({ map: skyTex, fog: false }), -0.5, 3.0, -10, false, false);
+add(outside, new THREE.PlaneGeometry(16, 6), B_(0xe9e1d3), -0.5, -0.01, -7.5, false, false).rotation.x = -Math.PI / 2;
+add(outside, new THREE.PlaneGeometry(16, 1.2), B_(0xd7cfc4), -0.5, 0.005, -5.6, false, false).rotation.x = -Math.PI / 2;
+const winPos = [];
+[[-4.2, 2.6, 0xf7c6b0], [-2.7, 3.6, 0xfbe3a8], [-1.2, 2.2, 0xbfe3d5], [0.3, 3.1, 0xf5d0dc], [1.8, 2.5, 0xcfe0f5], [3.3, 3.4, 0xffd9b0]].forEach(([x, h, c]) => {
+  add(outside, RB(1.3, h, 0.8, 0.12), B_(c), x, h / 2, -8.6, false, false);
+  for (let r = 0; r < Math.floor(h / 0.7); r++) for (let k = 0; k < 2; k++) winPos.push([x - 0.3 + k * 0.6, 0.6 + r * 0.7, -8.19]);
+});
+{ const im = new THREE.InstancedMesh(RB(0.26, 0.3, 0.02, 0.05, 2), B_(0xfffaf0), winPos.length), mtx = new THREE.Matrix4();
+  winPos.forEach((p, i) => im.setMatrixAt(i, mtx.makeTranslation(p[0], p[1], p[2]))); outside.add(im); }
+[[-3.3, 0x9fd6a8], [0.9, 0xb5dd9a], [2.6, 0x9fd6a8]].forEach(([x, c]) => {
+  add(outside, CYL(0.06, 0.08, 1.1, 8), B_(0xc49a74), x, 0.55, -6.6, false, false);
+  add(outside, SPH(0.6, 14, 10), B_(c), x, 1.45, -6.6, false, false);
+});
+[[-2.5, 4.4, 1], [1.2, 4.9, 0.8], [3.5, 4.2, 0.7]].forEach(([x, y, s]) => {
+  const g = new THREE.Group(); g.position.set(x, y, -9.5); g.scale.setScalar(s); outside.add(g);
+  [[0, 0, 0.5], [0.45, 0.1, 0.4], [-0.45, 0.05, 0.38], [0.15, 0.3, 0.38]].forEach(([a, b, r]) => add(g, SPH(r, 14, 10), B_(0xffffff), a, b, 0, false, false).scale.z = 0.4);
+});
+
+// 펜던트 조명 3개
+[[-0.85, 0xf6a491], [-0.1, 0xffdd8a], [0.65, 0x9fdcc6]].forEach(([x, c]) => {
+  const g = new THREE.Group(); g.position.set(x, ROOM.h, -0.35); scene.add(g);
+  add(g, CYL(0.006, 0.006, 0.55, 6), S(0x7a6555), 0, -0.275, 0, false);
+  const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.17, 0.15, 24, 1, true), P(c, 0.5, { side: THREE.DoubleSide })); sh.position.y = -0.6; g.add(sh);
+  add(g, SPH(0.045, 12, 10), new THREE.MeshStandardMaterial({ color: 0xfff6dd, emissive: 0xffe2a8, emissiveIntensity: 2 }), 0, -0.66, 0, false);
+});
+
+// 왼쪽 벽: 메뉴판(그림만) + 선반
+const board = new THREE.Group(); board.position.set(ROOM.x0 + 0.03, 1.65, -2.2); board.rotation.y = Math.PI / 2; scene.add(board);
+add(board, RB(1.3, 0.8, 0.04, 0.05), TM(S(0xd8b48a, 0.6), 0xd8b48a, 0xe2c27e, 0xc9a57c), 0, 0, 0, false);
+add(board, RB(1.18, 0.68, 0.02, 0.04), TM(S(0x4f7a68, 0.85), 0x4f7a68, 0xb79ad6, 0xe3c9a0), 0, 0, 0.02, false);
+[[-0.3, 0.2, 0xffe6a3], [-0.3, 0.02, 0xfbe2d2], [-0.3, -0.16, 0xffe6a3], [0.28, 0.2, 0xffc9a3], [0.28, 0.02, 0xfbe2d2], [0.28, -0.16, 0xc7e8da]].forEach(([x, y, c]) => add(board, RB(0.42, 0.05, 0.005, 0.02), S(c, 0.9), x, y, 0.032, false));
+const shelfL = new THREE.Group(); shelfL.position.set(ROOM.x0 + 0.14, 1.25, -0.6); shelfL.rotation.y = Math.PI / 2; scene.add(shelfL);
+add(shelfL, RB(1.0, 0.04, 0.22, 0.015), S(0xe2b886, 0.6, { map: woodTop }), 0, 0, 0);
+[[-0.35, 0xf2a48e], [0, 0xbfe3d5], [0.33, 0xffe6a3]].forEach(([x, c], i) => {
+  add(shelfL, i === 1 ? CYL(0.07, 0.07, 0.16, 18) : RB(0.13, 0.17, 0.13, 0.03), P(c, 0.4), x, 0.1, 0);
+  if (i === 1) add(shelfL, SPH(0.08, 12, 10), S(0x8fd0b4, 0.65), x, 0.24, 0).scale.y = 1.3;
+});
+
+// 뒤쪽 벽(내 등 뒤): 선반 + 시계
+const back = new THREE.Group(); back.position.set(-0.2, 0, ROOM.z1 - 0.15); back.rotation.y = Math.PI; scene.add(back);
+add(back, RB(1.8, 0.04, 0.26, 0.015), S(0xe2b886, 0.6, { map: woodTop }), 0, 1.45, 0);
+for (let i = 0; i < 6; i++) add(back, i % 2 ? CYL(0.06, 0.06, 0.18, 16) : RB(0.12, 0.16, 0.12, 0.03), P([0xffe6a3, 0xbfe3d5, 0xf2a48e, 0xefe8fb, 0xffd9b0, 0xc7e8da][i], 0.35), -0.7 + i * 0.28, 1.56, 0);
+const clock = new THREE.Group(); clock.position.set(0.6, 2.15, 0.02); back.add(clock);
+add(clock, CYL(0.22, 0.22, 0.04, 32), P(0xffffff, 0.3), 0, 0, 0, false).rotation.x = Math.PI / 2;
+add(clock, new THREE.TorusGeometry(0.22, 0.025, 10, 40), S(0xef8a74, 0.5), 0, 0, 0.02, false);
+const hourH = add(clock, RB(0.02, 0.11, 0.01, 0.005), S(0x4a3b30), 0, 0.045, 0.03, false);
+const minH = add(clock, RB(0.014, 0.16, 0.01, 0.005), S(0x4a3b30), 0, 0.07, 0.035, false);
+
+// 손님 테이블 + 의자 (식당 전용 그룹)
+const grpRest = new THREE.Group(); scene.add(grpRest);
+function chair(parent, x, z, ry, c) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; parent.add(g);
+  const m = P(c, 0.5), leg = S(0xd8b48a, 0.6);
+  add(g, RB(0.38, 0.06, 0.38, 0.03), m, 0, 0.46, 0);
+  add(g, RB(0.38, 0.32, 0.05, 0.025), m, 0, 0.68, -0.17);
+  [[-0.15, -0.15], [0.15, -0.15], [-0.15, 0.15], [0.15, 0.15]].forEach(([a, b]) => add(g, CYL(0.018, 0.015, 0.44, 8), leg, a, 0.22, b));
+}
+function table(x, z, ca, cb) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); grpRest.add(g);
+  add(g, CYL(0.45, 0.45, 0.05, 36), S(0xe8c39a, 0.55, { map: woodTop }), 0, 0.74, 0);
+  add(g, CYL(0.04, 0.04, 0.7, 12), S(0xf6f0e6, 0.5), 0, 0.37, 0);
+  add(g, CYL(0.22, 0.25, 0.03, 24), S(0xf6f0e6, 0.5), 0, 0.015, 0);
+  add(g, CYL(0.035, 0.03, 0.1, 14), P(0xffffff, 0.2), 0, 0.82, 0);
+  add(g, SPH(0.04, 10, 8), S(cb === 0xbfe3d5 ? 0xf7a7b6 : 0xffd56b, 0.6), 0, 0.9, 0);
+  chair(g, -0.62, 0.05, Math.PI / 2, ca); chair(g, 0.62, -0.05, -Math.PI / 2, cb);
+  const rug = add(grpRest, new THREE.CircleGeometry(1.0, 40), S(ca === 0xffc9a3 ? 0xffe4d4 : 0xdff2ea, 0.95), x, 0.003, z, false); rug.rotation.x = -Math.PI / 2;
+}
+table(-1.7, -2.6, 0xffc9a3, 0xbfe3d5);
+table(0.75, -3.25, 0xbfe3d5, 0xffe6a3);
+
+// 미용실: 거울 화장대 + 링조명 + 시술 의자 + 스툴
+const grpSalon = new THREE.Group(); scene.add(grpSalon);
+{
+  const pinkV = P(0xf4a9c4, 0.75, { clearcoat: 0.1 }), lav = P(0xd9c8f0, 0.45), white = P(0xfff7fa, 0.35), gold = S(0xe2bd6e, 0.3, { metalness: 0.85, envMapIntensity: 1 });
+  const chrome = S(0xeeeeee, 0.18, { metalness: 0.95, envMapIntensity: 1.1 }), mirror = new THREE.MeshBasicMaterial({ map: canvasTex(128, 192, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#f4f0fb'); gr.addColorStop(0.5, '#dfe8f3'); gr.addColorStop(1, '#efe4f6'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.moveTo(w * 0.15, h * 0.35); g.lineTo(w * 0.42, h * 0.12); g.lineTo(w * 0.52, h * 0.18); g.lineTo(w * 0.22, h * 0.45); g.fill();
+    g.beginPath(); g.moveTo(w * 0.3, h * 0.55); g.lineTo(w * 0.6, h * 0.3); g.lineTo(w * 0.64, h * 0.34); g.lineTo(w * 0.34, h * 0.6); g.fill(); }) });
+  const ringM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff1e2, emissiveIntensity: 1.5, roughness: 0.4 });
+  const rugM = S(0xfbe1ea, 0.95), ovalGeo = new THREE.CircleGeometry(0.3, 40), ringGeo = new THREE.TorusGeometry(0.31, 0.022, 10, 56);
+  [[-1.7, -2.95], [0.75, -3.4]].forEach(([x, z]) => {
+    const g = new THREE.Group(); g.position.set(x, 0, z); grpSalon.add(g);
+    add(g, RB(0.9, 0.05, 0.38, 0.02), white, 0, 0.78, -0.2);
+    add(g, RB(0.05, 0.76, 0.34, 0.02), lav, -0.42, 0.38, -0.2); add(g, RB(0.05, 0.76, 0.34, 0.02), lav, 0.42, 0.38, -0.2);
+    const mr = add(g, ovalGeo, mirror, 0, 1.4, -0.37, false); mr.scale.y = 1.35;
+    const rg = add(g, ringGeo, ringM, 0, 1.4, -0.36, false); rg.scale.y = 1.35;
+    add(g, CYL(0.035, 0.03, 0.1, 12), gold, 0.3, 0.86, -0.22, false);
+    const ch = new THREE.Group(); ch.position.set(0, 0, 0.45); g.add(ch);
+    add(ch, CYL(0.22, 0.26, 0.04, 24), chrome, 0, 0.02, 0);
+    add(ch, CYL(0.04, 0.04, 0.36, 12), chrome, 0, 0.22, 0);
+    add(ch, RB(0.48, 0.12, 0.46, 0.05), pinkV, 0, 0.45, 0);
+    add(ch, RB(0.48, 0.46, 0.11, 0.05), pinkV, 0, 0.72, 0.2);
+    add(ch, RB(0.06, 0.06, 0.38, 0.03), gold, -0.25, 0.58, 0); add(ch, RB(0.06, 0.06, 0.38, 0.03), gold, 0.25, 0.58, 0);
+    const st = new THREE.Group(); st.position.set(0.62, 0, 0.35); g.add(st);
+    add(st, CYL(0.16, 0.16, 0.07, 22), lav, 0, 0.5, 0); add(st, CYL(0.025, 0.025, 0.46, 8), chrome, 0, 0.24, 0); add(st, CYL(0.14, 0.16, 0.03, 18), chrome, 0, 0.015, 0);
+    const rug = add(g, new THREE.CircleGeometry(0.75, 36), rugM, 0, 0.003, 0.3, false); rug.rotation.x = -Math.PI / 2;
+  });
+}
+// 주부·가정: 소파 + 러그 + 커피테이블 + 스탠드 + 화분
+const grpHome = new THREE.Group(); scene.add(grpHome);
+const SOFA_SEAT = 0.56;
+{
+  const sage = P(0xa9c4a0, 0.8, { clearcoat: 0.05 }), sageL = P(0xc3d8b9, 0.85, { clearcoat: 0.05 }), wood = S(0xd8b48a, 0.55, { map: woodTop }), ivory = P(0xfaf5ea, 0.5);
+  const sofa = new THREE.Group(); sofa.position.set(-1.0, 0, -3.15); grpHome.add(sofa);
+  add(sofa, RB(1.75, 0.3, 0.8, 0.09), sage, 0, 0.27, 0);
+  add(sofa, RB(0.8, 0.14, 0.64, 0.06), sageL, -0.41, 0.49, 0.06); add(sofa, RB(0.8, 0.14, 0.64, 0.06), sageL, 0.41, 0.49, 0.06);
+  add(sofa, RB(1.75, 0.5, 0.2, 0.09), sage, 0, 0.62, -0.31);
+  add(sofa, RB(0.18, 0.42, 0.8, 0.08), sage, -0.86, 0.45, 0); add(sofa, RB(0.18, 0.42, 0.8, 0.08), sage, 0.86, 0.45, 0);
+  const pl = add(sofa, RB(0.3, 0.28, 0.1, 0.05), P(0xf2a48e, 0.8), -0.55, 0.68, -0.16); pl.rotation.z = 0.18;
+  const rug = add(grpHome, new THREE.CircleGeometry(1.25, 44), S(0xf3e9d8, 0.95), -1.0, 0.003, -2.5, false); rug.rotation.x = -Math.PI / 2; rug.scale.set(1.35, 1, 1);
+  const tb = new THREE.Group(); tb.position.set(-1.0, 0, -2.25); grpHome.add(tb);
+  add(tb, CYL(0.36, 0.36, 0.04, 32), wood, 0, 0.4, 0); add(tb, CYL(0.05, 0.08, 0.38, 12), ivory, 0, 0.19, 0);
+  add(tb, CYL(0.04, 0.034, 0.09, 16), P(0xffe6a3, 0.3), 0.1, 0.465, 0.05);
+  const lamp = new THREE.Group(); lamp.position.set(-2.35, 0, -3.5); grpHome.add(lamp);
+  add(lamp, CYL(0.015, 0.015, 1.45, 8), S(0x8f7a69, 0.5), 0, 0.73, 0); add(lamp, CYL(0.13, 0.15, 0.03, 18), S(0x8f7a69, 0.5), 0, 0.015, 0);
+  const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.22, 0.24, 24, 1, true), P(0xfff3dc, 0.7, { side: THREE.DoubleSide, emissive: 0xffe2b0, emissiveIntensity: 0.35 })); sh.position.y = 1.5; lamp.add(sh);
+  [[0.35, -3.95, 0.11], [-2.75, -1.9, 0.09]].forEach(([x, z, r]) => {
+    const g = new THREE.Group(); g.position.set(x, 0, z); grpHome.add(g);
+    add(g, CYL(r * 1.6, r * 1.2, r * 3, 18), P(0xe8dcc6, 0.6), 0, r * 1.5, 0);
+    const lm = S(0x8fbf8a, 0.65); add(g, SPH(r * 2.4, 14, 10), lm, 0, r * 5, 0).scale.y = 1.3; add(g, SPH(r * 1.7, 12, 10), lm, r * 1.4, r * 7, 0);
+  });
+}
+
+/* =========================================================
+   4. 카운터와 상호작용 물건
+   ========================================================= */
+const COUNTER_TOP = 0.95;
+const CB = { x0: -1.25, x1: 1.0, z0: -0.75, z1: 0 };
+const counter = new THREE.Group(); counter.position.set((CB.x0 + CB.x1) / 2, 0, (CB.z0 + CB.z1) / 2); scene.add(counter);
+const cw = CB.x1 - CB.x0, cd = CB.z1 - CB.z0;
+add(counter, RB(cw, 0.88, cd, 0.06), TM(S(0xf7e6c4, 0.75), 0xf7e6c4, 0xfbe1ea, 0xefe6d6), 0, 0.44, 0);
+add(counter, RB(cw + 0.14, 0.07, cd + 0.12, 0.03), TM(S(0xffffff, 0.48, { map: woodTop, envMapIntensity: 0.5 }), 0xffffff, 0xfff3f0, 0xf4e6d2), 0, 0.915, 0);
+add(counter, RB(cw - 0.1, 0.05, 0.03, 0.02), TM(S(0xef8a74, 0.5), 0xef8a74, 0xe6c27a, 0x9fbf8f), 0, 0.84, -cd / 2 - 0.01, false); // 손님쪽 코랄 라인
+// 내 쪽 수납칸 (카운터 안쪽이 보임)
+for (let i = 0; i < 3; i++) {
+  const x = -cw / 2 + 0.4 + i * 0.72;
+  add(counter, RB(0.62, 0.34, 0.05, 0.03), S(0xead2a8, 0.8), x, 0.52, cd / 2 + 0.002, false, true);
+  add(counter, RB(0.2, 0.22, 0.12, 0.03), P([0xbfe3d5, 0xffc9a3, 0xffe6a3][i], 0.5), x - 0.12, 0.48, cd / 2 + 0.06);
+  add(counter, RB(0.16, 0.16, 0.12, 0.03), P([0xefe8fb, 0xc7e8da, 0xf7c6b0][i], 0.5), x + 0.13, 0.45, cd / 2 + 0.06);
+}
+
+/* ---- 포스기 ---- */
+const pos = new THREE.Group(); pos.position.set(0.05, COUNTER_TOP, -0.33); scene.add(pos);
+const posBody = TM(P(0x9fd9c8, 0.38), 0x9fd9c8, 0xf2b8cc, 0x9fd9c8), posCream = P(0xfffaf0, 0.35);
+add(pos, RB(0.38, 0.07, 0.3, 0.03), posBody, 0, 0.035, 0);
+add(pos, RB(0.08, 0.17, 0.07, 0.025), posBody, 0, 0.14, -0.07);
+for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++)
+  add(pos, RB(0.055, 0.02, 0.04, 0.01, 2), P(c === 3 && r === 0 ? 0xef8a74 : [0xffe6a3, 0xfffaf0][r], 0.4), -0.1 + c * 0.066, 0.075, 0.055 + r * 0.05, false);
+const posCanvas = document.createElement('canvas'); posCanvas.width = 360; posCanvas.height = 230;
+const posTex = new THREE.CanvasTexture(posCanvas); posTex.colorSpace = THREE.SRGBColorSpace;
+const screenPivot = new THREE.Group(); screenPivot.position.set(0, 0.24, -0.06); screenPivot.rotation.x = -0.35; pos.add(screenPivot);
+add(screenPivot, RB(0.36, 0.25, 0.035, 0.03), posCream, 0, 0, 0);
+const screenMat = new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: posTex, emissiveIntensity: 0.62, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1, envMapIntensity: 0.6 });
+add(screenPivot, new THREE.PlaneGeometry(0.31, 0.2), screenMat, 0, 0, 0.0185, false);
+add(screenPivot, CYL(0.022, 0.022, 0.006, 16), S(0xef8a74, 0.5), 0.15, 0.1, 0.02, false).rotation.x = Math.PI / 2; // 하트 스티커 자리
+add(screenPivot, CYL(0.016, 0.016, 0.006, 5), S(0xffd56b, 0.5), -0.155, -0.1, 0.02, false).rotation.x = Math.PI / 2;
+function drawPos(today, monthS) {
+  const g = posCanvas.getContext('2d'), w = 360, h = 230;
+  const sal = MODE === 'salon', gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, sal ? '#fde8f0' : '#e2f6ee'); gr.addColorStop(1, sal ? '#f1d2e4' : '#c4ebdd');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect ? g.roundRect(14, 14, w - 28, h - 28, 22) : g.rect(14, 14, w - 28, h - 28); g.fill();
+  // 귀여운 얼굴
+  g.fillStyle = '#ffe6a3'; g.beginPath(); g.arc(w - 62, 62, 28, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#4a3b30'; g.beginPath(); g.arc(w - 72, 58, 3.6, 0, Math.PI * 2); g.arc(w - 52, 58, 3.6, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#4a3b30'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.arc(w - 62, 66, 7, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+  g.fillStyle = 'rgba(239,138,116,.55)'; g.beginPath(); g.arc(w - 80, 70, 4.5, 0, Math.PI * 2); g.arc(w - 44, 70, 4.5, 0, Math.PI * 2); g.fill();
+  g.fillStyle = sal ? '#c0608a' : '#3fa58a'; g.font = `700 21px ${FONT}`; g.fillText(MC().screen, 36, 60);
+  let size = 46; const t = won(today);
+  do { g.font = `800 ${size}px ${FONT}`; size -= 2; } while (g.measureText(t).width > w - 80 && size > 20);
+  g.fillStyle = '#4a3b30'; g.fillText(t, 36, 128);
+  g.fillStyle = '#8f7a69'; g.font = `600 18px ${FONT}`; g.fillText('이번 달 ' + won(monthS), 36, 166);
+  ['#ef8a74', '#ffd56b', '#9fd9c8'].forEach((c, i) => { g.fillStyle = c; g.beginPath(); g.arc(44 + i * 22, 192, 7, 0, Math.PI * 2); g.fill(); });
+  posTex.needsUpdate = true;
+}
+// 영수증 프린터
+const printer = new THREE.Group(); printer.position.set(0.42, COUNTER_TOP, -0.3); scene.add(printer);
+add(printer, RB(0.17, 0.12, 0.19, 0.035), P(0xfffaf0, 0.35), 0, 0.06, 0);
+add(printer, RB(0.1, 0.012, 0.03, 0.005), S(0x6f5c4f), 0, 0.12, -0.02, false);
+const paper = add(printer, new THREE.PlaneGeometry(0.08, 0.13), S(0xffffff, 0.85, { side: THREE.DoubleSide }), 0, 0.17, 0.0, false);
+paper.rotation.x = -0.35;
+const paperMat = S(0xfffdf8, 0.9);
+[[0.62, -0.1, 0.4], [0.68, -0.18, -0.3]].forEach(([x, z, r]) => { const m = add(scene, RB(0.08, 0.003, 0.15, 0.001, 1), paperMat, x, COUNTER_TOP + 0.002, z, false); m.rotation.y = r; });
+
+/* ---- 가정: 노트북 + 가계부 노트 (포스 자리) ---- */
+const laptop = new THREE.Group(); laptop.position.set(0.05, COUNTER_TOP, -0.33); scene.add(laptop);
+const lapCanvas = document.createElement('canvas'); lapCanvas.width = 360; lapCanvas.height = 230;
+const lapTex = new THREE.CanvasTexture(lapCanvas); lapTex.colorSpace = THREE.SRGBColorSpace;
+const lapScreenMat = new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: lapTex, emissiveIntensity: 0.62, roughness: 0.15, clearcoat: 1, envMapIntensity: 0.6 });
+{
+  const al = P(0xdfe3e2, 0.3, { metalness: 0.5 });
+  add(laptop, RB(0.38, 0.022, 0.26, 0.012), al, 0, 0.011, 0.02);
+  add(laptop, RB(0.32, 0.004, 0.12, 0.002), S(0xb9c0c0, 0.6), 0, 0.024, 0.0, false);
+  const hinge = new THREE.Group(); hinge.position.set(0, 0.022, -0.105); hinge.rotation.x = -0.3; laptop.add(hinge);
+  add(hinge, RB(0.38, 0.25, 0.014, 0.012), al, 0, 0.125, 0);
+  add(hinge, new THREE.PlaneGeometry(0.34, 0.21), lapScreenMat, 0, 0.127, 0.0095, false);
+  const nb = new THREE.Group(); nb.position.set(0.38, 0, 0.06); nb.rotation.y = -0.25; laptop.add(nb);
+  add(nb, RB(0.2, 0.022, 0.27, 0.01), P(0xa9c4a0, 0.5), 0, 0.011, 0);
+  add(nb, RB(0.185, 0.016, 0.255, 0.004), S(0xfffaf0, 0.9), 0.006, 0.013, 0, false);
+  add(nb, CYL(0.007, 0.007, 0.17, 8), S(0xf2a48e, 0.5), 0.03, 0.03, 0.02, false).rotation.set(Math.PI / 2, 0, 0.5);
+}
+function drawLaptop(mo) {
+  const g = lapCanvas.getContext('2d'), w = 360, h = 230;
+  const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#eef4e8'); gr.addColorStop(1, '#dfe9d6');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect ? g.roundRect(14, 14, w - 28, h - 28, 22) : g.rect(14, 14, w - 28, h - 28); g.fill();
+  g.font = `30px ${FONT}`; g.fillText('🏠', w - 76, 70);
+  g.fillStyle = '#6f8f63'; g.font = `700 20px ${FONT}`; g.fillText('이번 달 남은 돈', 36, 58);
+  let size = 44; const t = won(mo.net);
+  do { g.font = `800 ${size}px ${FONT}`; size -= 2; } while (g.measureText(t).width > w - 80 && size > 20);
+  g.fillStyle = mo.net >= 0 ? '#4a3b30' : '#dd5e47'; g.fillText(t, 36, 122);
+  g.fillStyle = '#8f7a69'; g.font = `600 17px ${FONT}`; g.fillText(`수입 ${won(mo.s)} · 지출 ${won(mo.exp)}`, 36, 160);
+  const r = mo.s > 0 ? Math.min(1, mo.exp / mo.s) : 1;
+  g.fillStyle = '#eee6da'; g.fillRect(36, 180, w - 72, 12); g.fillStyle = r > 0.9 ? '#ef8a74' : '#a9c4a0'; g.fillRect(36, 180, (w - 72) * r, 12);
+  lapTex.needsUpdate = true;
+}
+
+/* ---- 금고(캐시드로어) ---- */
+const safe = new THREE.Group(); safe.position.set(-0.45, COUNTER_TOP, -0.33); scene.add(safe);
+add(safe, RB(0.4, 0.26, 0.34, 0.05), TM(P(0xf29b8a, 0.42), 0xf29b8a, 0xeec98a, 0xd8b48a), 0, 0.13, 0);
+const coinSlot = add(safe, RB(0.16, 0.012, 0.03, 0.005), S(0x6f4a3d), 0, 0.262, -0.05, false); // 동전 투입구
+const lock = add(safe, new THREE.TorusGeometry(0.03, 0.009, 10, 24), S(0xe6b45a, 0.3, { metalness: 0.8 }), 0, 0.2, 0.172, false);
+const drawer = new THREE.Group(); drawer.position.set(0, 0.075, 0.17); safe.add(drawer);
+add(drawer, RB(0.34, 0.1, 0.03, 0.015), TM(P(0xffe6a3, 0.4), 0xffe6a3, 0xfff2f6, 0xf5efe3), 0, 0, 0.012);
+add(drawer, RB(0.13, 0.024, 0.024, 0.011), S(0xe6b45a, 0.28, { metalness: 0.85 }), 0, 0.005, 0.035);
+add(drawer, RB(0.32, 0.07, 0.3, 0.01), S(0xf6e8d6, 0.8), 0, -0.004, -0.15, false);
+const coinGeo = CYL(0.03, 0.03, 0.009, 18), goldM = S(0xf0c25e, 0.3, { metalness: 0.9, envMapIntensity: 1 });
+const billGeo = RB(0.12, 0.004, 0.06, 0.002, 1), billM = S(0xa9dcc0, 0.8);
+const receiptGeo = RB(0.06, 0.003, 0.12, 0.001, 1), receiptM = S(0xffffff, 0.9, { emissive: 0x222222 });
+for (let i = 0; i < 3; i++) add(drawer, billGeo, billM, -0.09 + i * 0.09, 0.034, -0.09, false);
+for (let i = 0; i < 5; i++) add(drawer, coinGeo, goldM, -0.12 + i * 0.06, 0.035, -0.2, false);
+const homeDrawers = new THREE.Group(); safe.add(homeDrawers);
+{ const f = P(0xf5efe3, 0.45), k = S(0xc9a57c, 0.4);
+  [0.163, 0.224].forEach(y => { add(homeDrawers, RB(0.34, 0.052, 0.012, 0.01), f, 0, y, 0.176, false); add(homeDrawers, CYL(0.012, 0.012, 0.012, 10), k, 0, y, 0.186, false).rotation.x = Math.PI / 2; }); }
+
+/* ---- 장부·컵·화분 ---- */
+const book = new THREE.Group(); book.position.set(-0.88, COUNTER_TOP, -0.27); book.rotation.y = 0.25; scene.add(book);
+add(book, RB(0.26, 0.04, 0.2, 0.012), P(0x9fd9c8, 0.5), 0, 0.02, 0);
+add(book, RB(0.245, 0.032, 0.19, 0.006), S(0xfffaf0, 0.9), 0.008, 0.021, 0, false);
+add(book, CYL(0.007, 0.007, 0.19, 8), S(0xffd56b, 0.5), 0.04, 0.05, 0.03, false).rotation.set(Math.PI / 2, 0, 0.5);
+const cup = new THREE.Group(); cup.position.set(0.72, COUNTER_TOP, -0.12); scene.add(cup);
+add(cup, CYL(0.045, 0.036, 0.11, 22), P(0xfffaf0, 0.3), 0, 0.055, 0);
+add(cup, CYL(0.047, 0.043, 0.04, 22), S(0x9fd9c8, 0.7), 0, 0.055, 0);
+add(cup, new THREE.TorusGeometry(0.028, 0.008, 8, 16), P(0xfffaf0, 0.3), 0.05, 0.06, 0).rotation.y = Math.PI / 2;
+const plant = new THREE.Group(); plant.position.set(-1.1, COUNTER_TOP, -0.6); scene.add(plant);
+add(plant, CYL(0.07, 0.055, 0.12, 18), P(0xf2a48e, 0.5), 0, 0.06, 0);
+const lf = S(0x86c9a5, 0.6);
+[[0, 0.18, 0, 0.07], [0.05, 0.24, 0.02, 0.05], [-0.05, 0.23, -0.01, 0.055], [0.01, 0.29, -0.01, 0.045]].forEach(([x, y, z, r]) => add(plant, SPH(r, 12, 10), lf, x, y, z));
+
+/* ---- 마스코트 인형 = 사장님 (말 걸기) ---- */
+const owner = new THREE.Group(); owner.position.set(0.85, COUNTER_TOP, -0.55); owner.rotation.y = -0.35; scene.add(owner);
+const doll = new THREE.Group(); owner.add(doll);
+const skin = P(0xffe3c8, 0.55), apronM = P(0xef8a74, 0.5), shirtM = P(0xfff2c4, 0.55);
+add(doll, SPH(0.075, 18, 14), shirtM, 0, 0.075, 0).scale.set(1, 0.95, 0.9);
+add(doll, CYL(0.077, 0.077, 0.07, 18, 1), apronM, 0, 0.06, 0.005).scale.set(1, 1, 0.92);
+const dhead = new THREE.Group(); dhead.position.y = 0.19; doll.add(dhead);
+add(dhead, SPH(0.072, 20, 16), skin, 0, 0, 0);
+add(dhead, new THREE.SphereGeometry(0.075, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.45), P(0x9fd9c8, 0.5), 0, 0.012, 0);
+add(dhead, CYL(0.05, 0.05, 0.008, 18), P(0x9fd9c8, 0.5), 0, 0.02, 0.05).scale.set(1, 1, 0.8);
+const eM = S(0x4a3b30, 0.3);
+add(dhead, SPH(0.009, 10, 8), eM, -0.025, -0.005, 0.066, false); add(dhead, SPH(0.009, 10, 8), eM, 0.025, -0.005, 0.066, false);
+const blM = S(0xf7a7a0, 0.8);
+add(dhead, SPH(0.011, 8, 6), blM, -0.045, -0.022, 0.055, false).scale.set(1, 0.6, 0.5); add(dhead, SPH(0.011, 8, 6), blM, 0.045, -0.022, 0.055, false).scale.set(1, 0.6, 0.5);
+const smile = add(dhead, new THREE.TorusGeometry(0.012, 0.003, 6, 12, Math.PI), eM, 0, -0.022, 0.068, false); smile.rotation.z = Math.PI;
+function dArm(side) { const p = new THREE.Group(); p.position.set(0.07 * side, 0.11, 0); doll.add(p); add(p, SPH(0.026, 10, 8), shirtM, 0.012 * side, -0.035, 0).scale.set(0.9, 1.4, 0.9); p.rotation.z = 0.2 * side; return p; }
+const dArmL = dArm(-1), dArmR = dArm(1);
+
+/* ---- 냉장고 (오른쪽, 문 2짝 경첩 피벗) ---- */
+const FW = 0.9, FH = 1.75, FD = 0.62;
+const fridge = new THREE.Group(); fridge.position.set(1.6, 0, -1.15); fridge.rotation.y = -0.63; scene.add(fridge);
+const fShell = TM(P(0x9fd9c4, 0.35, { metalness: 0.1, clearcoat: 0.8 }), 0x9fd9c4, 0xd9c8f0, 0xeee8da);
+const fInner = S(0xfffaf2, 0.6, { emissive: 0xfff3dc, emissiveIntensity: 0 });
+add(fridge, RB(FW, FH, 0.05, 0.02), fShell, 0, FH / 2, -FD / 2 + 0.025);
+add(fridge, RB(0.05, FH, FD, 0.02), fShell, -FW / 2 + 0.025, FH / 2, 0);
+add(fridge, RB(0.05, FH, FD, 0.02), fShell, FW / 2 - 0.025, FH / 2, 0);
+add(fridge, RB(FW, 0.07, FD, 0.03), fShell, 0, FH - 0.035, 0);
+add(fridge, RB(FW, 0.1, FD, 0.03), S(0x8fbfae, 0.6), 0, 0.05, 0);
+add(fridge, RB(FW - 0.1, FH - 0.18, 0.01, 0.005), fInner, 0, FH / 2, -FD / 2 + 0.055, false);
+add(fridge, RB(FW - 0.1, 0.01, FD - 0.06, 0.005), fInner, 0, 0.105, 0, false);
+const SHELF_Y = [0.5, 0.92, 1.34];
+const shelfM = P(0xeaf6f2, 0.15, { transparent: true, opacity: 0.8 });
+SHELF_Y.forEach(y => add(fridge, RB(FW - 0.1, 0.016, FD - 0.12, 0.006), shelfM, 0, y, -0.03, false));
+const fridgeLight = new THREE.PointLight(0xfff3dc, 0, 2, 1.5); fridgeLight.position.set(0, 1.3, 0.05); fridge.add(fridgeLight);
+const doorM = TM(P(0xb4e3d3, 0.3, { clearcoat: 1, clearcoatRoughness: 0.15 }), 0xb4e3d3, 0xe8dcf8, 0xf7f2e8);
+const glassM = new THREE.MeshPhysicalMaterial({ color: 0xd6f3ee, roughness: 0.12, metalness: 0, transparent: true, opacity: 0.5, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.2, depthWrite: false });
+const handleM = S(0xe6b45a, 0.28, { metalness: 0.85 });
+const magnetCols = [0xef8a74, 0xffd56b];
+function door(side) {
+  const pivot = new THREE.Group(); pivot.position.set(side * FW / 2, 0.11, FD / 2); fridge.add(pivot);
+  const dw = FW / 2 - 0.006, dh = FH - 0.15;
+  add(pivot, RB(dw, dh, 0.05, 0.03), doorM, -side * dw / 2, dh / 2, 0.025);
+  const gl = add(pivot, RB(dw - 0.13, dh * 0.4, 0.012, 0.02), glassM, -side * dw / 2, dh * 0.66, 0.053, false, false); gl.renderOrder = 2;
+  add(pivot, RB(0.03, 0.42, 0.035, 0.014), handleM, -side * (dw - 0.055), dh * 0.5, 0.075);
+  add(pivot, CYL(0.028, 0.028, 0.012, 18), S(magnetCols[side > 0 ? 1 : 0], 0.45), -side * dw / 2 + side * 0.05, dh * 0.3, 0.056, false).rotation.x = Math.PI / 2;
+  return pivot;
+}
+const doorL = door(-1), doorR = door(1);
+// 냉장고 안 식자재
+const ITEM = { box: [RB(0.13, 0.1, 0.13, 0.025), 0.1], tall: [RB(0.09, 0.2, 0.09, 0.025), 0.2], bottle: [CYL(0.032, 0.036, 0.2, 14), 0.2], jar: [CYL(0.05, 0.05, 0.1, 16), 0.1], fruit: [SPH(0.055, 14, 10), 0.11] };
+const KINDS = { restaurant: ['box', 'bottle', 'jar', 'tall'], salon: ['bottle', 'jar', 'tall', 'bottle'], home: ['box', 'jar', 'bottle', 'fruit'] };
+const ITEM_PAL = { salon: [0xf7a7c6, 0xc9b3ef, 0xf3d38a, 0xfbe1ea, 0xe6c27a, 0xb7a6e8, 0xffc9dd, 0xd9c8f0], home: [0xf3b27a, 0xc5e08f, 0xf7d26b, 0xef8a74, 0xe8dcc6, 0x9fd9c4, 0xf7a7b6, 0xb6cf9e] };
+const capGeo = CYL(0.02, 0.02, 0.03, 10), lidGeo = CYL(0.053, 0.053, 0.02, 16);
+const PAL = [0xef8a74, 0xffd56b, 0x9fd9c8, 0xf7a7b6, 0xb7a6e8, 0xffc9a3, 0x9cc9f0, 0xc5e08f];
+const hashStr = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+const fridgeItems = []; const MAX_ITEMS = 12; let popItemId = null;
+function makeItem(slot, name, pop) {
+  const h = hashStr(name + slot), kinds = KINDS[MODE], k = kinds[h % 4], [geo, ih] = ITEM[k], pal = ITEM_PAL[MODE] || PAL;
+  const mat = P(pal[(h >> 3) % pal.length], 0.4, { emissive: 0xffffff, emissiveIntensity: 0 });
+  const capC = MODE === 'salon' ? 0xe6c27a : 0xfffaf0;
+  const shelf = Math.floor(slot / 4), col = slot % 4;
+  const g = new THREE.Group(); const y = SHELF_Y[shelf] + 0.008;
+  g.position.set(-0.29 + col * 0.193, y, -0.07 + ((h >> 5) % 3) * 0.035); g.rotation.y = ((h >> 7) % 10) * 0.12; fridge.add(g);
+  add(g, geo, mat, 0, ih / 2, 0, false);
+  if (k === 'bottle') add(g, capGeo, S(capC, 0.4, { metalness: MODE === 'salon' ? 0.7 : 0 }), 0, ih + 0.015, 0, false);
+  if (k === 'jar') add(g, lidGeo, S(capC, 0.5), 0, ih + 0.01, 0, false);
+  g.userData = { baseY: y, popT: -1, spawnT: pop ? performance.now() : -1, mat };
+  if (pop) g.scale.setScalar(0.001);
+  fridgeItems.push(g); return g;
+}
+function syncFridgeItems() {
+  fridgeItems.forEach(g => { fridge.remove(g); g.userData.mat.dispose(); }); fridgeItems.length = 0;
+  M().ing.slice(0, MAX_ITEMS).forEach((x, i) => makeItem(i, x.name, x.id === popItemId)); popItemId = null;
+}
+
+/* ---- 점장 고양이 (방석 포함 메시 10개, 재질 5개) ---- */
+const cat = new THREE.Group(); cat.position.set(-0.17, COUNTER_TOP, -0.06); cat.rotation.y = 0.25; scene.add(cat);
+const furW = S(0xfff6ec, 0.85), furO = S(0xf3ac62, 0.8), catEye = S(0x3d2f28, 0.35);
+add(cat, CYL(0.12, 0.13, 0.035, 24), P(0xf7a7b6, 0.7, { clearcoat: 0.2 }), 0, 0.018, 0);                 // 1 방석
+const catBody = new THREE.Group(); catBody.position.y = 0.035; cat.add(catBody);
+add(catBody, SPH(0.085, 18, 14), furW, 0, 0.058, -0.015).scale.set(1.05, 0.78, 1.2);                       // 2 몸
+const catHead = new THREE.Group(); catHead.position.set(0, 0.125, 0.06); catBody.add(catHead);
+add(catHead, SPH(0.064, 18, 14), furW, 0, 0, 0).scale.set(1.12, 0.95, 0.95);                              // 3 머리
+const patch = add(catHead, new THREE.SphereGeometry(0.0655, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.33), furO, 0, 0.002, 0, false); // 4 머리 무늬
+patch.scale.set(1.12, 0.95, 0.95); patch.rotation.z = 0.45;
+const earGeo = new THREE.ConeGeometry(0.024, 0.048, 12);
+const earL = add(catHead, earGeo, furO, -0.04, 0.056, -0.005, false); earL.rotation.z = 0.38;            // 5 왼귀
+const earR = add(catHead, earGeo, furW, 0.04, 0.056, -0.005, false); earR.rotation.z = -0.38;           // 6 오른귀
+const eyeGeo = SPH(0.0085, 10, 8);
+const eyeL = add(catHead, eyeGeo, catEye, -0.025, 0.006, 0.058, false), eyeR = add(catHead, eyeGeo, catEye, 0.025, 0.006, 0.058, false); // 7·8 눈
+{ const v = []; [-1, 1].forEach(sd => [-0.008, 0, 0.008].forEach(dy => v.push(sd * 0.02, -0.014, 0.058, sd * 0.078, -0.01 + dy * 1.6, 0.05)));
+  const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  const wk = new THREE.LineSegments(wg, new THREE.LineBasicMaterial({ color: 0x9a8574 })); wk.raycast = () => {}; catHead.add(wk); } // 수염은 조준 판정에서 제외                // 9 수염
+const bow = new THREE.Group(); bow.position.set(0.035, 0.05, 0.02); bow.rotation.z = -0.4; catHead.add(bow);
+{ const bm = S(0xf06fa0, 0.5); add(bow, SPH(0.016, 10, 8), bm, -0.017, 0, 0, false).scale.set(1.3, 0.8, 0.6); add(bow, SPH(0.016, 10, 8), bm, 0.017, 0, 0, false).scale.set(1.3, 0.8, 0.6); add(bow, SPH(0.008, 8, 6), S(0xe2bd6e, 0.4), 0, 0, 0.004, false); }
+const tailPivot = new THREE.Group(); tailPivot.position.set(0.02, 0.03, -0.1); catBody.add(tailPivot);
+const tail = add(tailPivot, new THREE.CapsuleGeometry(0.017, 0.12, 4, 8), furO, 0.03, 0.06, -0.02); tail.rotation.set(-0.5, 0, -0.45); // 10 꼬리
+const CAT_BY = { salon: ['야옹~ 오늘도 화이팅!', '손님 머리 예쁘다냥~', '원장님 최고냥!', '예약 꽉 차라냥!', '리본 예쁘지냥? 🎀', '골골골… 기분 좋다냥'], home: ['야옹~ 오늘도 수고했냥', '오늘 저녁 뭐 먹냥?', '남은 돈 지키라냥!', '소파 최고다냥…', '골골골… 기분 좋다냥', '장 볼 때 츄르도 사라냥 😼'] };
+const CAT_LINES = ['야옹~ 오늘도 화이팅!', '손님 더 와라냥~', '사장님 최고냥!', '골골골… 기분 좋다냥', '매출 쑥쑥 오르라냥!', '오늘 장사 대박이다냥~', '츄르는 순익에서 주라냥 😼', '잠깐 쉬어가도 된다냥'];
+let catPetT = -1, catLast = -1, catBlinkAt = 3, catBubbleUntil = 0;
+const catBubble = document.getElementById('catBubble');
+function catPet() {
+  catPetT = performance.now();
+  let i; do { i = Math.floor(Math.random() * (CAT_BY[MODE] || CAT_LINES).length); } while (i === catLast && (CAT_BY[MODE] || CAT_LINES).length > 1); catLast = i;
+  catBubble.textContent = '🐱 ' + (CAT_BY[MODE] || CAT_LINES)[i]; catBubble.classList.add('show'); catBubbleUntil = performance.now() + 2600;
+  // 하트 파티클(DOM 10개, 끝나면 제거)
+  const w = new THREE.Vector3(); catHead.getWorldPosition(w); w.project(camera);
+  const sx = (w.x * 0.5 + 0.5) * innerWidth, sy = (-w.y * 0.5 + 0.5) * innerHeight, n = RM ? 4 : 10, H = ['💕', '❤️', '💗', '💖'];
+  for (let k = 0; k < n; k++) {
+    const el = document.createElement('span'); el.className = 'heart'; el.textContent = H[k % H.length];
+    el.style.cssText = `--x:${sx.toFixed(0)}px;--y:${sy.toFixed(0)}px;--dx:${((Math.random() - 0.5) * 120).toFixed(0)}px;--dy:${(-70 - Math.random() * 90).toFixed(0)}px;--r:${((Math.random() - 0.5) * 50).toFixed(0)}deg;--d:${(1.1 + Math.random() * 0.5).toFixed(2)}s;--dl:${(k * 0.045).toFixed(2)}s;font-size:${(15 + Math.random() * 10).toFixed(0)}px`;
+    el.addEventListener('animationend', () => el.remove()); fx.appendChild(el);
+  }
+  try { navigator.vibrate && navigator.vibrate([10, 40, 10]); } catch (er) {}
+}
+function stepCat(now, T, dt) {
+  if (!RM) { catBody.scale.y = 1 + Math.sin(T * 2.4) * 0.025; catBody.position.y = 0.035 + Math.sin(T * 2.4) * 0.002; tailPivot.rotation.z = Math.sin(T * 1.8) * 0.45; tailPivot.rotation.x = Math.sin(T * 0.9) * 0.15; }
+  let eye = 1, tilt = 0, ear = 0;
+  if (catPetT > 0) {
+    const t = (now - catPetT) / 1500;
+    if (t >= 1) catPetT = -1;
+    else {
+      const env = t < 0.15 ? t / 0.15 : t > 0.8 ? (1 - t) / 0.2 : 1;
+      eye = t > 0.08 && t < 0.78 ? 0.12 : 1;                       // 행복하게 눈 감기
+      tilt = 0.3 * env; ear = Math.sin(t * 38) * 0.18 * env;      // 갸웃 + 귀 쫑긋
+      catBody.scale.y *= 1 + Math.sin(t * 60) * 0.02 * env;       // 골골
+    }
+  } else {
+    catBlinkAt -= dt; if (catBlinkAt < 0) { if (catBlinkAt < -0.13) catBlinkAt = 3 + Math.random() * 3; else eye = 0.1; }
+  }
+  eyeL.scale.y = eyeR.scale.y = eye;
+  catHead.rotation.z += (tilt - catHead.rotation.z) * Math.min(1, dt * 12);
+  catHead.rotation.y = RM ? 0 : Math.sin(T * 0.7) * 0.12;
+  earL.rotation.z = 0.38 + ear; earR.rotation.z = -0.38 - ear;
+  if (catBubble.classList.contains('show')) {
+    if (now > catBubbleUntil) catBubble.classList.remove('show');
+    const w = new THREE.Vector3(); catHead.getWorldPosition(w); w.y += 0.09; w.project(camera);
+    const bw = catBubble.offsetWidth / 2 + 8, bx = Math.min(Math.max((w.x * 0.5 + 0.5) * innerWidth, bw), innerWidth - bw);
+    catBubble.style.transform = `translate3d(${bx.toFixed(1)}px,${((-w.y * 0.5 + 0.5) * innerHeight).toFixed(1)}px,0) translate(-50%,-100%)`;
+  }
+}
+
+const shelfLabels = [];
+const SHELF_TXT = { restaurant: ['세무', '회계', '급여'], salon: ['세무', '장부', '예약'], home: ['가계', '영수', '보험'] };
+function drawShelfLabels() {
+  shelfLabels.forEach(({ tex, col }, i) => { const t = SHELF_TXT[MODE][i], c = tex.image, g = c.getContext('2d'), w = c.width, h = c.height;
+    g.clearRect(0, 0, w, h); g.fillStyle = '#fffaf2'; g.beginPath(); g.roundRect ? g.roundRect(4, 4, w - 8, h - 8, 12) : g.rect(4, 4, w - 8, h - 8); g.fill();
+    g.fillStyle = col; g.font = `800 30px ${FONT}`; g.textAlign = 'center'; g.fillText(t[0], w / 2, 66); g.fillText(t[1], w / 2, 108); tex.needsUpdate = true; });
+}
+/* ---- 세무회계 책장 (메시 15개: 틀 7 + 바인더 1(인스턴스) + 라벨 3 + 트로피 2 + 화분 2) ---- */
+const shelf = new THREE.Group(); shelf.position.set(-1.65, 0, -1.05); shelf.rotation.y = 0.75; scene.add(shelf);
+{
+  const SW = 0.8, SH = 1.18, SD = 0.32, wood = S(0xffffff, 0.55, { map: woodTop, envMapIntensity: 0.4 }), backM = TM(P(0xffd9c4, 0.6, { clearcoat: 0.2 }), 0xffd9c4, 0xf3d6ec, 0xd5e2cc);
+  add(shelf, RB(0.045, SH, SD, 0.02), wood, -SW / 2 + 0.022, SH / 2, 0);
+  add(shelf, RB(0.045, SH, SD, 0.02), wood, SW / 2 - 0.022, SH / 2, 0);
+  add(shelf, RB(SW + 0.05, 0.05, SD + 0.03, 0.022), wood, 0, SH, 0);
+  add(shelf, RB(SW, 0.08, SD, 0.025), wood, 0, 0.04, 0);
+  add(shelf, RB(SW - 0.04, SH - 0.06, 0.02, 0.008), backM, 0, SH / 2, -SD / 2 + 0.012, false);
+  const SY = [0.08, 0.47, 0.86];
+  [0.47, 0.86].forEach(y => add(shelf, RB(SW - 0.07, 0.03, SD - 0.03, 0.01), wood, 0, y - 0.015, 0));
+  // 바인더·장부: 인스턴스 1개로 (색만 다르게)
+  const bcol = [0xef8a74, 0x9fd9c8, 0xffd56b, 0xb7a6e8, 0xf7a7b6, 0x9cc9f0, 0xffc9a3, 0x9fd9c8, 0xef8a74, 0xffd56b, 0xb7a6e8, 0x9cc9f0];
+  const binders = new THREE.InstancedMesh(RB(0.062, 0.3, 0.23, 0.014, 2), S(0xffffff, 0.55, { emissive: 0x000000 }), 12);
+  binders.castShadow = true; binders.receiveShadow = true;
+  const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(1, 1, 1), c = new THREE.Color();
+  const place = (i, x, y, z, rz, h = 1) => { q.setFromEuler(new THREE.Euler(0, 0, rz)); sc.set(1, h, 1); mtx.compose(V3(x, y, z), q, sc); binders.setMatrixAt(i, mtx); binders.setColorAt(i, c.setHex(bcol[i])); };
+  for (let i = 0; i < 6; i++) place(i, -0.28 + i * 0.068, SY[0] + 0.15, 0.01, 0);           // 아래 칸 6권
+  for (let i = 0; i < 4; i++) place(6 + i, -0.3 + i * 0.066, SY[1] + 0.135, 0.01, 0, 0.9);  // 가운데 칸 4권
+  place(10, 0.0, SY[1] + 0.125, 0.01, -0.32, 0.85);                                        // 기대 놓인 1권
+  place(11, 0.26, SY[1] + 0.03, 0.0, Math.PI / 2, 0.85);                                   // 눕힌 1권
+  shelf.add(binders);
+  // 앞쪽 3권 등 라벨: 세무 / 회계 / 급여
+  ['#c85a43', '#2c8a6e', '#a07a10'].forEach((col, i) => {
+    const tex = canvasTex(64, 160, () => {}); shelfLabels.push({ tex, col });
+    add(shelf, new THREE.PlaneGeometry(0.046, 0.115), S(0xffffff, 0.8, { map: tex }), -0.28 + i * 0.068, SY[0] + 0.17, 0.1265, false);
+  });
+  // 맨 위 칸: 트로피 + 화분
+  add(shelf, RB(0.08, 0.035, 0.08, 0.01), S(0xfffaf0, 0.5), -0.18, SY[2] + 0.018, 0);
+  add(shelf, CYL(0.05, 0.022, 0.1, 16), S(0xf0c25e, 0.25, { metalness: 0.9, envMapIntensity: 1 }), -0.18, SY[2] + 0.09, 0);
+  add(shelf, CYL(0.055, 0.042, 0.09, 16), P(0x9fd9c8, 0.5), 0.17, SY[2] + 0.045, 0);
+  add(shelf, SPH(0.07, 12, 10), S(0x86c9a5, 0.6), 0.17, SY[2] + 0.15, 0).scale.set(1, 1.15, 1);
+}
+
+/* ---- 직원 캐릭터 (가정: 가족 일정 보드 + 알림 비서) ---- */
+const staff = new THREE.Group(); staff.position.set(1.6, 0, 0.6); staff.rotation.y = -1.05; staff.scale.setScalar(0.82); scene.add(staff);
+const stBody = new THREE.Group(); staff.add(stBody);
+const stShirt = TM(P(0xfff2c4, 0.6), 0xfff2c4, 0xf8e3f0, 0xdfe8d6), stApron = TM(P(0x9fd9c8, 0.55, { side: THREE.DoubleSide }), 0x9fd9c8, 0xc9b3ef, 0xe8dcc6);
+const stSkin = P(0xffe3c8, 0.55), stDark = S(0x5b4a3f, 0.7), stEye = S(0x3d2f28, 0.3);
+add(stBody, new THREE.CapsuleGeometry(0.055, 0.24, 4, 10), stDark, -0.07, 0.19, 0); add(stBody, new THREE.CapsuleGeometry(0.055, 0.24, 4, 10), stDark, 0.07, 0.19, 0);
+add(stBody, new THREE.CapsuleGeometry(0.155, 0.24, 6, 16), stShirt, 0, 0.6, 0);
+const stApronMesh = add(stBody, new THREE.CylinderGeometry(0.162, 0.17, 0.32, 18, 1, true, -0.95, 1.9), stApron, 0, 0.54, 0, false);
+const stHead = new THREE.Group(); stHead.position.set(0, 0.98, 0); stBody.add(stHead);
+add(stHead, SPH(0.17, 20, 16), stSkin, 0, 0, 0);
+add(stHead, new THREE.SphereGeometry(0.176, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.42), stDark, 0, 0.012, -0.012, false);
+add(stHead, SPH(0.016, 10, 8), stEye, -0.055, -0.005, 0.157, false); add(stHead, SPH(0.016, 10, 8), stEye, 0.055, -0.005, 0.157, false);
+const stBl = S(0xf7a7a0, 0.8);
+add(stHead, SPH(0.02, 8, 6), stBl, -0.1, -0.045, 0.13, false).scale.set(1, 0.6, 0.5); add(stHead, SPH(0.02, 8, 6), stBl, 0.1, -0.045, 0.13, false).scale.set(1, 0.6, 0.5);
+const stSmile = add(stHead, new THREE.TorusGeometry(0.024, 0.006, 6, 12, Math.PI), stEye, 0, -0.05, 0.16, false); stSmile.rotation.z = Math.PI;
+const stCap = new THREE.Group(); stHead.add(stCap);
+add(stCap, new THREE.SphereGeometry(0.182, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.36), P(0xef8a74, 0.5), 0, 0.03, 0, false);
+add(stCap, CYL(0.12, 0.12, 0.012, 20), P(0xef8a74, 0.5), 0, 0.075, 0.12, false).scale.set(1, 1, 0.75);
+const stBand = add(stHead, new THREE.TorusGeometry(0.168, 0.016, 8, 32), P(0xc9b3ef, 0.4), 0, 0.07, -0.01, false); stBand.rotation.x = Math.PI / 2 - 0.35;
+function stArm(side) { const p = new THREE.Group(); p.position.set(0.17 * side, 0.76, 0.01); stBody.add(p); add(p, new THREE.CapsuleGeometry(0.045, 0.2, 4, 8), stShirt, 0, -0.15, 0); add(p, SPH(0.048, 10, 8), stSkin, 0, -0.3, 0); p.rotation.z = 0.12 * side; return p; }
+const stArmL = stArm(-1), stArmR = stArm(1);
+// 가정 모드: 가족 일정 보드(이젤)
+const boardGrp = new THREE.Group(); boardGrp.position.set(0.42, 0, 0.05); boardGrp.rotation.y = 0.2; staff.add(boardGrp);
+const boardCanvas = document.createElement('canvas'); boardCanvas.width = 320; boardCanvas.height = 240;
+const boardTex = new THREE.CanvasTexture(boardCanvas); boardTex.colorSpace = THREE.SRGBColorSpace;
+{ const w = S(0xc9a57c, 0.6);
+  const l1 = add(boardGrp, CYL(0.012, 0.012, 1.1, 6), w, -0.15, 0.55, -0.04); l1.rotation.z = 0.08; const l2 = add(boardGrp, CYL(0.012, 0.012, 1.1, 6), w, 0.15, 0.55, -0.04); l2.rotation.z = -0.08;
+  add(boardGrp, RB(0.46, 0.35, 0.025, 0.02), w, 0, 0.98, 0);
+  add(boardGrp, new THREE.PlaneGeometry(0.42, 0.31), S(0xffffff, 0.8, { map: boardTex }), 0, 0.98, 0.014, false); }
+function drawBoard() {
+  const g = boardCanvas.getContext('2d'), w = 320, h = 240;
+  g.fillStyle = '#fffaf2'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#6f8f63'; g.font = `800 24px ${FONT}`; g.fillText('🗓️ 우리집 일정', 18, 38);
+  (DATA.family || []).filter(f => !f.done).slice(0, 4).forEach((f, i) => {
+    g.fillStyle = ['#ef8a74', '#a9c4a0', '#f3c56a', '#b7a6e8'][i]; g.beginPath(); g.arc(26, 74 + i * 42, 7, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#4a3b30'; g.font = `700 18px ${FONT}`; g.fillText(String(f.text).slice(0, 11), 42, 80 + i * 42);
+  });
+  boardTex.needsUpdate = true;
+}
+let stWaveT = -1, stNextWave = 4;
+
+/* ---- 상호작용 등록 ---- */
+const OBJ = {};
+function bindRoot(key, root) {
+  const o = OBJ[key];
+  if (!root.userData.mats) {
+    const mats = new Set(); root.traverse(m => { if (m.isMesh && m.material && m.material.emissive && m.material !== screenMat && m.material !== lapScreenMat) mats.add(m.material); });
+    mats.forEach(m => { m.userData.baseEm = m.emissive.clone(); m.userData.baseEI = m.emissiveIntensity; });
+    root.userData.mats = [...mats];
+  }
+  if (o.root && o.root !== root) o.root.position.y = o.baseY;
+  o.root = root; o.mats = root.userData.mats; o.baseY = root.position.y; root.userData.key = key;
+}
+function register(key, root, o) { OBJ[key] = Object.assign({ h: 0 }, o); bindRoot(key, root); }
+register('pos', pos, { emoji: '🖥️', name: '포스기', chip: '탭해서 열기', anchor: V3(0.05, 1.36, -0.33),
+  focus: { t: V3(0.05, 1.17, -0.38), dir: V3(0, 0.6, 1), dist: 1.15, fit: 0.45, hh: 0.26 } });
+register('safe', safe, { emoji: '💰', name: '금고', chip: '탭해서 열기', anchor: V3(-0.45, 1.3, -0.33),
+  focus: { t: V3(-0.45, 1.06, -0.3), dir: V3(0.1, 0.75, 1), dist: 1.1, fit: 0.42, hh: 0.24 } });
+register('fridge', fridge, { emoji: '🧊', name: '냉장고', chip: '탭해서 열기', anchor: V3(1.6, 1.95, -1.15),
+  focus: { t: V3(1.58, 0.92, -1.12), dir: V3(-0.22, 0.2, 1), dist: 2.1, fit: 0.8, hh: 1.0 } });
+register('ledger', shelf, { emoji: '📚', name: '세무회계 장부', short: '장부', chip: '탭해서 복식장부 열기', anchor: V3(-1.65, 1.38, -1.05),
+  focus: { t: V3(-1.65, 0.68, -1.05), dir: V3(0.35, 0.55, 1), dist: 1.6, fit: 0.5, hh: 0.68 } });
+register('cat', cat, { emoji: '🐱', name: '점장 고양이', chip: '쓰다듬기', anchor: V3(-0.17, 1.27, -0.06), focus: null });
+register('owner', owner, { emoji: '🙋', name: '사장님', chip: '말 걸기', anchor: V3(0.85, 1.28, -0.55),
+  focus: null });
+register('staff', staff, { emoji: '🧑‍🍳', name: '직원', chip: '근태·급여 보기', anchor: V3(1.6, 1.2, 0.6),
+  focus: { t: V3(1.6, 0.72, 0.6), dir: V3(-0.85, 0.32, 0.45), dist: 1.7, fit: 0.55, hh: 0.62 } });
+let PICKABLE = [];
+const refreshPickable = () => { PICKABLE = Object.values(OBJ).filter(o => o.root.visible).map(o => o.root); };
+const CAT_AT = { counter: [V3(-0.17, COUNTER_TOP, -0.06), 0.25, 1, V3(-0.17, 1.27, -0.06)], sofa: [V3(-0.62, SOFA_SEAT, -3.05), 0.15, 1.7, V3(-0.62, SOFA_SEAT + 0.62, -3.05)] };
+// 업종 바꾸기: 색·물건·라벨을 그 방에 맞게
+function applyMode3D() {
+  const m = MODE, home = m === 'home', salon = m === 'salon';
+  THEMED.forEach(([mat, c]) => mat.color.setHex(c[m]));
+  const bg = { restaurant: 0xf3e6d6, salon: 0xf6e4ea, home: 0xf2eee4 }[m]; scene.background.setHex(bg); scene.fog.color.setHex(bg);
+  coralL.color.setHex({ restaurant: 0xff9e8a, salon: 0xff9ec4, home: 0xffd2a0 }[m]);
+  mintL.color.setHex({ restaurant: 0x9fe3cf, salon: 0xc5a8ff, home: 0xc9e3b8 }[m]);
+  grpRest.visible = m === 'restaurant'; grpSalon.visible = salon; grpHome.visible = home;
+  pos.visible = printer.visible = !home; laptop.visible = home;
+  homeDrawers.visible = home; lock.visible = coinSlot.visible = !home;
+  bow.visible = salon;
+  stCap.visible = m === 'restaurant'; stBand.visible = salon; stApronMesh.visible = !home; boardGrp.visible = home;
+  const ca = CAT_AT[home ? 'sofa' : 'counter']; cat.position.copy(ca[0]); cat.rotation.y = ca[1]; cat.scale.setScalar(ca[2]);
+  OBJ.cat.anchor = ca[3]; OBJ.cat.baseY = cat.position.y;
+  bindRoot('pos', home ? laptop : pos);
+  Object.values(OBJ).forEach(o => { o.h = 0; });
+  refreshPickable(); drawShelfLabels(); drawBoard();
+}
+
+/* =========================================================
+   5. 1인칭 카메라 (yaw/pitch + 관성 + 부드러운 이동)
+   ========================================================= */
+const PITCH_LIM = THREE.MathUtils.degToRad(38);
+const cam = { pos: V3(0, 1.18, 1.05), yaw: 0, pitch: -0.14 };
+const vel = { yaw: 0, pitch: 0 };
+let camTween = null, view = 'seat';
+const isPortrait = () => innerWidth / innerHeight < 0.8;
+function seatPose() { const pos = V3(-0.05, 1.2, isPortrait() ? 1.45 : 1.4); return Object.assign({ pos }, lookYP(pos, V3(0.05, 1.12, -0.36))); }
+function lookYP(from, to) { const d = to.clone().sub(from).normalize(); return { yaw: Math.atan2(-d.x, -d.z), pitch: Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)) }; }
+function visibleFrac() {
+  if (!(innerWidth < 720) || !activeKey) return 1;
+  const hb = document.getElementById('hud').getBoundingClientRect().bottom;
+  return Math.max(0.25, (innerHeight - panel.offsetHeight - hb) / innerHeight);
+}
+function focusPose(f) {
+  const vt = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2), ht = vt * camera.aspect;
+  const d = Math.max(f.dist, f.fit / ht, f.hh / (vt * visibleFrac()));
+  const pos = f.t.clone().addScaledVector(f.dir.clone().normalize(), d);
+  return Object.assign({ pos }, lookYP(pos, f.t));
+}
+const easeIO = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const easeBack = t => { const c1 = 1.6, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const angDiff = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
+function moveTo(pose, dur = 0.75) {
+  if (RM) dur = Math.min(dur, 0.3);
+  camTween = { p0: cam.pos.clone(), y0: cam.yaw, pi0: cam.pitch, p1: pose.pos.clone(), dy: angDiff(cam.yaw, pose.yaw), pi1: pose.pitch, s: performance.now(), d: dur * 1000 };
+  vel.yaw = vel.pitch = 0; document.body.classList.add('moving');
+}
+function setView(v) {
+  view = v; document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  if (v === 'seat') moveTo(seatPose(), 0.8);
+  else moveTo(focusPose(OBJ[v].focus), 0.75);
+}
+function setCameraFov() {
+  camera.aspect = innerWidth / innerHeight;
+  camera.fov = camera.aspect < 0.6 ? 74 : camera.aspect < 0.8 ? 70 : camera.aspect < 1.2 ? 66 : 60;
+  camera.updateProjectionMatrix();
+}
+// 패널이 가리는 만큼 3D 중심 이동
+const shift = { x: 0, y: 0, tx: 0, ty: 0 };
+function applyShift() {
+  shift.x += (shift.tx - shift.x) * 0.14; shift.y += (shift.ty - shift.y) * 0.14;
+  if (Math.abs(shift.x) < 0.3 && Math.abs(shift.y) < 0.3 && !shift.tx && !shift.ty) { if (camera.view && camera.view.enabled) camera.clearViewOffset(); shift.x = shift.y = 0; return; }
+  camera.setViewOffset(innerWidth, innerHeight, shift.x, shift.y, innerWidth, innerHeight);
+}
+
+/* =========================================================
+   6. 이펙트 (동전·지폐·영수증 / 떠오르는 숫자)
+   ========================================================= */
+const parts = [];
+function burstMoney(amount) {
+  const origin = V3(0.42, COUNTER_TOP + 0.16, -0.28);
+  const nC = 8 + Math.min(10, Math.floor(amount / 40000)), nB = 2 + Math.min(5, Math.floor(amount / 90000));
+  const spawn = (geo, mat, half, k) => {
+    const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.position.copy(origin).add(V3((Math.random() - 0.5) * 0.08, 0, (Math.random() - 0.5) * 0.06));
+    m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3); scene.add(m);
+    parts.push({ m, half, k, v: V3((Math.random() - 0.65) * 1.3, 1.9 + Math.random() * 1.1, 0.25 + Math.random() * 0.7), w: V3((Math.random() - 0.5) * 16, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 16), age: 0, life: 2 + Math.random() * 0.6, settled: false });
+  };
+  for (let i = 0; i < nC; i++) spawn(coinGeo, goldM, 0.0045, 'coin');
+  for (let i = 0; i < nB; i++) spawn(billGeo, billM, 0.002, 'bill');
+  spawn(receiptGeo, receiptM, 0.0015, 'receipt');
+}
+function updateParts(dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.age += dt;
+    if (!p.settled) {
+      const light = p.k !== 'coin';
+      p.v.y -= 9.8 * (light ? 0.35 : 1) * dt; if (light) p.v.multiplyScalar(1 - 1.3 * dt);
+      p.m.position.addScaledVector(p.v, dt);
+      p.m.rotation.x += p.w.x * dt; p.m.rotation.y += p.w.y * dt; p.m.rotation.z += p.w.z * dt;
+      const q = p.m.position, onTop = q.x > CB.x0 - 0.07 && q.x < CB.x1 + 0.07 && q.z > CB.z0 - 0.06 && q.z < CB.z1 + 0.06;
+      const gy = (onTop ? COUNTER_TOP : 0) + p.half;
+      if (q.y < gy && p.v.y < 0 && (!onTop || q.y > COUNTER_TOP - 0.12)) {
+        q.y = gy; p.v.y *= -0.35; p.v.x *= 0.55; p.v.z *= 0.55; p.w.multiplyScalar(0.5);
+        if (Math.abs(p.v.y) < 0.3) { p.settled = true; p.m.rotation.x = 0; p.m.rotation.z = 0; }
+      }
+    }
+    if (p.age > p.life) { const s = 1 - (p.age - p.life) / 0.35; if (s <= 0) { scene.remove(p.m); parts.splice(i, 1); continue; } p.m.scale.setScalar(s); }
+  }
+}
+const fx = document.getElementById('fx'), floats = [];
+function floatText(text, world, cool) {
+  const el = document.createElement('div'); el.className = 'ftext num' + (cool ? ' cool' : ''); el.textContent = text; fx.appendChild(el);
+  floats.push({ el, p: world.clone(), s: performance.now(), d: 1600 });
+}
+let screenGlow = 0, waveT = -1;
+
+/* =========================================================
+   7. HUD (카운트업)
+   ========================================================= */
+const hudEl = { s: document.getElementById('hSales'), e: document.getElementById('hExp'), n: document.getElementById('hNet') };
+const hudVal = { s: 0, e: 0, n: 0 }; let hudTween = null;
+function paintHud() {
+  hudEl.s.textContent = won(hudVal.s); hudEl.e.textContent = won(hudVal.e); hudEl.n.textContent = won(hudVal.n);
+  hudEl.n.classList.toggle('pos', hudVal.n > 0); hudEl.n.classList.toggle('neg', hudVal.n < 0);
+}
+function renderHud(animate) {
+  const mo = M(), to = { s: mo.s, e: mo.exp, n: mo.net }, from = Object.assign({}, hudVal);
+  if (!animate || RM) { Object.assign(hudVal, to); paintHud(); return; }
+  ['s', 'e', 'n'].forEach(k => { if (Math.round(to[k]) !== Math.round(from[k])) { hudEl[k].classList.add('bump'); setTimeout(() => hudEl[k].classList.remove('bump'), 900); } });
+  hudTween = { from, to, s: performance.now(), d: 1000 };
+}
+function stepHud(now) {
+  if (!hudTween) return;
+  const t = Math.min(1, (now - hudTween.s) / hudTween.d), e = easeOut(t);
+  ['s', 'e', 'n'].forEach(k => { hudVal[k] = hudTween.from[k] + (hudTween.to[k] - hudTween.from[k]) * e; });
+  paintHud(); if (t >= 1) hudTween = null;
+}
+function refreshPos() { const mo = M(); if (MODE === 'home') drawLaptop(mo); else drawPos(mo.today, mo.s); }
+
+/* =========================================================
+   8. 패널
+   ========================================================= */
+const panel = document.getElementById('panel'), pBody = document.getElementById('pBody'), pTag = document.getElementById('pTag'), pTitle = document.getElementById('pTitle');
+let ledgerAll = false, ledgerMore = false, fixedEdit = false;
+let activeKey = null, formOpen = false, saleChannel = MODES[MODE].channels[0], lastNewId = null, sampleArm = 0;
+const pct = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
+const netColor = n => `color:${n >= 0 ? 'var(--pos)' : 'var(--neg)'}`;
+function cards3(a, b, c) {
+  return `<div class="cards"><div class="card"><span>${a[0]}</span><b class="num">${won(a[1])}</b></div><div class="card"><span>${b[0]}</span><b class="num">${won(b[1])}</b></div><div class="card"><span>${c[0]}</span><b class="num" style="${netColor(c[1])}">${won(c[1])}</b></div></div>`;
+}
+function amtField(ph) { return `<div class="field"><label for="fAmt">금액(원)</label><input id="fAmt" class="num" inputmode="numeric" autocomplete="off" placeholder="${ph}" maxlength="13">`; }
+let fixCat = LIVE_FIX[0];
+const LIVE_SAVE = '☁ 내 장부에 저장', DEMO_SAVE = '🧪 체험 저장';
+function liveRow(x, label, sign = '') { return `<div class="row${x.id === lastNewId ? ' new' : ''}"><div class="l"><span class="d num">${md(x.date)}</span><span>${esc(label)}</span></div><b class="num">${sign}${won(x.amount)}</b></div>`; }
+function groupBy(arr, key) { const m = new Map(); arr.forEach(x => { const g = m.get(x[key]) || { n: 0, amt: 0 }; g.n++; g.amt += x.amount; m.set(x[key], g); }); return [...m.entries()].sort((a, b) => b[1].amt - a[1].amt); }
+function renderLivePanel() {
+  const mo = liveMonth(), c = MC(), ob = c.obj, [e1, n1] = ob[activeKey] || ['', ''];
+  const ymTxt = `${mo.k.y}년 ${mo.k.m}월`; let h = '';
+  if (activeKey === 'pos') {
+    if (!LIVE_CH.includes(saleChannel)) saleChannel = LIVE_CH[0];
+    pTag.textContent = `${e1} ${n1} · ☁ 내 장부`; pTitle.textContent = `${mo.k.m}월 매출`;
+    h += cards3(['매출', mo.s], ['가게 지출', mo.exp], ['순익', mo.net]);
+    h += `<div class="sec"><span>채널별 매출</span><span>${mo.sales.length}건</span></div><div class="rows">`;
+    const g = groupBy(mo.sales, 'channel');
+    h += g.length ? g.map(([ch, v]) => `<div class="row"><div class="l"><span class="chip c-live">${esc(ch)}</span><span class="d">${v.n}건</span></div><b class="num">${won(v.amt)}</b></div>`).join('') : `<div class="empty">${ymTxt} 매출 기록이 아직 없어요.</div>`;
+    h += `</div><div class="sec" style="margin-top:14px"><span>최근 매출</span><span>시간 —</span></div><div class="rows">`;
+    h += mo.sales.slice(-5).reverse().map(x => liveRow(x, x.channel + (x.memo ? ' · ' + x.memo : ''))).join('') || '<div class="empty">없음</div>';
+    h += '</div>';
+    h += !formOpen ? `<button class="primary" data-act="open-form">+ 매출 입력</button>` : `<div class="form">${amtField('예: 412,000')}
+      <div class="qk"><button data-add="10000">+1만</button><button data-add="50000">+5만</button><button data-add="100000">+10만</button></div></div>
+      <div class="field"><label>채널</label><div class="seg wrap">${LIVE_CH.map(x => `<button data-ch="${x}" class="${x === saleChannel ? 'on' : ''}">${x}</button>`).join('')}</div></div>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-sale">${LIVE_SAVE}</button></div></div>`;
+  } else if (activeKey === 'fridge') {
+    pTag.textContent = `${e1} ${n1} · ☁ 식자재비`; pTitle.textContent = `${mo.k.m}월 식자재비`;
+    const fill = Math.min(mo.ing.length, MAX_ITEMS);
+    h += `<div class="big"><span>이번 달 식자재비 합계 (계정: 식자재비)</span><b class="num">${won(mo.i)}</b><em>${mo.ing.length}건 · 선반 채움 ${fill}/${MAX_ITEMS} (${Math.round(fill / MAX_ITEMS * 100)}%)</em></div>`;
+    h += `<div class="sec"><span>최근 식자재</span></div><div class="rows">`;
+    h += mo.ing.slice(-5).reverse().map(x => liveRow(x, x.name)).join('') || '<div class="empty">이번 달 식자재 기록이 없어요.</div>';
+    h += '</div>';
+    h += !formOpen ? `<button class="primary" data-act="open-form">+ 식자재 입력</button>` : `<div class="form">
+      <div class="field"><label for="fName">품목·상세 (메모로 저장)</label><input id="fName" autocomplete="off" placeholder="예: 코스트코 채소" maxlength="30" style="font-size:16px">
+      <div class="qk">${c.quickVar.map(q => `<button data-name="${q}">${q}</button>`).join('')}</div></div>
+      ${amtField('예: 38,000')}</div>
+      <p class="hintp" style="margin:0 0 10px">카테고리는 <b>식자재</b>로 저장돼 가계부에서도 식자재비로 잡혀요.</p>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-ing">${LIVE_SAVE}</button></div></div>`;
+  } else if (activeKey === 'safe') {
+    pTag.textContent = `${e1} ${n1} · ☁ 고정비·기타`; pTitle.textContent = `${mo.k.m}월 그 외 사업 지출`;
+    h += `<div class="big"><span>식자재비를 뺀 사업 지출 합계</span><b class="num">${won(mo.f + mo.o)}</b><em>고정비 ${won(mo.f)} · 기타 지출 ${won(mo.o)}</em></div>`;
+    h += `<div class="sec"><span>고정비</span><span>${mo.fx.length}건</span></div><div class="rows">`;
+    const fxShow = mo.fx.slice().reverse();
+    h += fxShow.slice(0, 8).map(x => liveRow(x, (x.category || '고정비') + (x.memo ? ' · ' + x.memo : ''))).join('') || '<div class="empty">고정비 기록이 없어요.</div>';
+    if (fxShow.length > 8) h += `<div class="row"><div class="l"><span class="d">외 ${fxShow.length - 8}건</span></div><b class="num">${won(sum(fxShow.slice(8)))}</b></div>`;
+    h += `<div class="row total"><div class="l"><span>고정비 합계</span></div><b class="num">${won(mo.f)}</b></div></div>`;
+    h += `<div class="sec" style="margin-top:14px"><span>기타 지출 (계정별)</span><span>${mo.etc.length}건</span></div><div class="rows">`;
+    h += groupBy(mo.etc, 'acc').map(([a, v]) => `<div class="row"><div class="l"><span>${esc(a)}</span><span class="d">${v.n}건</span></div><b class="num">${won(v.amt)}</b></div>`).join('') || '<div class="empty">기타 지출이 없어요.</div>';
+    h += `<div class="row total"><div class="l"><span>기타 합계</span></div><b class="num">${won(mo.o)}</b></div></div>`;
+    h += `<div class="sec" style="margin-top:14px"><span>이번 달 순익 계산</span></div><div class="rows">
+      <div class="row"><div class="l"><span>매출</span></div><b class="num">${won(mo.s)}</b></div>
+      <div class="row"><div class="l"><span>− 식자재비</span></div><b class="num">${won(mo.i)}</b></div>
+      <div class="row"><div class="l"><span>− 고정비·기타</span></div><b class="num">${won(mo.f + mo.o)}</b></div>
+      <div class="row total"><div class="l"><span>= 순익 ${mo.s ? `(${(mo.net / mo.s * 100).toFixed(1)}%)` : ''}</span></div><b class="num ${mo.net >= 0 ? 'pos' : 'neg'}">${won(mo.net)}</b></div></div>`;
+    h += !formOpen ? `<button class="primary" data-act="open-form">+ 지출 입력</button>` : `<div class="form">
+      <div class="field"><label>카테고리</label><div class="seg wrap">${LIVE_FIX.map(x => `<button data-fc="${x}" class="${x === fixCat ? 'on' : ''}">${x}</button>`).join('')}</div></div>
+      <div class="field"><label for="fMemo">상세 (메모)</label><input id="fMemo" autocomplete="off" placeholder="예: 11월 월세" maxlength="40" style="font-size:16px"></div>
+      ${amtField('예: 1,200,000')}</div>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-fix">${LIVE_SAVE}</button></div></div>`;
+  } else if (activeKey === 'ledger') {
+    pTag.textContent = `${e1} ${n1} · ☁ 내 장부`; pTitle.textContent = `📒 ${mo.k.m}월 복식장부`;
+    const E = journalLive(ledgerAll), tb = trialLive(E);
+    h += `<div class="mode" role="tablist"><button data-mode="biz" class="${ledgerAll ? '' : 'on'}" role="tab" aria-selected="${!ledgerAll}">🏪 사업 전용</button><button data-mode="all" class="${ledgerAll ? 'on' : ''}" role="tab" aria-selected="${ledgerAll}">👛 전체</button></div>`;
+    h += cards3(['매출', mo.s], ['가게 지출', mo.exp], ['순익', mo.net]);
+    h += ledgerAll ? `<div class="pnote">👛 개인 소비 ${mo.pers.length}건 · <b>${won(mo.p)}</b>을 <b>개인출금</b>으로 분개했어요. 사업 순익에는 들어가지 않아요.</div>`
+                   : `<div class="pnote" style="color:#2c8a6e;background:#eaf7f1">🏪 사업 거래만 보여요. 개인 소비 ${mo.pers.length}건은 <b>전체</b>에서 볼 수 있어요.</div>`;
+    const sorted = E.slice().sort((a, b) => (String(b.date) + b.id).localeCompare(String(a.date) + a.id));
+    const shown = ledgerMore ? sorted : sorted.slice(0, 12);
+    h += `<div class="sec"><span>자동 분개</span><span>${E.length}건 · 최신순</span></div><div class="jt">`;
+    h += `<div class="jh"><span>날짜 · 적요</span><span>차변 계정 (금액)</span><span>대변 계정 (금액)</span></div>`;
+    h += shown.map(e => `<div class="jr${e.personal ? ' personal' : ''}${e.id === lastNewId ? ' new' : ''}"><div class="dm"><span class="d num">${md(e.date)}</span><span class="m">${esc(e.memo)}</span></div>
+      <div class="side dr"><span class="a"><span class="lb">차)</span>${esc(e.dr)}</span><b class="num">${e.amt.toLocaleString('ko-KR')}</b></div>
+      <div class="side cr"><span class="a"><span class="lb">대)</span>${esc(e.cr)}</span><b class="num">${e.amt.toLocaleString('ko-KR')}</b></div></div>`).join('') || '<div class="empty" style="padding:14px 12px">이번 달 분개가 없어요.</div>';
+    if (sorted.length > shown.length) h += `<button class="more" data-act="more">전체 ${sorted.length}건 보기 ▾</button>`;
+    h += `</div><div class="sec" style="margin-top:18px"><span>시산표</span><span>${ledgerAll ? '전체' : '사업 전용'}</span></div><div class="tb">`;
+    h += `<div class="tr"><span>계정</span><span>차변 합</span><span>대변 합</span><span>잔액</span></div>`;
+    const f = v => v ? v.toLocaleString('ko-KR') : '<i class="z">—</i>';
+    h += tb.rows.map(r => `<div class="tr"><span>${esc(r.acc)}</span><span class="num">${f(r.dr)}</span><span class="num">${f(r.cr)}</span><span class="num">${r.bal ? `<small>${r.bal < 0 ? (r.side === '차' ? '대' : '차') : r.side}</small>${Math.abs(r.bal).toLocaleString('ko-KR')}` : '<i class="z">—</i>'}</span></div>`).join('');
+    h += `<div class="tr sum"><span>합계</span><span class="num">${tb.drT.toLocaleString('ko-KR')}</span><span class="num">${tb.crT.toLocaleString('ko-KR')}</span><span></span></div></div>`;
+    const ok = Math.round(tb.drT) === Math.round(tb.crT);
+    h += `<div class="bal${ok ? '' : ' bad'}">${ok ? `⚖️ 차변 합계 = 대변 합계 ${tb.drT.toLocaleString('ko-KR')}원 ✅` : '⚠️ 차변·대변 합계가 달라요'}</div>`;
+    h += `<p class="hintp">가계부 앱과 같은 규칙(카테고리 → 메모 순서)으로 계정을 나눴어요. 매출은 <b>보통예금/매출액</b>, 지출은 <b>각 비용 계정/보통예금</b>, 개인 소비는 <b>개인출금</b>이에요.</p>`;
+  } else return false;
+  pBody.innerHTML = h; lastNewId = null; return true;
+}
+function renderPanel() {
+  if (isLive() && renderLivePanel()) return;
+  const mo = month(), c = MC(), home = MODE === 'home', ob = c.obj; let h = '';
+  const [e1, n1] = ob[activeKey] ? ob[activeKey] : ['', ''];
+  if (activeKey === 'pos') {
+    pTag.textContent = home ? '💻 가계부 노트 · 수입/생활비' : `${e1} ${n1} · ${c.inc}`;
+    pTitle.textContent = home ? `${mo.k.m}월 가계부` : `${mo.k.m}월 ${c.inc}`;
+    h += cards3([c.hud[0], mo.s], [c.hud[1], mo.exp], [c.hud[2], mo.net]);
+    h += `<div class="sec"><span>최근 ${c.inc}</span><span>${mo.sales.length}건</span></div><div class="rows">`;
+    const r = recent(mo.sales);
+    h += r.length ? r.map(x => `<div class="row${x.id === lastNewId ? ' new' : ''}"><div class="l"><span class="d num">${md(x.date)} ${esc(x.time || '')}</span><span class="chip c-${esc(x.channel)}">${esc(x.channel)}</span></div><b class="num">${won(x.amount)}</b></div>`).join('') : `<div class="empty">아직 이번 달 ${c.inc}이 없어요.</div>`;
+    h += '</div>';
+    if (home) {
+      h += `<div class="sec" style="margin-top:14px"><span>최근 생활비</span><span>${mo.pers.length}건</span></div><div class="rows">`;
+      const rp = recent(mo.pers);
+      h += rp.length ? rp.map(x => `<div class="row${x.id === lastNewId ? ' new' : ''}"><div class="l"><span class="d num">${md(x.date)}</span><span>${esc(x.name)}</span></div><b class="num">−${won(x.amount)}</b></div>`).join('') : '<div class="empty">아직 생활비 기록이 없어요.</div>';
+      h += '</div>';
+    }
+    if (!formOpen) h += `<button class="primary" data-act="open-form">+ ${c.inc} 입력</button>` + (home ? `<button class="ghost" data-act="open-spend">🧾 + 생활비 지출 입력</button>` : '');
+    else if (formOpen === 'spend') h += `<div class="form">
+      <div class="field"><label for="fName">어디에 썼나요?</label><input id="fName" autocomplete="off" placeholder="예: 생활용품" maxlength="20" style="font-size:16px">
+      <div class="qk">${['생활용품', '교통', '병원', '외식', '경조사'].map(q => `<button data-name="${q}">${q}</button>`).join('')}</div></div>
+      ${amtField('예: 23,000')}</div>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-spend">${DEMO_SAVE}</button></div></div>`;
+    else h += `<div class="form">${amtField(home ? '예: 3,200,000' : '예: 12,000')}
+      <div class="qk"><button data-add="10000">+1만</button><button data-add="50000">+5만</button><button data-add="100000">+10만</button>${home ? '<button data-add="1000000">+100만</button>' : ''}</div></div>
+      <div class="field"><label>${home ? '종류' : MODE === 'salon' ? '시술 종류' : '채널'}</label><div class="seg">${c.channels.map(x => `<button data-ch="${x}" class="${x === saleChannel ? 'on' : ''}">${x}</button>`).join('')}</div></div>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-sale">${DEMO_SAVE}</button></div></div>`;
+  } else if (activeKey === 'fridge') {
+    pTag.textContent = `${e1} ${n1} · ${c.varW}`; pTitle.textContent = `${mo.k.m}월 ${c.varTotal}`;
+    const slot = MODE === 'salon' ? '선반 칸' : '냉장고 칸';
+    h += `<div class="big"><span>이번 달 ${c.varTotal} 합계</span><b class="num">${won(mo.i)}</b><em>${mo.ing.length}건 · ${slot} ${Math.min(mo.ing.length, MAX_ITEMS)}/${MAX_ITEMS}</em></div>`;
+    h += `<div class="sec"><span>최근 ${c.varW}</span></div><div class="rows">`;
+    const r = recent(mo.ing);
+    h += r.length ? r.map(x => `<div class="row${x.id === lastNewId ? ' new' : ''}"><div class="l"><span class="d num">${md(x.date)}</span><span>${esc(x.name)}</span></div><b class="num">${won(x.amount)}</b></div>`).join('') : `<div class="empty">아직 비어 있어요. 첫 ${c.varW}를 넣어볼까요?</div>`;
+    h += '</div>';
+    const putW = MODE === 'salon' ? '선반에 채우기' : '냉장고에 넣기';
+    h += !formOpen ? `<button class="primary" data-act="open-form">+ ${c.varW} 입력</button>` : `<div class="form">
+      <div class="field"><label for="fName">품목</label><input id="fName" autocomplete="off" placeholder="예: ${c.quickVar[0]}" maxlength="20" style="font-size:16px">
+      <div class="qk">${c.quickVar.map(q => `<button data-name="${q}">${q}</button>`).join('')}</div></div>
+      ${amtField('예: 38,000')}</div>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-ing">${DEMO_SAVE} · ${putW}</button></div></div>`;
+  } else if (activeKey === 'safe') {
+    pTag.textContent = `${e1} ${n1} · ${c.fixW}`; pTitle.textContent = `${mo.k.m}월 ${c.fixW}`;
+    h += `<div class="sec"><span>매달 나가는 돈</span><span>${DATA.fixed.length}개 항목</span></div><div class="rows${fixedEdit ? ' fx-edit' : ''}">`;
+    if (!fixedEdit) {
+      h += DATA.fixed.map(x => `<div class="row"><div class="l"><span>${esc(x.name)}</span></div><b class="num">${won(x.amount)}</b></div>`).join('');
+      h += `<div class="row total"><div class="l"><span>${c.fixW} 합계</span></div><b class="num">${won(mo.f)}</b></div></div><button class="ghost" data-act="edit-fixed">✏️ ${c.fixW} 금액 수정</button>`;
+    } else {
+      h += DATA.fixed.map((x, i) => `<div class="row"><div class="l"><span>${esc(x.name)}</span></div><input class="num amt" data-fx="${i}" inputmode="numeric" maxlength="13" value="${Number(x.amount).toLocaleString('ko-KR')}" aria-label="${esc(x.name)} 금액"></div>`).join('');
+      h += `</div><div class="factions" style="margin-top:10px"><button class="cancel" data-act="cancel-fixed">취소</button><button class="save" data-act="save-fixed">저장</button></div>`;
+    }
+    h += `<div class="sec" style="margin-top:16px"><span>이번 달 ${c.netW} 계산</span></div><div class="rows">
+      <div class="row"><div class="l"><span>${c.inc}</span></div><b class="num">${won(mo.s)}</b></div>
+      <div class="row"><div class="l"><span>− ${c.varTotal}</span></div><b class="num">${won(mo.i)}</b></div>
+      <div class="row"><div class="l"><span>− ${c.fixW}</span></div><b class="num">${won(mo.f)}</b></div>
+      ${home ? `<div class="row"><div class="l"><span>− 생활비</span></div><b class="num">${won(mo.p)}</b></div>` : ''}
+      <div class="row total"><div class="l"><span>= ${c.netW}</span></div><b class="num ${mo.net >= 0 ? 'pos' : 'neg'}">${won(mo.net)}</b></div></div>
+      <p class="hintp">${c.fixW}를 고치면 상단 숫자와 ${home ? '📒 가계 정산표' : '📒 복식장부'}에도 바로 반영돼요.</p>
+      <button class="reset" data-act="reset">↺ 이 방을 샘플 데이터로 되돌리기</button>`;
+  } else if (activeKey === 'ledger' && home) {
+    pTag.textContent = '📚 가계부 책장'; pTitle.textContent = `📒 ${mo.k.m}월 가계 정산표`;
+    h += cards3(['수입', mo.s], ['지출', mo.exp], ['남은 돈', mo.net]);
+    const cats = [['🛒 장보기·식비', mo.i, '#f3b27a']].concat(DATA.fixed.map((f, i) => ['🏷️ ' + f.name, Number(f.amount) || 0, ['#a9c4a0', '#9cc9f0', '#b7a6e8', '#f7a7b6', '#e6c27a', '#9fd9c4'][i % 6]]));
+    const byName = {}; mo.pers.forEach(x => { byName[x.name] = (byName[x.name] || 0) + x.amount; });
+    Object.entries(byName).forEach(([n, v]) => cats.push(['🧾 ' + n, v, '#e8b8a8']));
+    cats.sort((a, b) => b[1] - a[1]);
+    const catSum = cats.reduce((s, x) => s + x[1], 0);
+    h += `<div class="sec"><span>지출 카테고리 비중</span><span>${won(mo.exp)}</span></div><div class="rows">`;
+    h += cats.filter(x => x[1] > 0).map(([n, v, col]) => `<div class="cat"><div class="ct"><span>${esc(n)}</span><b class="num">${won(v)} <small>${pct(v, mo.exp)}%</small></b></div><div class="bar"><i style="width:${Math.max(2, pct(v, mo.exp))}%;background:${col}"></i></div></div>`).join('');
+    h += `</div>`;
+    const ok = Math.round(catSum) === Math.round(mo.exp) && Math.round(mo.s - mo.exp) === Math.round(mo.net);
+    h += `<div class="bal${ok ? '' : ' bad'}">${ok ? `⚖️ 수입 ${won(mo.s)} − 지출 ${won(mo.exp)} = 남은 돈 ${won(mo.net)} ✅` : '⚠️ 합계가 맞지 않아요'}</div>`;
+    const all = [...mo.sales.map(x => ({ ...x, kind: '+', label: '수입 · ' + x.channel })), ...mo.ing.map(x => ({ ...x, kind: '−', label: '식비 · ' + x.name })), ...mo.pers.map(x => ({ ...x, kind: '−', label: '생활비 · ' + x.name }))]
+      .sort((a, b) => (b.date + (b.time || '') + b.id).localeCompare(a.date + (a.time || '') + a.id)).slice(0, 8);
+    h += `<div class="sec" style="margin-top:16px"><span>최근 내역</span><span>고정 지출 제외</span></div><div class="rows">`;
+    h += all.map(x => `<div class="row${x.id === lastNewId ? ' new' : ''}"><div class="l"><span class="d num">${md(x.date)}</span><span>${esc(x.label)}</span></div><b class="num" style="color:${x.kind === '+' ? 'var(--pos)' : 'var(--ink)'}">${x.kind}${won(x.amount)}</b></div>`).join('') || '<div class="empty">아직 내역이 없어요.</div>';
+    h += `</div><p class="hintp">수입·생활비는 💻 가계부 노트, 식비는 🧊 냉장고, 고정 지출은 🗄️ 서랍장에서 넣으면 여기 바로 반영돼요.</p>`;
+  } else if (activeKey === 'ledger') {
+    pTag.textContent = `${e1} ${n1}`; pTitle.textContent = `📒 ${mo.k.m}월 복식장부`;
+    const E = journal(ledgerAll), tb = trialBalance(E, ledgerAll);
+    h += `<div class="mode" role="tablist"><button data-mode="biz" class="${ledgerAll ? '' : 'on'}" role="tab" aria-selected="${!ledgerAll}">🏪 사업 전용</button><button data-mode="all" class="${ledgerAll ? 'on' : ''}" role="tab" aria-selected="${ledgerAll}">👛 전체</button></div>`;
+    h += cards3([c.inc, mo.s], ['비용', mo.exp], ['순익', mo.net]);
+    h += ledgerAll ? `<div class="pnote">👛 개인 지출 ${mo.pers.length}건 · <b>${won(mo.p)}</b>을 <b>개인인출</b>로 분개했어요. 사업 순익에는 들어가지 않아요.</div>`
+                   : `<div class="pnote" style="color:#2c8a6e;background:#eaf7f1">🏪 사업 거래만 보여요. 개인 지출 ${mo.pers.length}건은 <b>전체</b>에서 볼 수 있어요.</div>`;
+    const sorted = E.slice().sort((a, b) => (b.date + b.t + b.id).localeCompare(a.date + a.t + a.id));
+    const shown = ledgerMore ? sorted : sorted.slice(0, 12);
+    h += `<div class="sec"><span>자동 분개</span><span>${E.length}건 · 최신순</span></div><div class="jt">`;
+    h += `<div class="jh"><span>날짜 · 적요</span><span>차변 계정 (금액)</span><span>대변 계정 (금액)</span></div>`;
+    h += shown.map(e => `<div class="jr${e.personal ? ' personal' : ''}${e.id === lastNewId ? ' new' : ''}"><div class="dm"><span class="d num">${md(e.date)}</span><span class="m">${esc(e.memo)}</span></div>
+      <div class="side dr"><span class="a"><span class="lb">차)</span>${esc(e.dr)}</span><b class="num">${e.amt.toLocaleString('ko-KR')}</b></div>
+      <div class="side cr"><span class="a"><span class="lb">대)</span>${esc(e.cr)}</span><b class="num">${e.amt.toLocaleString('ko-KR')}</b></div></div>`).join('');
+    if (sorted.length > shown.length) h += `<button class="more" data-act="more">전체 ${sorted.length}건 보기 ▾</button>`;
+    h += `</div>`;
+    if (!formOpen) h += `<button class="ghost" data-act="open-form">👛 + 개인 지출 입력</button>`;
+    else h += `<div class="form">
+      <div class="field"><label for="fName">개인 지출 내용</label><input id="fName" autocomplete="off" placeholder="예: 편의점" maxlength="20" style="font-size:16px">
+      <div class="qk">${['편의점', '주유', '생활용품', '병원'].map(q => `<button data-name="${q}">${q}</button>`).join('')}</div></div>
+      ${amtField('예: 8,400')}</div>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-personal">${DEMO_SAVE}</button></div></div>`;
+    h += `<div class="sec" style="margin-top:18px"><span>시산표</span><span>${ledgerAll ? '전체' : '사업 전용'}</span></div><div class="tb">`;
+    h += `<div class="tr"><span>계정</span><span>차변 합</span><span>대변 합</span><span>잔액</span></div>`;
+    const f = v => v ? v.toLocaleString('ko-KR') : '<i class="z">—</i>';
+    h += tb.rows.map(r => `<div class="tr"><span>${esc(r.acc)}</span><span class="num">${f(r.dr)}</span><span class="num">${f(r.cr)}</span><span class="num">${r.bal ? `<small>${r.bal < 0 ? (r.side === '차' ? '대' : '차') : r.side}</small>${Math.abs(r.bal).toLocaleString('ko-KR')}` : '<i class="z">—</i>'}</span></div>`).join('');
+    h += `<div class="tr sum"><span>합계</span><span class="num">${tb.drT.toLocaleString('ko-KR')}</span><span class="num">${tb.crT.toLocaleString('ko-KR')}</span><span></span></div></div>`;
+    const ok = Math.round(tb.drT) === Math.round(tb.crT);
+    h += `<div class="bal${ok ? '' : ' bad'}">${ok ? '⚖️ 차변 합계 = 대변 합계 · 균형 OK ✅' : '⚠️ 차변·대변 합계가 달라요'}</div>`;
+    h += `<p class="hintp">${ob.pos[1]} ${c.inc}은 <b>현금/${c.incAcc}</b>, ${ob.fridge[1]} ${c.varW}는 <b>${c.varAcc}/현금</b>, 금고 고정비는 각 비용 계정/현금으로 자동 분개돼요. 월초 시재(기초 현금)는 샘플 값이에요.</p>`;
+  } else if (activeKey === 'staff' && home) {
+    pTag.textContent = '🗓️ 가족 일정 보드'; pTitle.textContent = '가족 일정 · 알림';
+    const fam = DATA.family || [], left = fam.filter(x => !x.done).length;
+    const due = DATA.fixed.slice(0, 3).map(x => `<span class="chip" style="background:#f3eefc;color:#7a5fc0">${esc(x.name)} ${won(x.amount)}</span>`).join(' ');
+    h += `<div class="big"><span>남은 할 일</span><b class="num">${left}개</b><em>체크하면 완료 · 보드에도 바로 반영돼요</em></div>`;
+    h += `<div class="sec"><span>일정·알림</span><span>${fam.length}개</span></div><div class="rows">`;
+    h += fam.map(x => `<div class="row fam${x.done ? ' done' : ''}${x.id === lastNewId ? ' new' : ''}"><button class="ck" data-fid="${x.id}" aria-label="${esc(x.text)} ${x.done ? '완료 취소' : '완료'}">${x.done ? '✅' : '⬜'}</button><div class="l"><span>${esc(x.text)}</span></div><span class="d">${esc(x.when)}</span></div>`).join('') || '<div class="empty">일정이 없어요.</div>';
+    h += `</div>`;
+    h += !formOpen ? `<button class="primary" data-act="open-form">+ 일정 추가</button>` : `<div class="form">
+      <div class="field"><label for="fName">할 일·일정</label><input id="fName" autocomplete="off" placeholder="예: 치과 예약" maxlength="20" style="font-size:16px"></div>
+      <div class="field"><label for="fWhen">언제</label><input id="fWhen" autocomplete="off" placeholder="예: 금요일 15:00" maxlength="16" style="font-size:16px">
+      <div class="qk">${['오늘', '내일', '이번 주말', '매달 25일'].map(q => `<button data-when="${q}">${q}</button>`).join('')}</div></div>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-fam">추가</button></div></div>`;
+    h += `<div class="sec" style="margin-top:16px"><span>이번 달 고정 지출 알림</span></div><div style="display:flex;flex-wrap:wrap;gap:6px">${due}</div>`;
+    h += `<p class="hintp">가족 일정은 이 기기에만 저장돼요.</p>`;
+  } else if (activeKey === 'staff') {
+    const remoteOK = MODE === 'restaurant' && REAL.on && REAL.staffState === 'ok' && REAL.staff;
+    if (MODE === 'restaurant' && REAL.on && REAL.staffState === 'idle') tryStaffRemote();
+    const ss = staffSummary(remoteOK ? REAL.staff : DATA), k = mo.k, totalPay = ss.reduce((s, x) => s + x.pay, 0), working = ss.filter(x => x.working).length;
+    pTag.textContent = `${e1} ${n1} · 근태관리`; pTitle.textContent = '근태관리 & 급여 요약';
+    const stNote = remoteOK ? '🔗 근태관리 앱 데이터를 읽어 왔어요 (출퇴근은 근태관리 앱에서 기록)'
+      : (MODE === 'restaurant' && REAL.on && REAL.staffState === 'loading') ? '🔗 근태관리 앱 데이터를 확인하는 중… 지금은 체험 직원 데이터예요'
+      : '🧪 체험 직원 데이터예요. 출근 체크는 이 기기에만 저장돼요.';
+    h += `<div class="pnote" style="margin:0 0 12px;color:#8a6a1a;background:#fff4d6">${stNote}</div>`;
+    h += `<div class="cards"><div class="card"><span>지금 근무 중</span><b class="num">${working} / ${ss.length}명</b></div><div class="card"><span>이번 달 근무</span><b class="num">${hm(ss.reduce((s, x) => s + x.mins, 0)).replace(' ', '')}</b></div><div class="card"><span>예상 급여</span><b class="num">${won(totalPay)}</b></div></div>`;
+    h += `<div class="sec"><span>오늘 출근 현황</span><span>${md(k.date)} ${k.time}</span></div><div class="rows">`;
+    h += ss.map(x => {
+      const st = x.working ? '<span class="chip" style="background:#e5f6ef;color:#2c8a6e">🟢 근무 중</span>' : x.last ? '<span class="chip" style="background:#f7efe4;color:#8f7a69">퇴근</span>' : '<span class="chip" style="background:#ffe9e1;color:#c85a43">미출근</span>';
+      const tm = x.today.map(r => `${r.in}~${r.out || '근무 중'}`).join(', ') || '기록 없음';
+      return `<div class="att${x.st.id === lastNewId ? ' new' : ''}"><div class="who"><b>${esc(x.st.name)}</b><span class="d">${esc(x.st.role)}</span>${st}</div><div class="tm d num">${esc(tm)}</div>
+        ${remoteOK ? '' : `<button class="clk ${x.working ? 'out' : ''}" data-sid="${x.st.id}">${x.working ? '퇴근 체크' : '출근 체크'}</button>`}</div>`;
+    }).join('');
+    h += `</div>`;
+    h += `<div class="sec" style="margin-top:16px"><span>이번 달 직원별 예상 급여</span><span>근무시간 × 시급</span></div><div class="rows">`;
+    h += ss.map(x => `<div class="pay"><div class="l"><b>${esc(x.st.name)}</b><span class="d num">${x.days}일 · ${hm(x.mins)} × ${won(x.st.wage)}</span></div><b class="num">${won(x.pay)}</b></div>`).join('');
+    h += `<div class="row total"><div class="l"><span>합계</span></div><b class="num">${won(totalPay)}</b></div></div>`;
+    h += `<p class="hintp">예상 급여는 근무시간 × 시급 맛보기 계산이에요(주휴수당·4대보험·세금 제외). 실제 출퇴근 기록과 급여명세서는 <b>'솔로운영 근태관리'</b>에서 관리해요.</p>`;
+    h += `<a class="primary linkbtn" href="${STAFF_APP_URL}" target="_blank" rel="noopener">🔗 근태관리 앱 열기 ↗</a>`;
+  }
+  pBody.innerHTML = h; lastNewId = null;
+}
+function updateShiftTarget() {
+  if (!activeKey) { shift.tx = shift.ty = 0; return; }
+  if (innerWidth < 720) { const hb = document.getElementById('hud').getBoundingClientRect().bottom; shift.tx = 0; shift.ty = Math.round((panel.offsetHeight - hb) / 2); }
+  else { shift.tx = Math.round((panel.offsetWidth + 16) / 2); shift.ty = 0; }
+}
+function interact(k) {
+  if (!k) return;
+  firstUse();
+  if (k === 'owner') { ownerTalk(); return; }
+  if (k === 'cat') { catPet(); return; }
+  if (activeKey === k) return;
+  const prev = activeKey; activeKey = k; formOpen = false; fixedEdit = false; ledgerMore = false; ledgerAll = false;
+  if (prev === 'fridge') fridgeOpen(false); if (prev === 'safe') drawerOpen(false);
+  const wide = k === 'ledger' && MODE !== 'home'; panel.classList.toggle('wide', wide); document.body.classList.toggle('panel-wide', wide);
+  if (k === 'staff') stWaveT = performance.now();
+  renderPanel(); pBody.scrollTop = 0;
+  panel.classList.add('open'); panel.setAttribute('aria-hidden', 'false'); document.body.classList.add('panel-open');
+  if (k === 'fridge') fridgeOpen(true); if (k === 'safe') drawerOpen(true); if (k === 'pos') screenGlow = 0.6;
+  view = k; document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === k));
+  updateShiftTarget(); moveTo(focusPose(OBJ[k].focus), 0.7);
+}
+function closePanel() {
+  if (!activeKey) return;
+  if (activeKey === 'fridge') fridgeOpen(false); if (activeKey === 'safe') drawerOpen(false);
+  activeKey = null; formOpen = false; fixedEdit = false;
+  document.body.classList.remove('panel-wide');
+  panel.classList.remove('open'); panel.setAttribute('aria-hidden', 'true'); document.body.classList.remove('panel-open');
+  shift.tx = shift.ty = 0; setView('seat');
+}
+document.getElementById('pClose').addEventListener('click', closePanel);
+const digits = v => String(v || '').replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+pBody.addEventListener('input', e => {
+  if (e.target.id === 'fAmt' || (e.target.classList && e.target.classList.contains('amt'))) { const d = digits(e.target.value).slice(0, 10); e.target.value = d ? Number(d).toLocaleString('ko-KR') : ''; }
+  e.target.classList && e.target.classList.remove('err');
+});
+pBody.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); const b = pBody.querySelector('.save'); b && b.click(); } e.stopPropagation(); });
+pBody.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !pBody.contains(b)) return; const act = b.dataset.act;
+  if (b.dataset.fc) { fixCat = b.dataset.fc; pBody.querySelectorAll('[data-fc]').forEach(x => x.classList.toggle('on', x === b)); return; }
+  if (isLive() && (act === 'save-sale' || act === 'save-ing' || act === 'save-fix')) { liveSave(act, b); return; }
+  if (act === 'open-form' || act === 'open-spend') { formOpen = act === 'open-spend' ? 'spend' : true; renderPanel(); const f = pBody.querySelector('.form input'); f && f.focus({ preventScroll: true }); pBody.scrollTop = pBody.scrollHeight; return; }
+  if (b.dataset.sid) { // 출근/퇴근 체크
+    const k = kst(), sid = b.dataset.sid, today = (DATA.att || []).filter(a => a.sid === sid && a.date === k.date), last = today[today.length - 1];
+    if (last && !last.out) last.out = k.time; else (DATA.att = DATA.att || []).push({ id: uid(), sid, date: k.date, in: k.time, out: null });
+    saveData(DATA); lastNewId = sid; renderPanel(); return;
+  }
+  if (b.dataset.fid) { const f = (DATA.family || []).find(x => x.id === b.dataset.fid); if (f) { f.done = !f.done; saveData(DATA); drawBoard(); renderPanel(); } return; }
+  if (b.dataset.when) { const i = pBody.querySelector('#fWhen'); i.value = b.dataset.when; return; }
+  if (act === 'save-fam') {
+    const n = pBody.querySelector('#fName'), w = pBody.querySelector('#fWhen'), text = (n.value || '').trim().slice(0, 20);
+    if (!text) { n.classList.add('err'); n.focus(); return; }
+    const rec = { id: uid(), text, when: (w.value || '').trim().slice(0, 16) || '언제든', done: false };
+    (DATA.family = DATA.family || []).unshift(rec); saveData(DATA); lastNewId = rec.id; formOpen = false; drawBoard(); renderPanel(); return;
+  }
+  if (act === 'save-spend') {
+    const n = pBody.querySelector('#fName'), i = pBody.querySelector('#fAmt');
+    const name = (n.value || '').trim().slice(0, 20), amount = Number(digits(i.value));
+    if (!name) { n.classList.add('err'); n.focus(); return; }
+    if (!amount || amount > 100000000) { i.classList.add('err'); i.focus(); return; }
+    const rec = { id: uid(), date: kst().date, name, amount };
+    (DATA.personal = DATA.personal || []).push(rec); saveData(DATA); lastNewId = rec.id; formOpen = false;
+    renderPanel(); renderHud(true); refreshPos(); floatText('−' + won(amount), V3(0.2, COUNTER_TOP + 0.45, -0.3), true); return;
+  }
+  if (act === 'cancel') { formOpen = false; renderPanel(); return; }
+  if (b.dataset.mode) { ledgerAll = b.dataset.mode === 'all'; renderPanel(); return; }
+  if (act === 'more') { ledgerMore = true; renderPanel(); return; }
+  if (act === 'edit-fixed') { fixedEdit = true; renderPanel(); const f = pBody.querySelector('[data-fx]'); f && f.focus({ preventScroll: true }); return; }
+  if (act === 'cancel-fixed') { fixedEdit = false; renderPanel(); return; }
+  if (act === 'save-fixed') {
+    const ins = [...pBody.querySelectorAll('[data-fx]')]; let bad = null;
+    const vals = ins.map(i => { const v = Number(digits(i.value) || 0); if (v > 100000000) bad = i; return v; });
+    if (bad) { bad.classList.add('err'); bad.focus(); return; }
+    vals.forEach((v, i) => { DATA.fixed[+ins[i].dataset.fx].amount = v; });
+    saveData(DATA); fixedEdit = false; renderPanel(); renderHud(true); refreshPos(); return;
+  }
+  if (act === 'save-personal') {
+    const n = pBody.querySelector('#fName'), i = pBody.querySelector('#fAmt');
+    const name = (n.value || '').trim().slice(0, 20), amount = Number(digits(i.value));
+    if (!name) { n.classList.add('err'); n.focus(); return; }
+    if (!amount || amount > 100000000) { i.classList.add('err'); i.focus(); return; }
+    const rec = { id: uid(), date: kst().date, name, amount };
+    (DATA.personal = DATA.personal || []).push(rec); saveData(DATA); lastNewId = rec.id; formOpen = false; ledgerAll = true;
+    renderPanel(); return;
+  }
+  if (b.dataset.ch) { saleChannel = b.dataset.ch; pBody.querySelectorAll('[data-ch]').forEach(x => x.classList.toggle('on', x === b)); return; }
+  if (b.dataset.add) { const i = pBody.querySelector('#fAmt'); i.value = Math.min(Number(digits(i.value) || 0) + Number(b.dataset.add), 9999999999).toLocaleString('ko-KR'); i.classList.remove('err'); return; }
+  if (b.dataset.name) { const i = pBody.querySelector('#fName'); i.value = b.dataset.name; i.classList.remove('err'); const a = pBody.querySelector('#fAmt'); a && a.focus({ preventScroll: true }); return; }
+  if (act === 'save-sale') {
+    const i = pBody.querySelector('#fAmt'), amount = Number(digits(i.value));
+    if (!amount || amount > 100000000) { i.classList.remove('err'); void i.offsetWidth; i.classList.add('err'); i.focus(); return; }
+    const k = kst(), rec = { id: uid(), date: k.date, time: k.time, amount, channel: saleChannel };
+    DATA.sales.push(rec); saveData(DATA); lastNewId = rec.id; formOpen = false;
+    renderPanel(); renderHud(true); refreshPos(); screenGlow = 1;
+    burstMoney(amount); floatText('+' + won(amount), V3(0.2, COUNTER_TOP + 0.45, -0.3));
+    try { navigator.vibrate && navigator.vibrate(18); } catch (er) {}
+    return;
+  }
+  if (act === 'save-ing') {
+    const n = pBody.querySelector('#fName'), i = pBody.querySelector('#fAmt');
+    const name = (n.value || '').trim().slice(0, 20), amount = Number(digits(i.value));
+    if (!name) { n.classList.add('err'); n.focus(); return; }
+    if (!amount || amount > 100000000) { i.classList.add('err'); i.focus(); return; }
+    const rec = { id: uid(), date: kst().date, name, amount };
+    DATA.ingredients.push(rec); saveData(DATA); lastNewId = rec.id; formOpen = false;
+    const cnt = month().ing.length; const w = new THREE.Vector3();
+    if (cnt <= MAX_ITEMS) { const g = makeItem(cnt - 1, name, true); g.getWorldPosition(w); w.y += 0.3; }
+    else { fridgeItems.forEach((g, j) => { g.userData.popT = performance.now() + j * 40; }); w.set(1.5, 1.5, -0.9); }
+    floatText('−' + won(amount), w, true);
+    renderPanel(); renderHud(true); refreshPos();
+    try { navigator.vibrate && navigator.vibrate(14); } catch (er) {}
+    return;
+  }
+  if (act === 'reset') {
+    const now = performance.now();
+    if (now - sampleArm > 3000) { sampleArm = now; b.textContent = '한 번 더 누르면 샘플로 되돌려요'; b.classList.add('warn'); return; }
+    sampleArm = 0; DATA = makeSample(); saveData(DATA); syncFridgeItems(); refreshPos(); drawBoard(); renderHud(true); renderPanel();
+  }
+});
+
+/* ---- 냉장고 문 / 금고 서랍 ---- */
+const an = { door: 0, df: 0, dt: 0, ds: 0, drw: 0, wf: 0, wt: 0, ws: 0 }; let sparkleAt = 0;
+function fridgeOpen(on) { an.df = an.door; an.dt = on ? 1 : 0; an.ds = performance.now(); if (on) sparkleAt = performance.now() + (RM ? 0 : 380); }
+function drawerOpen(on) { an.wf = an.drw; an.wt = on ? 1 : 0; an.ws = performance.now(); }
+function stepAnims(now) {
+  const op = an.dt > an.df, td = Math.min(1, (now - an.ds) / (op ? 800 : 600));
+  an.door = an.df + (an.dt - an.df) * (op ? easeBack(td) : easeIO(td));
+  const a = 1.9 * an.door; doorL.rotation.y = -a; doorR.rotation.y = a;
+  const lit = THREE.MathUtils.clamp(an.door, 0, 1); fridgeLight.intensity = 3.5 * lit; fInner.emissiveIntensity = 0.45 * lit;
+  if (sparkleAt && now >= sparkleAt) { fridgeItems.forEach((g, j) => { g.userData.popT = now + j * 55; }); sparkleAt = 0; }
+  const tw = Math.min(1, (now - an.ws) / 650);
+  an.drw = an.wf + (an.wt - an.wf) * (an.wt > an.wf ? easeBack(tw) : easeIO(tw));
+  drawer.position.z = 0.17 + 0.17 * an.drw;
+  fridgeItems.forEach(g => {
+    const u = g.userData; let s = 1, ei = 0; g.position.y = u.baseY;
+    if (u.spawnT > 0) {
+      const t = (now - u.spawnT) / 650;
+      if (t >= 1) { u.spawnT = -1; u.popT = now; }
+      else { const e = Math.max(0, t); s = Math.max(0.001, easeBack(e)); g.position.y = u.baseY + (1 - easeOut(e)) * 0.25; ei = 0.6 * (1 - e); }
+    }
+    if (u.spawnT < 0 && u.popT > 0) {
+      const t = (now - u.popT) / 520;
+      if (t >= 0 && t < 1) { s = 1 + 0.22 * Math.sin(Math.PI * t); ei = 0.7 * (1 - t); g.position.y = u.baseY + 0.04 * Math.sin(Math.PI * t); }
+      else if (t >= 1) u.popT = -1;
+    }
+    g.scale.setScalar(s); u.mat.emissiveIntensity = ei;
+  });
+}
+
+/* ---- 사장님 말 걸기 ---- */
+const bubble = document.getElementById('bubble'), face = document.getElementById('face'); let bubbleTimer = 0;
+function ownerTalk() {
+  const mo = M(), c = MC(), home = MODE === 'home';
+  const quip = home ? (mo.net > 0 ? '이번 달도 알뜰살뜰! 😄' : '이번 달은 지출 조심! 💪') : mo.net > 0 ? '이번 달은 흑자예요! 😄' : mo.net < 0 ? '아직 적자… 조금만 더 힘내요! 💪' : '딱 본전이에요! 🙂';
+  const todayLine = home ? `이번 달 수입 <b>${won(mo.s)}</b> · 지출 <b>${won(mo.exp)}</b>` : mo.today > 0 ? `오늘 ${c.inc} <b>${won(mo.today)}</b> 🎉` : `오늘은 아직 ${c.inc}이 없어요. ${c.obj.pos[1]}에서 첫 ${c.inc} 넣어볼까요?`;
+  bubble.innerHTML = `${todayLine}<br>이번 달 ${c.netW} <b>${won(mo.net)}</b><br>${quip}`;
+  bubble.classList.add('show'); clearTimeout(bubbleTimer); bubbleTimer = setTimeout(() => bubble.classList.remove('show'), 4500);
+  face.classList.remove('wiggle'); void face.offsetWidth; face.classList.add('wiggle');
+  waveT = performance.now();
+}
+face.addEventListener('click', () => { firstUse(); ownerTalk(); });
+
+/* =========================================================
+   9. 배지 / 화면 밖 방향 표시
+   ========================================================= */
+const tagsEl = document.getElementById('tags');
+Object.entries(OBJ).forEach(([k, o]) => {
+  const el = document.createElement('button'); el.type = 'button'; el.className = 'tg';
+  el.innerHTML = `<span class="b">${o.emoji}</span><span class="e"><span class="ee"></span>${o.emoji} ${o.short || o.name}</span>`;
+  el.setAttribute('aria-label', o.name + ' 보기');
+  el.addEventListener('click', e => { e.stopPropagation(); firstUse(); if (el.classList.contains('edge')) { if (o.focus) setView(k); else lookAt(o.anchor); } else interact(k); });
+  tagsEl.appendChild(el); o.el = el; o.arrow = el.querySelector('.ee');
+});
+function relabel() {
+  Object.entries(OBJ).forEach(([k, o]) => {
+    const d = MC().obj[k]; if (!d) return; [o.emoji, o.name, o.chip, o.short] = d;
+    if (o.el) { o.el.innerHTML = `<span class="b">${o.emoji}</span><span class="e"><span class="ee"></span>${o.emoji} ${o.short || o.name}</span>`; o.el.setAttribute('aria-label', o.name + ' 보기'); o.arrow = o.el.querySelector('.ee'); }
+  });
+  aimKey = undefined;
+}
+function applyModeUI() {
+  const c = MC();
+  c.hud.forEach((t, i) => { document.getElementById('hL' + i).textContent = t; });
+  const qb = document.querySelectorAll('[data-view]'); qb[0].textContent = c.views[0]; qb[1].textContent = c.views[1];
+  face.textContent = c.face; face.setAttribute('aria-label', c.boss + '에게 말 걸기');
+  document.querySelectorAll('.modes [data-m]').forEach(b => { const on = b.dataset.m === MODE; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  document.body.dataset.mode = MODE;
+}
+let switching = false;
+const curtain = document.getElementById('curtain');
+function switchMode(m) {
+  if (m === MODE || switching || !MODES[m]) return;
+  switching = true; firstUse();
+  if (activeKey) closePanel();
+  bubble.classList.remove('show'); catBubble.classList.remove('show');
+  document.getElementById('cvIcon').textContent = MODES[m].icon; document.getElementById('cvText').textContent = MODES[m].label + ' 방으로 이동 중…';
+  curtain.classList.add('show');
+  setTimeout(() => {
+    MODE = m; try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
+    DATA = loadData(m); saleChannel = MC().channels[0]; ledgerAll = false;
+    parts.forEach(p => scene.remove(p.m)); parts.length = 0;
+    applyMode3D(); relabel(); applyModeUI(); syncFridgeItems(); refreshPos(); renderAuth();
+    const st = seatPose(); camTween = null; vel.yaw = vel.pitch = 0; view = 'seat';
+    cam.pos.copy(st.pos).add(V3(0, 0.1, 0.3)); cam.yaw = st.yaw + 0.22; cam.pitch = st.pitch + 0.05; applyCam();
+    moveTo(st, 0.6);
+    hudVal.s = hudVal.e = hudVal.n = 0; paintHud(); renderHud(true);
+    requestAnimationFrame(() => { curtain.classList.remove('show'); setTimeout(() => { switching = false; }, 300); });
+  }, RM ? 40 : 290);
+}
+document.querySelectorAll('.modes [data-m]').forEach(b => b.addEventListener('click', () => switchMode(b.dataset.m)));
+function lookAt(p) { const yp = lookYP(cam.pos, p); moveTo({ pos: cam.pos.clone(), yaw: yp.yaw, pitch: THREE.MathUtils.clamp(yp.pitch, -PITCH_LIM, PITCH_LIM) }, 0.6); }
+const tmpV = new THREE.Vector3(), tmpF = new THREE.Vector3();
+function updateOverlays(now) {
+  const hb = document.getElementById('hud').getBoundingClientRect().bottom + 10;
+  const barEl = document.getElementById('bar'), bt = (innerWidth < 720 && document.body.classList.contains('panel-open')) ? innerHeight - panel.offsetHeight : barEl.getBoundingClientRect().top - 10;
+  camera.getWorldDirection(tmpF);
+  Object.entries(OBJ).forEach(([k, o]) => {
+    if (activeKey || camTween) { o.el.classList.add('hide'); return; }
+    tmpV.copy(o.anchor).project(camera);
+    const behind = o.anchor.clone().sub(camera.position).dot(tmpF) < 0;
+    let x = tmpV.x, y = tmpV.y; if (behind) { x = -x; y = -y; }
+    const sx = (x * 0.5 + 0.5) * innerWidth, sy = (-y * 0.5 + 0.5) * innerHeight;
+    const inView = !behind && sx > 20 && sx < innerWidth - 20 && sy > hb && sy < bt;
+    o.el.classList.toggle('hide', aimKey === k && inView);
+    if (inView) {
+      o.el.classList.remove('edge');
+      o.el.style.transform = `translate3d(${sx.toFixed(1)}px,${sy.toFixed(1)}px,0) translate(-50%,-100%)`;
+    } else {
+      o.el.classList.add('edge');
+      // 화면 중심에서 그 방향으로 가장자리까지
+      const cx = innerWidth / 2, cy = innerHeight / 2; let dx = sx - cx, dy = sy - cy;
+      if (behind || Math.abs(dx) + Math.abs(dy) < 1) { dx = (x >= 0 ? 1 : -1) * 1000; dy = 0; }
+      const w = o.el.offsetWidth || 90, h = o.el.offsetHeight || 30;
+      const minX = 8 + w / 2, maxX = innerWidth - 8 - w / 2, minY = hb + h / 2, maxY = bt - h / 2;
+      const sc = Math.min(dx > 0 ? (maxX - cx) / dx : dx < 0 ? (minX - cx) / dx : Infinity, dy > 0 ? (maxY - cy) / dy : dy < 0 ? (minY - cy) / dy : Infinity);
+      const ex = THREE.MathUtils.clamp(cx + dx * sc, minX, maxX), ey = THREE.MathUtils.clamp(cy + dy * sc, minY, maxY);
+      const arrow = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? '▶' : '◀') : (dy > 0 ? '▼' : '▲');
+      o.arrow.innerHTML = `<i>${arrow}</i>`;
+      if (dx > 0 && Math.abs(dx) > Math.abs(dy)) o.arrow.parentNode.appendChild(o.arrow); else o.arrow.parentNode.insertBefore(o.arrow, o.arrow.parentNode.firstChild);
+      o.el.style.transform = `translate3d(${ex.toFixed(1)}px,${ey.toFixed(1)}px,0) translate(-50%,-50%)`;
+    }
+  });
+  for (let i = floats.length - 1; i >= 0; i--) {
+    const f = floats[i], t = (now - f.s) / f.d;
+    if (t >= 1) { f.el.remove(); floats.splice(i, 1); continue; }
+    tmpV.copy(f.p); tmpV.y += easeOut(t) * 0.35; tmpV.project(camera);
+    const sc = t < 0.15 ? 0.6 + t / 0.15 * 0.5 : 1.1 - (t - 0.15) * 0.15;
+    f.el.style.transform = `translate3d(${(tmpV.x * 0.5 + 0.5) * innerWidth}px,${(-tmpV.y * 0.5 + 0.5) * innerHeight}px,0) translate(-50%,-50%) scale(${sc})`;
+    f.el.style.opacity = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3;
+  }
+}
+
+/* =========================================================
+   10. 입력: 드래그=고개 돌리기, 짧은 탭=상호작용, 조준
+   ========================================================= */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const cv = renderer.domElement;
+function pickAt(nx, ny) {
+  ndc.set(nx, ny); ray.setFromCamera(ndc, camera);
+  const hits = ray.intersectObjects(PICKABLE, true);
+  for (const h of hits) { let o = h.object; while (o && !o.userData.key) o = o.parent; if (o) return o.userData.key; }
+  return null;
+}
+let drag = null, aimKey = null;
+const SENS = COARSE ? 0.0058 : 0.0045;
+cv.addEventListener('pointerdown', e => {
+  if (drag) return;
+  drag = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), lt: performance.now(), moved: 0 };
+  try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+  vel.yaw = vel.pitch = 0;
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag || drag.id !== e.pointerId) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y, now = performance.now(), dt = Math.max(1, now - drag.lt);
+  drag.x = e.clientX; drag.y = e.clientY; drag.lt = now;
+  drag.moved = Math.max(drag.moved, Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy));
+  if (drag.moved < 8) return; // 탭 판정 구간
+  if (camTween) { camTween = null; document.body.classList.remove('moving'); }
+  cv.classList.add('dragging'); firstUse(true);
+  cam.yaw += dx * SENS; cam.pitch = THREE.MathUtils.clamp(cam.pitch + dy * SENS, -PITCH_LIM, PITCH_LIM);
+  // 관성용 속도(라디안/초), 부드럽게 평균
+  vel.yaw = vel.yaw * 0.6 + (dx * SENS / dt * 1000) * 0.4; vel.pitch = vel.pitch * 0.6 + (dy * SENS / dt * 1000) * 0.4;
+});
+function endDrag(e, cancel) {
+  if (!drag || drag.id !== e.pointerId) return;
+  const tap = !cancel && drag.moved < 8 && performance.now() - drag.t < 600;
+  if (performance.now() - drag.lt > 80) vel.yaw = vel.pitch = 0;
+  drag = null; cv.classList.remove('dragging');
+  if (RM) vel.yaw = vel.pitch = 0;
+  if (!tap) return;
+  const r = cv.getBoundingClientRect();
+  const k = pickAt(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1) || (activeKey ? null : aimKey);
+  if (k) interact(k); else if (activeKey) closePanel();
+}
+cv.addEventListener('pointerup', e => endDrag(e, false));
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('pointercancel', e => endDrag(e, true));
+window.addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') return;
+  if (e.key === 'Escape') { closePanel(); return; }
+  if ((e.key === ' ' || e.key === 'Enter') && !activeKey && aimKey && document.activeElement === document.body) { e.preventDefault(); interact(aimKey); return; }
+  const step = 0.09;
+  if (e.key === 'ArrowLeft' || e.key === 'a') { cam.yaw += step; firstUse(true); }
+  if (e.key === 'ArrowRight' || e.key === 'd') { cam.yaw -= step; firstUse(true); }
+  if (e.key === 'ArrowUp' || e.key === 'w') cam.pitch = Math.min(PITCH_LIM, cam.pitch + step);
+  if (e.key === 'ArrowDown' || e.key === 's') cam.pitch = Math.max(-PITCH_LIM, cam.pitch - step);
+});
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { firstUse(); if (activeKey) { closePanel(); if (b.dataset.view === 'seat') return; } setView(b.dataset.view); }));
+document.getElementById('homeBtn').addEventListener('click', () => { if (activeKey) closePanel(); else setView('seat'); });
+const hintEl = document.getElementById('hint'); let used = { drag: false, tap: false };
+function firstUse(isDrag) { if (isDrag) used.drag = true; else used.tap = true; if (used.drag && used.tap) hintEl.classList.add('gone'); }
+setTimeout(() => hintEl.classList.add('gone'), 15000);
+
+/* =========================================================
+   10-b. 실데이터 연동: 가계부 Firebase(alluser-77808) + 근태관리(보조, 읽기만)
+   - 체험 모드(로그인 전)에는 Firestore 모듈 자체를 불러오지 않음 → 쓰기 0건
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAemJzk3V5hKH0cb0jP_XxtVRaYOZzL848",
+  authDomain: "alluser-77808.firebaseapp.com",
+  projectId: "alluser-77808",
+  storageBucket: "alluser-77808.firebasestorage.app",
+  messagingSenderId: "327718577440",
+  appId: "1:327718577440:web:c1b4717066a8434d30a345",
+  measurementId: "G-VT2NKC3ZY2"
+};
+const staffConfig = {
+  apiKey: "AIzaSyCD4M452qAiF7JnG7Z9wcI_qjxNB6cwkbI",
+  authDomain: "craftburgers-database.firebaseapp.com",
+  projectId: "craftburgers-database",
+  storageBucket: "craftburgers-database.firebasestorage.app",
+  messagingSenderId: "975736531",
+  appId: "1:975736531:web:a0e140c464331bb2ea0e26"
+};
+const FBV = 'https://www.gstatic.com/firebasejs/10.7.1/';
+let FBA = null, FBAU = null, FSm = null, fbApp = null, fbAuth = null;
+async function loadFB() { if (!FBA) { const r = await Promise.all([import(FBV + 'firebase-app.js'), import(FBV + 'firebase-auth.js')]); FBA = r[0]; FBAU = r[1]; } }
+async function loadFS() { if (!FSm) FSm = await import(FBV + 'firebase-firestore.js'); return FSm; }
+async function initFirebase() {
+  try {
+    await loadFB();
+    fbApp = FBA.getApps().find(a => a.name === '[DEFAULT]') || FBA.initializeApp(firebaseConfig);
+    fbAuth = FBAU.getAuth(fbApp);
+    // 2D 가계부와 같은 주소·같은 프로젝트라 로그인 상태를 그대로 이어받음
+    FBAU.onAuthStateChanged(fbAuth, u => { if (u) startLive(u); else stopLive(); });
+  } catch (e) { fbAuth = null; }
+}
+function login() {
+  if (!fbAuth) { toast('로그인 기능을 불러오지 못했어요 — 인터넷 연결을 확인하고 새로고침해 주세요', true); initFirebase(); return; }
+  // 팝업 차단을 피하려고 클릭 직후 바로 호출
+  FBAU.signInWithPopup(fbAuth, new FBAU.GoogleAuthProvider()).catch(e => {
+    const c = (e && e.code) || '';
+    if (c === 'auth/popup-blocked') toast('팝업이 막혔어요 — 다시 눌러 주세요', true);
+    else if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') {}
+    else toast('로그인하지 못했어요 (' + (c || '알 수 없는 오류') + ')', true);
+  });
+}
+function logout() {
+  if (!fbAuth) { stopLive(); return; }
+  FBAU.signOut(fbAuth).then(() => toast('체험 모드로 돌아왔어요 · 2D 가계부도 로그아웃됐어요')).catch(() => stopLive());
+}
+function stopListen() { if (REAL.unsub) { try { REAL.unsub(); } catch (e) {} } REAL.unsub = null; }
+async function startLive(u) {
+  if (REAL.on && REAL.uid === u.uid && REAL.status !== 'error') return;
+  stopListen();
+  Object.assign(REAL, { on: true, uid: u.uid, status: 'loading', docs: [], staff: null, staffState: 'idle' });
+  renderAuth();
+  try {
+    const F = await loadFS();
+    if (!REAL.db) REAL.db = F.getFirestore(fbApp);
+    if (!REAL.on || REAL.uid !== u.uid) return;
+    REAL.unsub = F.onSnapshot(F.collection(REAL.db, 'users', u.uid, 'ledger'), { includeMetadataChanges: true }, snap => {
+      // 서버에 확정된 문서만 반영(저장 실패 시 숫자가 먼저 바뀌지 않도록)
+      REAL.docs = snap.docs.filter(d => !d.metadata.hasPendingWrites).map(d => Object.assign({ id: d.id }, d.data()));
+      const first = REAL.status !== 'ok'; REAL.status = 'ok'; liveRefresh(first);
+    }, () => { REAL.status = 'error'; liveRefresh(); });
+  } catch (e) { REAL.status = 'error'; liveRefresh(); }
+}
+function stopLive() {
+  const was = REAL.on; stopListen();
+  Object.assign(REAL, { on: false, uid: null, status: 'idle', docs: [], staff: null, staffState: 'idle' });
+  if (was) liveRefresh(); else renderAuth();
+}
+function liveRefresh(first) {
+  fixedEdit = false;
+  renderAuth(); syncFridgeItems(); refreshPos(); renderHud(true);
+  if (activeKey && !formOpen) renderPanel();
+  if (first && isLive()) toast(`☁ 내 장부를 불러왔어요 · ${kst().m}월 ${liveMonth().count}건`);
+}
+let lastIdNum = 0;
+const newLedgerId = () => { lastIdNum = Math.max(Date.now(), lastIdNum + 1); return String(lastIdNum); };
+async function liveSave(act, btn) {
+  const amtIn = pBody.querySelector('#fAmt'), amount = Number(digits(amtIn && amtIn.value));
+  if (!amount || amount > 100000000) { amtIn.classList.remove('err'); void amtIn.offsetWidth; amtIn.classList.add('err'); amtIn.focus(); return; }
+  const date = kst().date, id = newLedgerId(); let rec;
+  if (act === 'save-sale') rec = { id, type: 'sales', date, category: saleChannel, amount, memo: '' };
+  else if (act === 'save-ing') {
+    const n = pBody.querySelector('#fName'), memo = (n.value || '').trim().slice(0, 30);
+    if (!memo) { n.classList.add('err'); n.focus(); return; }
+    rec = { id, type: 'variable', category: '식자재', amount, date, memo, scope: 'store' };
+  } else rec = { id, type: 'fixed', category: fixCat, amount, date, memo: (pBody.querySelector('#fMemo').value || '').trim().slice(0, 40), scope: 'store' };
+  // 가드: 로그인한 본인 장부에만, 실데이터 모드에서만 저장
+  if (!isLive() || !REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 저장하지 않았어요', true); return; }
+  btn.disabled = true; btn.textContent = '저장 중…';
+  try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), rec); }
+  catch (e) { btn.disabled = false; btn.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 숫자는 바꾸지 않았어요. 다시 시도해 주세요', true); return; }
+  formOpen = false; lastNewId = id;
+  toast('☁ 내 장부에 저장됐어요 (가계부 앱에도 바로 반영)');
+  if (act === 'save-sale') { burstMoney(amount); floatText('+' + won(amount), V3(0.2, COUNTER_TOP + 0.45, -0.3)); screenGlow = 1; }
+  else if (act === 'save-ing') { popItemId = id; floatText('−' + won(amount), V3(1.5, 1.5, -0.9), true); }
+  else { floatText('−' + won(amount), V3(-0.45, COUNTER_TOP + 0.4, -0.3), true); drawerOpen(false); setTimeout(() => activeKey === 'safe' && drawerOpen(true), 300); }
+  try { navigator.vibrate && navigator.vibrate(18); } catch (er) {}
+  liveRefresh();
+}
+// 근태관리(다른 Firebase 프로젝트): 읽기만 조용히 시도, 안 되면 체험 데이터로
+const STAFF_APP_URL = 'https://craftburgers1.github.io/craftburger/';
+const toDate = v => !v ? null : typeof v.toDate === 'function' ? v.toDate() : typeof v === 'number' ? new Date(v) : typeof v === 'string' ? new Date(v) : (v.seconds ? new Date(v.seconds * 1000) : null);
+async function tryStaffRemote() {
+  if (REAL.staffState !== 'idle' || !REAL.uid) return;
+  REAL.staffState = 'loading';
+  try {
+    await loadFB(); const F = await loadFS();
+    try { F.setLogLevel('silent'); } catch (e) {}
+    const app = FBA.getApps().find(a => a.name === 'solo3dStaff') || FBA.initializeApp(staffConfig, 'solo3dStaff');
+    const sdb = F.getFirestore(app), uidS = REAL.uid;
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000));
+    const [st, at] = await Promise.race([Promise.all([F.getDocs(F.collection(sdb, 'users', uidS, 'staffs')), F.getDocs(F.collection(sdb, 'users', uidS, 'attendance'))]), timeout]);
+    const staff = st.docs.map(d => { const x = d.data() || {}; return { id: d.id, name: x.name || x.staffName || '직원', role: x.role || x.position || '', wage: Number(x.hourlyWage || x.wage || x.hourly || x.payRate) || 0 }; });
+    if (!staff.length) throw new Error('empty');
+    const att = []; at.docs.forEach(d => { const x = d.data() || {}, s0 = toDate(x.startTime), e0 = toDate(x.endTime); if (!x.staffId || !s0 || isNaN(s0)) return;
+      const ks = kst(s0); att.push({ sid: String(x.staffId), date: ks.date, in: ks.time, out: e0 && !isNaN(e0) ? kst(e0).time : null }); });
+    REAL.staff = { staff, att }; REAL.staffState = 'ok';
+  } catch (e) { REAL.staffState = 'fail'; }
+  if (activeKey === 'staff' && !formOpen) renderPanel();
+}
+// 상단: 체험/내 장부 배지 + 로그인/로그아웃
+const authEl = document.getElementById('auth'), hSub = document.getElementById('hSub');
+function renderAuth() {
+  const k = kst();
+  if (REAL.on && REAL.status === 'ok') authEl.innerHTML = `<span class="badge live">☁ 내 장부 · ${k.y}년 ${k.m}월</span><button class="obtn" type="button" data-auth="out" title="로그아웃하고 체험 데이터로 돌아가요">↩ 체험 모드로</button>`;
+  else if (REAL.on && REAL.status === 'loading') authEl.innerHTML = `<span class="badge live">☁ 내 장부 불러오는 중…</span><button class="obtn" type="button" data-auth="out">↩ 체험 모드로</button>`;
+  else if (REAL.on && REAL.status === 'error') authEl.innerHTML = `<span class="badge err">☁ 장부 연결 실패 —</span><button class="gbtn" type="button" data-auth="retry">다시 시도</button>`;
+  else authEl.innerHTML = `<span class="badge demo">🧪 <em>체험 데이터</em></span><button class="gbtn" type="button" data-auth="in"><i class="g"></i>Google 로그인으로 내 장부 연동</button>`;
+  if (isLive()) { const mo = liveMonth(); hSub.hidden = false; hSub.textContent = `👤 개인 -${mo.p.toLocaleString('ko-KR')}원 · 이번 달 ${mo.count}건`; }
+  else if (REAL.on && REAL.status === 'ok' && MODE === 'home') { hSub.hidden = false; hSub.textContent = '🏠 가정 방은 체험 데이터 · 내 장부는 식당·미용실 방에서'; }
+  else hSub.hidden = true;
+  setHudVar();
+}
+authEl.addEventListener('click', e => {
+  const b = e.target.closest('[data-auth]'); if (!b) return; firstUse();
+  if (b.dataset.auth === 'in') login(); else if (b.dataset.auth === 'out') logout();
+  else if (b.dataset.auth === 'retry' && fbAuth && fbAuth.currentUser) { REAL.status = 'error'; startLive(fbAuth.currentUser); }
+});
+function setHudVar() { requestAnimationFrame(() => document.documentElement.style.setProperty('--hudb', Math.round(document.getElementById('hud').getBoundingClientRect().bottom) + 'px')); }
+const toastEl = document.getElementById('toast'); let toastT = 0;
+function toast(msg, bad) { toastEl.textContent = msg; toastEl.classList.toggle('bad', !!bad); toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 3200); }
+
+/* =========================================================
+   11. 크기 변경 · 루프
+   ========================================================= */
+function applyCam() { camera.position.copy(cam.pos); camera.rotation.set(cam.pitch, cam.yaw, 0, 'YXZ'); }
+function onResize() {
+  renderer.setSize(innerWidth, innerHeight); setCameraFov(); updateShiftTarget(); setHudVar();
+  if (!activeKey && !camTween && view === 'seat') { const s = seatPose(); cam.pos.copy(s.pos); }
+}
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', () => setTimeout(onResize, 200));
+
+setCameraFov();
+const seat0 = seatPose();
+cam.pos.copy(seat0.pos); cam.yaw = seat0.yaw; cam.pitch = seat0.pitch;
+if (!RM) { cam.pos.add(V3(0, 0.25, 0.5)); cam.yaw = 0.5; cam.pitch = 0.05; } // 들어오며 자리에 앉는 연출
+applyCam();
+applyMode3D(); relabel(); applyModeUI(); syncFridgeItems(); refreshPos(); renderHud(RM); renderAuth();
+const HL = new THREE.Color(0xffb08a);
+const clock0 = { last: performance.now(), t: 0 }, perf = { n: 0, sum: 0, last: performance.now() };
+let started = false;
+function frame(now) {
+  const dt = Math.min(0.05, (now - clock0.last) / 1000); clock0.last = now; clock0.t += dt; const T = clock0.t;
+
+  if (camTween) {
+    const t = Math.min(1, (now - camTween.s) / camTween.d), e = easeIO(t);
+    cam.pos.lerpVectors(camTween.p0, camTween.p1, e); cam.yaw = camTween.y0 + camTween.dy * e; cam.pitch = camTween.pi0 + (camTween.pi1 - camTween.pi0) * e;
+    if (t >= 1) { camTween = null; document.body.classList.remove('moving'); }
+  } else if (!drag && (Math.abs(vel.yaw) > 0.002 || Math.abs(vel.pitch) > 0.002)) {
+    cam.yaw += vel.yaw * dt; cam.pitch = THREE.MathUtils.clamp(cam.pitch + vel.pitch * dt, -PITCH_LIM, PITCH_LIM);
+    const k = Math.exp(-dt * 5.5); vel.yaw *= k; vel.pitch *= k;
+  }
+  applyCam(); applyShift();
+
+  // 조준 (화면 중앙 레이)
+  const nk = (!activeKey && !camTween) ? pickAt(0, 0) : null;
+  if (nk !== aimKey) {
+    aimKey = nk; const xh = document.getElementById('xh');
+    xh.classList.toggle('aim', !!nk);
+    if (nk) document.getElementById('chip').innerHTML = `${OBJ[nk].emoji} ${OBJ[nk].name} · <small>${OBJ[nk].chip}</small>`;
+  }
+  // 하이라이트: 살짝 들뜨고 따뜻하게 빛남
+  Object.entries(OBJ).forEach(([k, o]) => {
+    const target = (aimKey === k || activeKey === k) ? 1 : 0;
+    o.h += (target - o.h) * Math.min(1, dt * 10);
+    o.root.position.y = o.baseY + o.h * (k === 'fridge' ? 0.012 : 0.025) + (k === 'owner' && !RM ? Math.abs(Math.sin(T * 2)) * 0.004 : 0);
+    o.mats.forEach(m => { m.emissive.copy(m.userData.baseEm).lerp(HL, o.h * 0.35); m.emissiveIntensity = Math.max(m.userData.baseEI, o.h * 0.32); });
+  });
+  screenGlow = Math.max(0, screenGlow - dt * 0.9);
+  screenMat.emissiveIntensity = 0.62 + screenGlow * 1.2 + OBJ.pos.h * 0.15;
+  // 인형: 숨쉬기 + 손 흔들기
+  if (!RM) { doll.scale.y = 1 + Math.sin(T * 2.2) * 0.015; dhead.rotation.z = Math.sin(T * 1.1) * 0.05; }
+  if (waveT > 0) {
+    const t = (now - waveT) / 1600;
+    if (t >= 1) { waveT = -1; dArmR.rotation.z = 0.2; doll.position.y = 0; }
+    else { const up = t < 0.15 ? easeOut(t / 0.15) : t > 0.85 ? 1 - easeIO((t - 0.85) / 0.15) : 1; dArmR.rotation.z = 0.2 + up * (2.3 + Math.sin(t * 30) * 0.4); doll.position.y = Math.abs(Math.sin(t * Math.PI * 3)) * 0.03 * (1 - t); }
+  }
+  // 직원: 살짝 흔들 + 가끔 손 흔들기
+  if (!RM) { stBody.rotation.z = Math.sin(T * 1.3) * 0.035; stHead.rotation.y = Math.sin(T * 0.8) * 0.15; stNextWave -= dt; if (stNextWave < 0 && stWaveT < 0) { stWaveT = now; stNextWave = 6 + Math.random() * 4; } }
+  if (stWaveT > 0) {
+    const t = (now - stWaveT) / 1400;
+    if (t >= 1) { stWaveT = -1; stArmR.rotation.z = 0.12; }
+    else { const up = t < 0.15 ? easeOut(t / 0.15) : t > 0.85 ? 1 - easeIO((t - 0.85) / 0.15) : 1; stArmR.rotation.z = 0.12 + up * (2.4 + Math.sin(t * 28) * 0.35); }
+  }
+  // 시계
+  const k0 = kst(); hourH.rotation.z = -((+k0.time.slice(0, 2) % 12) + (+k0.time.slice(3)) / 60) / 12 * Math.PI * 2; minH.rotation.z = -(+k0.time.slice(3)) / 60 * Math.PI * 2;
+  hourH.position.set(Math.sin(-hourH.rotation.z) * 0.045, Math.cos(hourH.rotation.z) * 0.045, 0.03); minH.position.set(Math.sin(-minH.rotation.z) * 0.07, Math.cos(minH.rotation.z) * 0.07, 0.035);
+
+  if (perf.n < 90 && started) { perf.sum += now - perf.last; perf.n++; if (perf.n === 90 && perf.sum / 90 > 22 && renderer.getPixelRatio() > 1) { renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight); } }
+  perf.last = now;
+  stepCat(now, T, dt); stepAnims(now); updateParts(dt); stepHud(now);
+  renderer.render(scene, camera);
+  updateOverlays(now);
+
+  if (!started) {
+    started = true;
+    document.getElementById('loader').classList.add('hide'); stage.classList.add('ready');
+    setTimeout(() => { document.getElementById('loader').hidden = true; }, 700);
+    if (!RM) { moveTo(seatPose(), 1.6); setTimeout(() => renderHud(true), 500); }
+    setTimeout(initFirebase, 0);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__solo3d = { info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, dpr: renderer.getPixelRatio(), geos: renderer.info.memory.geometries, fb: !!fbAuth, live: REAL.status }) };
+}
+</script>
+</body>
+</html>
