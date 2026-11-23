@@ -643,9 +643,9 @@
             </div>
             <div class="flex flex-col sm:flex-row gap-2">
                 <button type="button" id="ledgerSheetBtn" onclick="exportLedgerToSheets()" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-bold rounded-xl text-xs shadow-sm transition">📊 구글 시트로 내보내기</button>
-                <button type="button" id="ledgerCsvJournalBtn" onclick="v19DownloadJournal()" class="py-2.5 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs transition whitespace-nowrap">⬇️ 분개장</button>
-                <button type="button" id="ledgerCsvMonthlyBtn" onclick="v19DownloadMonthly()" class="py-2.5 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs transition whitespace-nowrap">⬇️ 월별 요약</button>
+                <button type="button" id="ledgerXlsxBtn" onclick="v20DownloadBook()" class="py-2.5 px-3 bg-white hover:bg-slate-50 disabled:opacity-60 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs transition whitespace-nowrap">⬇️ 엑셀(.xlsx)</button>
             </div>
+            <p class="text-[11px] text-slate-400 break-keep">세무사에게 보내기 좋은 구성: 요약 · 손익계산서 · 합계잔액시산표 · 분개장 · 계정별원장(계정마다 시트) · 거래처별 집계 (3D와 같은 파일)</p>
             <p id="ledgerExportMsg" class="text-[11px] text-slate-500 break-keep" role="status" aria-live="polite"></p>
             <button type="button" onclick="closeLedgerModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
         </div>
@@ -899,6 +899,8 @@
 
     </main>
 
+    <!-- v20: 세무회계 장부 엑셀(3D와 공용) -->
+    <script src="soloBook.js"></script>
     <!-- Application Script -->
     <script>
         const COUPANG_TRACKING_CODE = "AF4185384";
@@ -3445,12 +3447,11 @@
             if (btn) btn.disabled = true;
             v19ExportMsg('📊 구글 시트를 만드는 중…');
             const run = async (token) => {
+                // v20: 세무사용 구성(요약·손익계산서·합계잔액시산표·분개장·계정별원장·거래처별 집계)을 시트 탭으로 나눈 구글 시트 1개
+                await window.SoloBook.load();
                 const folderId = await driveFindOrCreateFolder(token, '솔로운영_장부', '');
-                const n1 = await v19UniqueSheetName(token, folderId, `솔로운영_분개장_${L.tag}`);
-                const f1 = await v19UploadSheet(token, folderId, n1, v19JournalCsv(L));
-                const n2 = await v19UniqueSheetName(token, folderId, `솔로운영_월별요약_${L.tag}`);
-                await v19UploadSheet(token, folderId, n2, v19MonthlyCsv(L));
-                return f1;
+                const n1 = await v19UniqueSheetName(token, folderId, `솔로운영_세무장부_${L.tag}`);
+                return window.SoloBook.uploadAsGoogleSheet((u, o) => driveFetch(u, o, token), folderId, n1, window.SoloBook.build(v20BookOpts(L)));
             };
             try {
                 let f1;
@@ -3468,6 +3469,20 @@
                 console.warn('[장부 내보내기] 실패', err);
                 v19ExportMsg(m === 'denied' || m === 'access_denied' || m === 'popup_closed' ? '드라이브 권한이 필요해요' : (m === 'unavailable' ? '지금은 구글 드라이브를 쓸 수 없어요' : '시트를 만들지 못했어요 (잠시 후 다시)'));
             } finally { if (btn) btn.disabled = false; }
+        }
+
+        // ---- v20: 📊 세무회계 장부 엑셀(.xlsx) — 3D와 같은 공용 파일 soloBook.js ----
+        function v20BookOpts(L) {
+            const year = document.getElementById('yearSelect').value, month = document.getElementById('monthSelect').value;
+            return { entries: getFilteredData(), mapper: v19AccountFor, store: (storeConfig && storeConfig.name) || '내 가게', scope: v19LedgerScope === 'all' ? 'all' : 'store',
+                months: month === 'ALL' ? [] : [`${year}-${month}`], label: L.label, tag: L.tag };
+        }
+        async function v20DownloadBook() {
+            const btn = document.getElementById('ledgerXlsxBtn'); if (btn) btn.disabled = true;
+            v19ExportMsg('⬇️ 엑셀 파일을 만드는 중…');
+            try { await window.SoloBook.load(); const L = v19BuildLedger(v19LedgerScope); window.SoloBook.download(window.SoloBook.build(v20BookOpts(L)), `솔로운영_세무장부_${L.tag}`); v19ExportMsg('✅ 엑셀 파일을 받았어요' + (isDemoMode ? ' (체험 데이터)' : '')); }
+            catch (e) { v19ExportMsg('엑셀을 만들지 못했어요 (인터넷 연결을 확인하고 다시 눌러 주세요)'); }
+            finally { if (btn) btn.disabled = false; }
         }
 
         // ---- 📥 홈택스/카드 엑셀 업로드 ----

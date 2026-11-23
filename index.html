@@ -3603,6 +3603,58 @@ renderClerk = function () { _renderClerk_book(); const g = smBody.querySelector(
   const after = g.querySelector('[data-clerk=manual]'); if (after) after.insertAdjacentHTML('afterend', card); else g.insertAdjacentHTML('beforeend', card);
   const h = smBody.querySelector('.hintp'); if (h) h.textContent = '세무회계 장부에서 자동 분개된 복식장부·시산표를 볼 수 있어요. 직접 입력은 2D 가계부처럼 수입/매출 · 고정비 · 변동비로 나눠 적어요.'; };
 smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || smOpen !== 'clerk' || b.dataset.clerk !== 'book') return; closeSm(); setTimeout(() => interact('ledger'), 200); });
+
+/* ---- 📊 세무회계 장부 내보내기: 2D 가계부와 같은 공용 파일(soloBook.js)로 같은 시트 구성
+   요약 · 손익계산서 · 합계잔액시산표 · 분개장(일반전표) · 계정별원장(계정마다 시트) · 거래처별 집계 ---- */
+const BK = { period: 'month', busy: false, msg: '', link: '' }; let bookP = null;
+function loadBook() { if (window.SoloBook) return window.SoloBook.load(); if (!bookP) bookP = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'soloBook.js'; s.onload = () => res(); s.onerror = () => { bookP = null; rej(new Error('book')); }; document.head.appendChild(s); });
+  return bookP.then(() => window.SoloBook.load()); }
+function bookMapper(e) { // 2D v19AccountFor 와 같은 규칙
+  if (e.type === 'sales') return { debit: '보통예금', credit: '매출액', kind: '사업' };
+  if (e.scope === 'personal') return { debit: '개인출금', credit: '보통예금', kind: '개인' };
+  return { debit: accountOf(e.category || '', e.memo || ''), credit: '보통예금', kind: '사업' }; }
+function bookOpts() {
+  const k = kst(), from = BK.period === 'year' ? `${k.y}-01` : k.ym, to = k.ym;
+  const src = isLive() ? REAL.docs.map(d => Object.assign({}, d, { date: String(d.date || '') })) : allEntries();
+  const entries = src.filter(e => { const ym = String(e.date).slice(0, 7); return ym >= from && ym <= to; });
+  const months = []; for (let m = +from.slice(5); m <= +to.slice(5); m++) months.push(`${k.y}-${String(m).padStart(2, '0')}`);
+  return { entries, mapper: bookMapper, store: cleanName(storeName()) || '내 가게', scope: ledgerAll ? 'all' : 'store', months,
+    label: BK.period === 'year' ? `${k.y}년 1월~${k.m}월` : `${k.y}년 ${k.m}월`, tag: BK.period === 'year' ? `${k.y}년` : k.ym };
+}
+function bookSection() {
+  return `<div class="sec" style="margin-top:18px"><span>📊 세무사에게 보낼 장부 (엑셀·구글 시트)</span></div>
+    <div class="mode" role="tablist" style="margin-bottom:8px"><button data-bkp="month" class="${BK.period === 'month' ? 'on' : ''}">이번 달</button><button data-bkp="year" class="${BK.period === 'year' ? 'on' : ''}">올해 전체</button></div>
+    <p class="hintp" style="margin:0 0 8px">요약 · 손익계산서 · 합계잔액시산표 · 분개장 · 계정별원장(계정마다 시트) · 거래처별 집계로 나눠 만들어요. 2D 가계부와 같은 구성이에요. (${ledgerAll ? '전체: 개인출금 포함' : '사업 전용'})</p>
+    <button class="primary" data-bk="gs" ${BK.busy ? 'disabled' : ''}>${BK.busy === 'gs' ? '구글 시트 만드는 중…' : '📊 구글 시트로 만들기'}</button>
+    <button class="ghost" data-bk="xlsx" ${BK.busy ? 'disabled' : ''} style="margin-top:8px">${BK.busy === 'xlsx' ? '엑셀 만드는 중…' : '⬇️ 엑셀 파일(.xlsx) 받기'}</button>
+    ${BK.msg ? `<p class="hintp" role="status" style="margin-top:6px">${esc(BK.msg)}${BK.link ? ` · <a href="${esc(BK.link)}" target="_blank" rel="noopener noreferrer" style="font-weight:800;color:#2563eb">시트 열기</a>` : ''}</p>` : ''}`;
+}
+const _renderPanel_book = renderPanel;
+renderPanel = function () { _renderPanel_book(); if (activeKey === 'ledger') { pBody.insertAdjacentHTML('beforeend', bookSection()); if (isLive()) loadGisScript().catch(() => {}); } };
+function bookRefresh() { if (activeKey === 'ledger') { const y = pBody.scrollTop; renderPanel(); pBody.scrollTop = y; } }
+async function bookXlsx() {
+  BK.busy = 'xlsx'; BK.msg = ''; BK.link = ''; bookRefresh();
+  try { await loadBook(); const o = bookOpts(); window.SoloBook.download(window.SoloBook.build(o), `솔로운영_세무장부_${o.tag}`); BK.msg = `✅ 엑셀 파일을 받았어요 (${o.entries.length}건)` + (isLive() ? '' : ' · 체험 데이터');
+  } catch (e) { BK.msg = '엑셀을 만들지 못했어요 (인터넷 연결을 확인하고 다시 눌러 주세요)'; }
+  BK.busy = false; bookRefresh();
+}
+async function bookSheet() {
+  if (!isLive()) { BK.msg = '구글 시트는 로그인(내 장부 연동) 후 만들 수 있어요. 체험 모드에서는 ⬇️ 엑셀 파일로 받아 보세요.'; BK.link = ''; bookRefresh(); return; }
+  if (!rcUid()) { toast('로그인 상태를 확인할 수 없어요', true); return; }
+  const tokenP = driveGetToken(true); // 누른 그 클릭 안에서 권한 창(팝업 차단 방지)
+  BK.busy = 'gs'; BK.msg = '📊 구글 시트를 만드는 중…'; BK.link = ''; bookRefresh();
+  const run = async token => { await loadBook(); const o = bookOpts(), wb = window.SoloBook.build(o), folder = await driveFolder(token, '솔로운영_장부', '');
+    const hm = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).replace(':', '');
+    return window.SoloBook.uploadAsGoogleSheet((u, op) => driveFetch(u, op, token), folder, `솔로운영_세무장부_${o.tag}_${hm}`, wb); };
+  try { let f; try { f = await run(await tokenP); } catch (e) { if (!(e && e.message === 'drive-401')) throw e; f = await run(await driveGetToken(true)); }
+    BK.link = f.webViewLink || (f.id ? `https://docs.google.com/spreadsheets/d/${encodeURIComponent(f.id)}/edit` : ''); BK.msg = '✅ 내 구글 드라이브 [솔로운영_장부] 폴더에 시트를 만들었어요';
+    if (BK.link) { try { window.open(BK.link, '_blank', 'noopener'); } catch (e) {} }
+  } catch (e) { const m = e && e.message; BK.msg = /denied|popup|token/.test(m || '') ? '구글 드라이브 권한이 필요해요 (다시 눌러 허용해 주세요)' : '시트를 만들지 못했어요 (잠시 후 다시)'; }
+  BK.busy = false; bookRefresh();
+}
+pBody.addEventListener('click', e => { if (activeKey !== 'ledger') return; const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.bkp) { BK.period = b.dataset.bkp; BK.msg = ''; BK.link = ''; bookRefresh(); return; }
+  if (b.dataset.bk === 'xlsx' && !BK.busy) bookXlsx(); if (b.dataset.bk === 'gs' && !BK.busy) { loadGisScript().catch(() => {}); bookSheet(); } });
 setCameraFov();
 const seat0 = seatPose();
 cam.pos.copy(seat0.pos); cam.yaw = seat0.yaw; cam.pitch = seat0.pitch;
