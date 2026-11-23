@@ -364,6 +364,16 @@ body.sm-open #xh,body.sm-open #tags{opacity:0}
 .stk button.x{width:auto;padding:0 10px;font-size:12px;font-weight:800;color:var(--muted)}
 .row .del{height:28px;min-width:30px;padding:0 6px;border-radius:8px;background:#f7efe4;font-size:13px}
 .row .del.arm{background:var(--neg);color:#fff;font-size:11.5px;font-weight:800}
+.entools{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 10px}
+.entools button{height:30px;padding:0 10px;border-radius:9px;background:#f7efe4;font-size:12px;font-weight:800;color:var(--ink)}
+.donut{width:150px;height:150px;border-radius:50%;margin:4px auto 14px;display:flex;align-items:center;justify-content:center}
+.donut span{width:96px;height:96px;border-radius:50%;background:#fffaf3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.donut b{font-size:13px}.donut em{font-style:normal;font-size:10.5px;color:var(--muted)}
+.cat .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.post{background:#fff;border-radius:14px;padding:10px 12px;margin-bottom:8px;box-shadow:0 2px 8px rgba(110,70,40,.06)}
+.post .ph{display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px}.post .ph .d{margin-left:auto}
+.post .pc{font-size:13.5px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
+.manual .row{align-items:flex-start}.manual .d{font-size:12px}
 @media (prefers-reduced-motion:reduce){ .tg .b,.blob{animation:none} }
 </style>
 <script type="importmap">
@@ -2910,7 +2920,7 @@ const ENTRY_DEF = {
   home: { sales: ['월급', '용돈', '부수입'], fixed: ['관리비', '공과금', '교육비', '통신비', '보험'], variable: ['마트', '시장', '온라인 장보기', '외식', '생활용품'] }
 };
 const ENTRY_TYPES = [['sales', '수입/매출'], ['fixed', '고정비'], ['variable', '변동비']];
-const entryCats = t => { const c = isLive() && REAL.cfg && Array.isArray(REAL.cfg[t]) && REAL.cfg[t].length ? REAL.cfg[t] : ENTRY_DEF[MODE][t]; return c.length ? c : ['기타 지출']; };
+const entryCats = t => { let dc = null; try { const d = JSON.parse(localStorage.getItem('solo3d_cats') || '{}'); dc = d && d[MODE] && d[MODE][t]; } catch (e) {} const c = isLive() && REAL.cfg && Array.isArray(REAL.cfg[t]) && REAL.cfg[t].length ? REAL.cfg[t] : (!isLive() && Array.isArray(dc) && dc.length ? dc : ENTRY_DEF[MODE][t]); return c.length ? c : ['기타 지출']; };
 const EN = { type: 'variable', cat: null, scope: 'store' };
 // 2D 가계부 설정 목록과 3D 실데이터 입력칸을 항상 같게: 포스 매출 채널 = sales, 금고 고정비 = fixed, 냉장고 = variable 중 식자재비 항목
 function fridgeCat() { const v = REAL.cfg && Array.isArray(REAL.cfg.variable) ? REAL.cfg.variable : []; return v.find(c => accountOf(c, '') === '식자재비') || '식자재'; }
@@ -3116,6 +3126,170 @@ interact = function (k) { if (k === 'calendar') { firstUse(); if (activeKey) clo
 const _applyMode3D_cal = applyMode3D; applyMode3D = function () { _applyMode3D_cal(); drawWallCal(); };
 const _liveRefresh_cal = liveRefresh; liveRefresh = function (first) { _liveRefresh_cal(first); if (smOpen === 'cal' || smOpen === 'day') renderSm(); };
 snapMat(wallCal.children[0].material); snapMat(wallCal.children[2].material);
+
+/* =========================================================
+   🔗 2D 가계부 기능을 3D에도 (같은 데이터·같은 규칙)
+   ① 달력 화면 탭: 달력 | 목록 | 차트 (2D 내역 달력/목록 + 월간 지출 항목별 분석)
+   ② 직접 입력: ⚙️ 항목 관리(설정 목록 추가·삭제) · 📋 지난달 고정비 불러오기
+   ③ 💬 자유 게시판 (왼쪽 벽 칠판) — 2D와 같은 community_board
+   ④ 👤 내정보 & 📖 사용설명서 (상단 가게 이름)
+   ========================================================= */
+CAL.view = 'cal'; CAL.filter = 'all';
+const calTabs = () => `<div class="mode" role="tablist">${[['cal', '📅 달력'], ['list', '📋 목록'], ['chart', '📊 차트']].map(([v, l]) => `<button type="button" data-cview="${v}" class="${CAL.view === v ? 'on' : ''}" role="tab" aria-selected="${CAL.view === v}">${l}</button>`).join('')}</div>`;
+const calBar = () => `<div class="calbar"><button type="button" data-cal="-1" aria-label="이전 달">◀</button><b>${CAL.y}년 ${CAL.m}월</b><button type="button" data-cal="1" aria-label="다음 달">▶</button></div>`;
+const isPers = x => x.scope === 'personal';
+function monthEntries() { const ym = `${CAL.y}-${String(CAL.m).padStart(2, '0')}`; return allEntries().filter(x => x.date.startsWith(ym)); }
+function renderCalList() {
+  const E = monthEntries().filter(x => CAL.filter === 'all' || (CAL.filter === 'in' ? x.type === 'sales' : x.type !== 'sales')).sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
+  smTitle.textContent = `📋 ${CAL.y}년 ${CAL.m}월 내역`;
+  let h = calTabs() + calBar() + `<div class="seg" style="margin-bottom:8px">${[['all', '전체'], ['in', '수입'], ['out', '지출']].map(([v, l]) => `<button type="button" data-cflt="${v}" class="${CAL.filter === v ? 'on' : ''}">${l}</button>`).join('')}</div><div class="rows">`;
+  h += E.map(x => { const s = x.type === 'sales', canDel = isLive() || (x.src && x.src !== 'fixed');
+    return `<div class="row"><div class="l"><span class="d num">${md(x.date)}</span><span><b>${esc(x.category)}</b>${x.memo ? ` <span class="d">${esc(x.memo)}</span>` : ''}${isPers(x) ? ' <span class="d">👛개인</span>' : ''}</span></div>
+      <div style="display:flex;align-items:center;gap:6px"><b class="num" style="color:${s ? 'var(--pos)' : 'var(--neg)'}">${s ? '+' : '-'}${won(x.amount)}</b>${canDel ? `<button type="button" class="del${CAL.delArm === x.id ? ' arm' : ''}" data-del="${esc(x.id)}" aria-label="삭제">${CAL.delArm === x.id ? '삭제?' : '🗑'}</button>` : ''}</div></div>`; }).join('') || '<div class="empty">이 달 내역이 없어요.</div>';
+  h += `</div><p class="hintp">${E.length}건 · 🗑을 두 번 누르면 삭제돼요${isLive() ? ' (2D 가계부에서도 지워져요)' : ''}.</p>`;
+  smBody.innerHTML = h;
+}
+function renderCalChart() {
+  // 2D와 같은 집계: 개인 소비는 제외, 지출을 항목(category)별로
+  const E = monthEntries(), cat = {}; let sales = 0, exp = 0;
+  E.forEach(x => { if (x.type === 'sales') sales += x.amount; else if (!isPers(x)) { exp += x.amount; cat[x.category] = (cat[x.category] || 0) + x.amount; } });
+  const rows = Object.entries(cat).sort((a, b) => b[1] - a[1]), COL = ['#2563eb', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+  let acc = 0; const cone = rows.map(([, v], i) => { const a = acc / exp * 100, b = (acc += v) / exp * 100; return `${COL[i % 8]} ${a.toFixed(2)}% ${b.toFixed(2)}%`; }).join(',');
+  smTitle.textContent = `📊 ${CAL.y}년 ${CAL.m}월 지출 항목별 분석`;
+  let h = calTabs() + calBar() + cards3(['매출', sales], ['지출', exp], ['순익', sales - exp]);
+  h += rows.length ? `<div class="donut" style="background:conic-gradient(${cone})"><span><b class="num">${won(exp)}</b><em>${sales > 0 ? `순익률 ${((sales - exp) / sales * 100).toFixed(1)}%` : ''}</em></span></div><div class="rows">` +
+    rows.map(([n, v], i) => `<div class="cat"><div class="ct"><span><i class="dot" style="background:${COL[i % 8]}"></i>${esc(n)}</span><b class="num">${won(v)} <small>${pct(v, exp)}%</small></b></div><div class="bar"><i style="width:${Math.max(2, pct(v, exp))}%;background:${COL[i % 8]}"></i></div></div>`).join('') + '</div>'
+    : '<div class="empty">이 달 지출 내역이 없어요.</div>';
+  h += `<p class="hintp">2D 가계부의 '월간 지출 항목별 분석'과 같은 계산이에요(개인 소비 제외).</p>`;
+  smBody.innerHTML = h;
+}
+const _renderCal_p = renderCal;
+renderCal = function () { if (CAL.view === 'list') return renderCalList(); if (CAL.view === 'chart') return renderCalChart(); _renderCal_p(); smBody.insertAdjacentHTML('afterbegin', calTabs()); };
+smEl.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || smOpen !== 'cal') return;
+  if (b.dataset.cview) { CAL.view = b.dataset.cview; CAL.delArm = null; renderSm(); return; }
+  if (b.dataset.cflt) { CAL.filter = b.dataset.cflt; renderSm(); return; }
+  if (b.dataset.del) { e.stopImmediatePropagation(); if (CAL.delArm === b.dataset.del) deleteEntryAny(b.dataset.del); else { CAL.delArm = b.dataset.del; renderSm(); } }
+}, true);
+
+/* ---- ② 항목 관리 · 지난달 고정비 ---- */
+const CATS_KEY = 'solo3d_cats';
+function demoCats() { try { return JSON.parse(localStorage.getItem(CATS_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function catList(t) { if (isLive()) return entryCats(t); const d = demoCats()[MODE]; return d && Array.isArray(d[t]) && d[t].length ? d[t] : ENTRY_DEF[MODE][t]; }
+let catArm = null, copyArm = 0;
+function renderCats() {
+  const t = EN.type, list = catList(t), nm = { sales: '수입/매출', fixed: '고정비', variable: '변동비' }[t];
+  smTitle.textContent = `⚙️ ${nm} 항목 관리`;
+  smBody.innerHTML = `<div class="rows">${list.map((c, i) => `<div class="row"><div class="l"><span>${esc(c)}</span></div><button type="button" class="del${catArm === i ? ' arm' : ''}" data-cdel="${i}">${catArm === i ? '삭제?' : '✕'}</button></div>`).join('') || '<div class="empty">항목이 없어요.</div>'}</div>
+    <div class="form"><div class="field"><label for="newCat">새 항목</label><input id="newCat" maxlength="20" autocomplete="off" placeholder="예: 배달 용기" style="font-size:16px"></div>
+    <div class="factions"><button type="button" class="cancel" data-act="cats-back">← 입력으로</button><button type="button" class="save" data-act="cats-add">+ 추가</button></div>
+    <p class="hintp">${isLive() ? '☁ 2D 가계부 설정과 같은 목록이에요. 여기서 바꾸면 2D 입력칸에도 같이 바뀌어요.' : '🧪 체험 모드라 이 기기에만 저장돼요.'}</p></div>`;
+}
+async function saveCatList(t, list) {
+  if (isLive()) {
+    if (!REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 저장하지 않았어요', true); return false; }
+    try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'settings', 'config'), { [t]: list }, { merge: true }); } // 다른 설정(이름·업종 등)은 그대로
+    catch (e) { toast('저장하지 못했어요 — 다시 시도해 주세요', true); return false; }
+    REAL.cfg = Object.assign({}, REAL.cfg || {}, { [t]: list }); syncCfgLists(); return true;
+  }
+  const d = demoCats(); d[MODE] = Object.assign({}, d[MODE] || {}, { [t]: list }); try { localStorage.setItem(CATS_KEY, JSON.stringify(d)); } catch (e) {} return true;
+}
+async function copyPrevFixed(btn) {
+  if (!isLive()) { toast('🧪 체험 고정비는 매달 자동으로 들어가요 (로그인하면 2D처럼 지난달 고정비를 복사해요)'); return; }
+  const k = kst(), pm = k.m === 1 ? 12 : k.m - 1, py = k.m === 1 ? k.y - 1 : k.y, pym = `${py}-${String(pm).padStart(2, '0')}`;
+  const prev = REAL.docs.filter(x => x.type === 'fixed' && String(x.date || '').startsWith(pym)), cur = REAL.docs.filter(x => x.type === 'fixed' && String(x.date || '').startsWith(k.ym));
+  if (!prev.length) { toast(`지난달(${pm}월)에 등록된 고정비 내역이 없어요`, true); return; }
+  if (performance.now() - copyArm > 4000) { copyArm = performance.now(); btn.textContent = cur.length ? `이번 달에 이미 ${cur.length}건 있어요 · 한 번 더 누르면 ${prev.length}건 추가` : `한 번 더 누르면 지난달 ${prev.length}건 복사`; return; }
+  copyArm = 0;
+  if (!REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 저장하지 않았어요', true); return; }
+  btn.disabled = true; btn.textContent = '복사 중…'; let n = 0;
+  try { for (const it of prev) { const id = newLedgerId(); await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), Object.assign({ id, type: 'fixed', date: k.ym + '-01', category: it.category, amount: Number(it.amount) || 0, memo: it.memo ? `(지난달 복사) ${it.memo}` : '(지난달 복사)' }, it.scope ? { scope: it.scope } : {})); n++; } }
+  catch (e) { toast(`복사 중 오류 — ${n}건만 복사됐어요`, true); renderSm(); return; }
+  toast(`지난달(${pm}월) 고정지출 ${n}건이 이번 달(${k.m}월)로 들어갔어요`); liveRefresh(); renderSm();
+}
+const _renderEntry_p = renderEntry;
+renderEntry = function () {
+  _renderEntry_p();
+  const tools = `<div class="entools"><button type="button" data-act="cats-open">⚙️ ${{ sales: '수입/매출', fixed: '고정비', variable: '변동비' }[EN.type]} 항목 관리</button>${EN.type === 'fixed' ? '<button type="button" data-act="copy-prev">📋 지난달 고정비 불러오기</button>' : ''}</div>`;
+  const tabs = smBody.querySelector('.mode'); tabs && tabs.insertAdjacentHTML('afterend', tools);
+  // 체험 모드에서도 관리한 항목 목록으로 칩을 다시 그림
+  if (!isLive()) { const list = catList(EN.type); if (!list.includes(EN.cat)) EN.cat = list[0]; const seg = smBody.querySelector('[data-ecat]')?.parentElement; if (seg) seg.innerHTML = list.map(x => `<button type="button" data-ecat="${esc(x)}" class="${x === EN.cat ? 'on' : ''}">${esc(x)}</button>`).join(''); }
+};
+const _renderSm_p = renderSm;
+renderSm = function () { if (smOpen === 'cats') return renderCats(); if (smOpen === 'bbs') return renderBbs(); if (smOpen === 'me') return renderMe(); _renderSm_p(); };
+smEl.addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (smOpen === 'entry' && b.dataset.act === 'cats-open') { catArm = null; smOpen = 'cats'; renderSm(); return; }
+  if (smOpen === 'entry' && b.dataset.act === 'copy-prev') { copyPrevFixed(b); return; }
+  if (smOpen !== 'cats') return;
+  const t = EN.type, list = catList(t).slice();
+  if (b.dataset.act === 'cats-back') { smOpen = 'entry'; renderSm(); return; }
+  if (b.dataset.cdel !== undefined) { const i = +b.dataset.cdel; if (catArm !== i) { catArm = i; renderSm(); return; } if (list.length <= 1) { toast('항목은 최소 1개 있어야 해요', true); return; } list.splice(i, 1); catArm = null; if (await saveCatList(t, list)) renderSm(); return; }
+  if (b.dataset.act === 'cats-add') { const inp = smBody.querySelector('#newCat'), v = cleanName(inp.value).slice(0, 20); if (!v) { inp.classList.add('err'); inp.focus(); return; } if (list.includes(v)) { toast('이미 있는 항목이에요', true); return; } list.push(v); if (await saveCatList(t, list)) { EN.cat = v; renderSm(); } }
+});
+
+/* ---- ③ 💬 자유 게시판 (왼쪽 벽 칠판) ---- */
+const BBS = { posts: null, loading: false, form: false, arm: null };
+register('community', board, { emoji: '💬', name: '자유 게시판', short: '게시판', chip: '탭해서 소통방 열기', anchor: V3(ROOM.x0 + 0.06, 2.12, -2.2), focus: null });
+{ const o = OBJ.community, el = document.createElement('button'); el.type = 'button'; el.className = 'tg';
+  el.innerHTML = `<span class="b">💬</span><span class="e"><span class="ee"></span>💬 게시판</span>`; el.setAttribute('aria-label', '자유 게시판 보기');
+  el.addEventListener('click', e => { e.stopPropagation(); firstUse(); if (el.classList.contains('edge')) { lookAt(o.anchor); setTimeout(() => interact('community'), RM ? 320 : 650); } else interact('community'); });
+  tagsEl.appendChild(el); o.el = el; o.arrow = el.querySelector('.ee'); }
+const bbsOk = () => REAL.on && REAL.status === 'ok' && REAL.db && FSm && fbAuth && fbAuth.currentUser && fbAuth.currentUser.uid === REAL.uid;
+async function loadBbs() {
+  if (!bbsOk() || BBS.loading) return; BBS.loading = true;
+  try { const col = FSm.collection(REAL.db, 'community_board'), snaps = await Promise.all([FSm.getDocs(FSm.query(col, FSm.where('isPrivate', '==', false))), FSm.getDocs(FSm.query(col, FSm.where('uid', '==', REAL.uid)))]);
+    const map = {}; snaps.forEach(s => s.forEach(d => { const x = d.data(); map[x.id || d.id] = x; })); BBS.posts = Object.values(map).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); }
+  catch (e) { BBS.posts = 'err'; }
+  BBS.loading = false; if (smOpen === 'bbs') renderSm();
+}
+function renderBbs() {
+  smTitle.textContent = '💬 자유 게시판 & 소통방';
+  if (!bbsOk()) { smBody.innerHTML = `<p class="ailead">2D 가계부와 같은 게시판이에요. Google 로그인(내 장부 연동)을 하면 글을 보고 쓸 수 있어요.</p><button type="button" class="primary" data-act="bbs-login">Google 로그인으로 내 장부 연동</button>`; return; }
+  if (BBS.posts === null) { smBody.innerHTML = '<p class="empty">불러오는 중…</p>'; loadBbs(); return; }
+  if (BBS.posts === 'err') { smBody.innerHTML = '<p class="empty">게시글을 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</p>'; return; }
+  let h = `<div class="sec"><span>총 ${BBS.posts.length}개의 게시글</span></div>`;
+  h += !BBS.form ? `<button type="button" class="primary" data-act="bbs-write" style="margin:0 0 12px">✏️ 글쓰기</button>` : `<div class="form" style="margin:0 0 12px"><div class="field"><label for="bbsAuthor">이름(닉네임)</label><input id="bbsAuthor" maxlength="30" style="font-size:16px"></div>
+    <div class="field"><label for="bbsContent">내용</label><textarea id="bbsContent" maxlength="1000" rows="4" style="width:100%;border-radius:13px;border:2px solid #f1e4d4;background:#fffaf3;padding:10px 12px;font-size:15px;font:inherit;user-select:text"></textarea></div>
+    <label class="aitog"><input type="checkbox" id="bbsPriv"><span>🔒 비공개 (나와 관리자만 보기)</span></label>
+    <div class="factions"><button type="button" class="cancel" data-act="bbs-cancel">취소</button><button type="button" class="save" data-act="bbs-save">등록</button></div></div>`;
+  h += BBS.posts.map(p => { const mine = p.uid === REAL.uid, can = !p.isPrivate || mine;
+    return `<div class="post"><div class="ph"><b>👤 ${esc(p.author || '')}</b>${p.isPrivate ? '<span class="chip" style="background:#fff1d6;color:#9a6a12">🔒 비공개</span>' : ''}<span class="d">${esc(p.dateStr || '')}</span>${mine ? `<button type="button" class="del${BBS.arm === p.id ? ' arm' : ''}" data-pdel="${esc(p.id)}">${BBS.arm === p.id ? '삭제?' : '🗑'}</button>` : ''}</div><div class="pc">${can ? esc(p.content || '').replace(/\n/g, '<br>') : '<i class="d">🔒 비공개 글이에요</i>'}</div></div>`; }).join('') || '<p class="empty">등록된 게시글이 없어요. 첫 의견을 남겨 주세요!</p>';
+  smBody.innerHTML = h;
+}
+smEl.addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b || smOpen !== 'bbs') return;
+  if (b.dataset.act === 'bbs-login') { closeSm(); login(); return; }
+  if (b.dataset.act === 'bbs-write') { BBS.form = true; renderSm(); return; }
+  if (b.dataset.act === 'bbs-cancel') { BBS.form = false; renderSm(); return; }
+  if (b.dataset.act === 'bbs-save') {
+    const a = smBody.querySelector('#bbsAuthor'), c = smBody.querySelector('#bbsContent'), author = a.value.trim(), content = c.value.trim();
+    if (!author) { a.classList.add('err'); a.focus(); return; } if (!content) { c.focus(); return; }
+    if (!bbsOk()) { toast('로그인 상태를 확인할 수 없어 등록하지 않았어요', true); return; }
+    const post = { id: Date.now().toString(), uid: REAL.uid, author: author.slice(0, 30), content: content.slice(0, 1000), isPrivate: smBody.querySelector('#bbsPriv').checked, createdAt: Date.now(), dateStr: new Date().toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) };
+    b.disabled = true; b.textContent = '등록 중…';
+    try { await FSm.setDoc(FSm.doc(REAL.db, 'community_board', post.id), post); } catch (er) { b.disabled = false; b.textContent = '등록'; toast('등록하지 못했어요 — 다시 시도해 주세요', true); return; }
+    BBS.posts.unshift(post); BBS.form = false; toast('게시글이 등록됐어요 (2D 게시판에도 보여요)'); renderSm(); return;
+  }
+  if (b.dataset.pdel) { const id = b.dataset.pdel; if (BBS.arm !== id) { BBS.arm = id; renderSm(); return; }
+    try { await FSm.deleteDoc(FSm.doc(REAL.db, 'community_board', id)); BBS.posts = BBS.posts.filter(p => p.id !== id); BBS.arm = null; renderSm(); } catch (er) { toast('삭제 권한이 없거나 오류가 났어요', true); } }
+});
+
+/* ---- ④ 👤 내정보 & 📖 사용설명서 (상단 가게 이름) ---- */
+function renderMe() {
+  smTitle.textContent = '👤 내정보 & 사용설명서';
+  const u = fbAuth && fbAuth.currentUser, live = REAL.on && REAL.status === 'ok' && u;
+  smBody.innerHTML = `<div class="stcard">${live ? `<b>🔐 Google 계정 로그인 중</b><p>${esc(u.email || '구글 계정 정보 없음')}</p><p>모든 장부 데이터는 이 구글 계정에 실시간으로 저장돼요. 2D 가계부와 같은 장부예요.</p>` : `<b>🧪 체험 모드</b><p>지금은 이 기기에만 저장되는 체험 데이터예요. 로그인하면 2D 가계부와 같은 내 장부로 바뀌어요.</p>`}</div>
+    <div class="factions">${live ? '<button type="button" class="cancel" data-act="me-out">로그아웃</button>' : '<button type="button" class="save" data-act="me-in">Google 로그인</button>'}<a class="ghost linkghost" href="2d.html" style="flex:1;margin:0;height:46px">📊 2D 가계부</a></div>
+    <div class="sec" style="margin-top:16px"><span>📖 사용설명서 — 무엇을 누르면 되나요?</span></div>
+    <div class="rows manual">${[['🖥️ 포스 (가정: 노트북)', '이번 달 매출·지출·순익 요약, 매출 입력'], ['🧊 냉장고', '식자재 입력·목록'], ['📦 부자재 창고', '포장재·소모품 입력·목록'], ['💰 금고', '고정비·기타 지출, 순익 계산'], ['📚 장부 책장', '복식장부(자동 분개·시산표)'], ['🧑‍💼 세무담당 직원', 'AI 자동입력 / 직접 입력(수입·고정비·변동비, 항목 관리, 지난달 고정비)'], ['📅 벽걸이 달력', '달력·목록·차트, 날짜 스티커, 내역 삭제'], ['🧑‍🍳 직원', '근태·급여 요약(근태관리 앱 읽기)'], ['💬 칠판', '자유 게시판'], ['🪧 간판 · 📋 게시판 · 🎨 메뉴판', '가게 이름 · 업종 · 테마 바꾸기']].map(([a, b]) => `<div class="row"><div class="l"><b>${a}</b></div><span class="d" style="text-align:right">${b}</span></div>`).join('')}</div>
+    <p class="hintp">드래그로 둘러보고, 가운데 ◎로 겨눠서 탭하거나 가장자리 배지를 누르면 돼요.</p>`;
+}
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || smOpen !== 'me') return; if (b.dataset.act === 'me-out') { closeSm(); logout(); } if (b.dataset.act === 'me-in') { closeSm(); login(); } });
+{ const mk = document.querySelector('.mark'); if (mk) { mk.setAttribute('role', 'button'); mk.tabIndex = 0; mk.style.cursor = 'pointer'; mk.addEventListener('click', () => { firstUse(); if (activeKey) closePanel(); openSm('me'); }); } }
+const _interact_p = interact;
+interact = function (k) { if (k === 'community') { firstUse(); if (activeKey) closePanel(); BBS.posts = null; BBS.form = false; openSm('community' === k ? 'bbs' : k); return; } return _interact_p(k); };
+const _stopLive_p = stopLive; stopLive = function () { BBS.posts = null; _stopLive_p(); };
 
 setCameraFov();
 const seat0 = seatPose();
