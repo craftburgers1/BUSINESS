@@ -3547,7 +3547,7 @@ if (!RM) { cam.pos.add(V3(0, 0.25, 0.5)); cam.yaw = 0.5; cam.pitch = 0.05; } // 
 applyCam();
 applyMode3D(); relabel(); applyModeUI(); syncFridgeItems(); refreshPos(); renderHud(RM); renderAuth();
 const HL = new THREE.Color(0xffb08a);
-let diagN = 0, diagT = performance.now(); const diagEl = DIAG ? Object.assign(document.body.appendChild(document.createElement('pre')), { style: 'position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.72);color:#9f9;font:11px/1.4 monospace;white-space:pre-wrap;max-width:92vw;pointer-events:none' }) : null;
+let diagN = 0, diagT = performance.now(); const diagMs = { pick: 0, anim: 0, render: 0, over: 0, all: 0 }; const diagEl = DIAG ? Object.assign(document.body.appendChild(document.createElement('pre')), { style: 'position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.72);color:#9f9;font:11px/1.4 monospace;white-space:pre-wrap;max-width:92vw;pointer-events:none' }) : null;
 if (SOFT_GPU) setTimeout(() => toast('⚠ 이 브라우저는 그래픽 가속이 꺼져 있어 느릴 수 있어요 — 크롬 설정 › 시스템 › "그래픽 가속 사용"을 켜 주세요', true), 2500);
 const clock0 = { last: performance.now(), t: 0 }, perf = { n: 0, sum: 0, lv: 0, last: performance.now() };
 let started = false;
@@ -3565,7 +3565,7 @@ function frame(now) {
   applyCam(); applyShift();
 
   // 조준 (화면 중앙 레이)
-  const nk = (!activeKey && !camTween) ? pickAt(0, 0) : null;
+  const _t0 = performance.now(); const nk = (!activeKey && !camTween) ? pickAt(0, 0) : null; const _t1 = performance.now();
   if (nk !== aimKey) {
     aimKey = nk; const xh = document.getElementById('xh');
     xh.classList.toggle('aim', !!nk);
@@ -3608,11 +3608,12 @@ function frame(now) {
         if (perf.lv === 1 || perf.lv === 3) { prScale *= 0.78; renderer.setPixelRatio(targetPR()); renderer.setSize(innerWidth, innerHeight); }
         if (perf.lv === 2) { renderer.shadowMap.type = THREE.PCFShadowMap; sun.shadow.map && sun.shadow.map.dispose(); sun.shadow.map = null; sun.shadow.mapSize.set(1024, 1024); renderer.shadowMap.needsUpdate = true; }
         if (perf.lv === 4) { prScale *= 0.85; renderer.setPixelRatio(targetPR()); renderer.setSize(innerWidth, innerHeight); } } } }
-  if (DIAG) { diagN++; if (now - diagT > 1000) { diagEl.textContent = `GPU: ${GPU_NAME}\n${Math.round(diagN * 1000 / (now - diagT))} fps · 화면 ${innerWidth}×${innerHeight} · 배율 ${renderer.getPixelRatio().toFixed(2)} · 화질단계 ${perf.lv}${SOFT_GPU ? '\n⚠ 그래픽 가속 꺼짐(소프트웨어)' : ''}`; diagN = 0; diagT = now; } }
+  if (DIAG) { diagN++; if (now - diagT > 1000) { const f = Math.max(1, diagN), m = k => (diagMs[k] / f).toFixed(1); diagEl.textContent = `GPU: ${GPU_NAME}\nCPU ms/프레임: 조준 ${m('pick')} · 애니 ${m('anim')} · 그리기명령 ${m('render')} · 배지 ${m('over')} · 합계 ${m('all')}\n${Math.round(diagN * 1000 / (now - diagT))} fps · 화면 ${innerWidth}×${innerHeight} · 배율 ${renderer.getPixelRatio().toFixed(2)} · 화질단계 ${perf.lv}${SOFT_GPU ? '\n⚠ 그래픽 가속 꺼짐(소프트웨어)' : ''}`; diagN = 0; diagT = now; for (const k in diagMs) diagMs[k] = 0; } }
   perf.last = now;
-  stepCat(now, T, dt); stepAnims(now); updateParts(dt); stepHud(now);
-  renderer.render(scene, camera);
-  updateOverlays(now);
+  const _t2 = performance.now(); stepCat(now, T, dt); stepAnims(now); updateParts(dt); stepHud(now);
+  const _t3 = performance.now(); renderer.render(scene, camera);
+  const _t4 = performance.now(); updateOverlays(now); const _t5 = performance.now();
+  if (DIAG) { diagMs.pick += _t1 - _t0; diagMs.anim += _t3 - _t2; diagMs.render += _t4 - _t3; diagMs.over += _t5 - _t4; diagMs.all += _t5 - now; }
 
   if (!started) {
     started = true;
