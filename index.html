@@ -710,7 +710,10 @@ const stage = document.getElementById('stage');
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); }
 catch (e) { window.__solo3dFail && window.__solo3dFail(); throw e; }
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, COARSE ? 1.5 : 2));
+// 화질 예산: PC는 창이 커서(예: 2560×1440×2배 = 1,470만 화소) 폰(360×720×1.5배 ≈ 58만)보다 수십 배 많이 그림 → 화소 수 상한을 둠
+const PX_BUDGET = COARSE ? 1.1e6 : 2.4e6; let prScale = 1;
+function targetPR() { const d = window.devicePixelRatio || 1, cap = Math.min(d, COARSE ? 1.5 : 2), fit = Math.sqrt(PX_BUDGET / Math.max(1, innerWidth * innerHeight)); return Math.max(0.5, Math.min(cap, fit) * prScale); }
+renderer.setPixelRatio(targetPR());
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -2361,6 +2364,7 @@ async function copyText(t) {
   try { const ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px;opacity:0'; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
 }
 aiEl.addEventListener('click', async e => {
+  if (e.target.classList.contains('aibg') && !bgTap(aiEl)) return;
   if (e.target.closest('[data-close]')) { closeAi(); return; }
   const b = e.target.closest('[data-copy]'); if (!b) return;
   const t = b.dataset.copy === 'full' ? AI_FULL[MODE] : (aiFood ? AI_SHORT.food : AI_SHORT[MODE]);
@@ -2376,7 +2380,7 @@ aiEl.addEventListener('change', e => { if (e.target.id === 'aiFood') { aiFood = 
    ========================================================= */
 function applyCam() { camera.position.copy(cam.pos); camera.rotation.set(cam.pitch, cam.yaw, 0, 'YXZ'); }
 function onResize() {
-  renderer.setSize(innerWidth, innerHeight); setCameraFov(); updateShiftTarget(); setHudVar();
+  renderer.setPixelRatio(targetPR()); renderer.setSize(innerWidth, innerHeight); setCameraFov(); updateShiftTarget(); setHudVar();
   if (!activeKey && !camTween && view === 'seat') { const s = seatPose(); cam.pos.copy(s.pos); }
 }
 window.addEventListener('resize', onResize);
@@ -2629,6 +2633,13 @@ function renderSm() {
       <p class="hintp">${live ? '☁ 내 장부(2D 가계부)의 가게 이름도 같이 바뀌어요.' : '🧪 체험 모드라 이 기기에만 저장돼요.'}</p></div>`;
   }
 }
+function bgTap(m) { return m._bgDown; }
+// 3D 화면을 탭해서 창을 열면, 손을 뗀 뒤 휴대폰이 같은 자리에 '클릭'을 한 번 더 보냄 → 방금 열린 창의 배경·버튼을 눌러 창이 바로 닫히던 버그 방지
+[smEl, aiEl].forEach(m => {
+  m.addEventListener('pointerdown', e => { m._down = true; m._bgDown = e.target.classList.contains('aibg'); }, true);
+  m.addEventListener('click', e => { if (e.detail > 0 && !m._down) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  new MutationObserver(() => { if (m.classList.contains('open') && !m._wasOpen) { m._down = false; m._bgDown = false; } m._wasOpen = m.classList.contains('open'); }).observe(m, { attributes: true, attributeFilter: ['class'] });
+});
 function openSm(k) {
   smEl.classList.toggle('peek', k === 'menu');
   if (k === 'menu') setView('seat'); // 테마는 가게 전체가 보이는 내 자리 시점에서 비교
@@ -2656,6 +2667,7 @@ async function saveStore(btn) {
   closeSm(); refreshStore(); toast(`🪧 간판을 '${name}'(으)로 바꿨어요`);
 }
 smEl.addEventListener('click', e => {
+  if (e.target.classList.contains('aibg') && !bgTap(smEl)) return; // 열자마자 따라오는 유령 클릭은 무시
   if (e.target.closest('[data-close]')) { closeSm(); return; }
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.m2) { const m = b.dataset.m2; closeSm(); if (m !== MODE) switchMode(m); return; }
@@ -3530,7 +3542,7 @@ if (!RM) { cam.pos.add(V3(0, 0.25, 0.5)); cam.yaw = 0.5; cam.pitch = 0.05; } // 
 applyCam();
 applyMode3D(); relabel(); applyModeUI(); syncFridgeItems(); refreshPos(); renderHud(RM); renderAuth();
 const HL = new THREE.Color(0xffb08a);
-const clock0 = { last: performance.now(), t: 0 }, perf = { n: 0, sum: 0, last: performance.now() };
+const clock0 = { last: performance.now(), t: 0 }, perf = { n: 0, sum: 0, lv: 0, last: performance.now() };
 let started = false;
 function frame(now) {
   const dt = Math.min(0.05, (now - clock0.last) / 1000); clock0.last = now; clock0.t += dt; const T = clock0.t;
@@ -3582,7 +3594,13 @@ function frame(now) {
   const k0 = kst(); hourH.rotation.z = -((+k0.time.slice(0, 2) % 12) + (+k0.time.slice(3)) / 60) / 12 * Math.PI * 2; minH.rotation.z = -(+k0.time.slice(3)) / 60 * Math.PI * 2;
   hourH.position.set(Math.sin(-hourH.rotation.z) * 0.045, Math.cos(hourH.rotation.z) * 0.045, 0.03); minH.position.set(Math.sin(-minH.rotation.z) * 0.07, Math.cos(minH.rotation.z) * 0.07, 0.035);
 
-  if (perf.n < 90 && started) { perf.sum += now - perf.last; perf.n++; if (perf.n === 90 && perf.sum / 90 > 22 && renderer.getPixelRatio() > 1) { renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight); } }
+  // 끊기면 자동으로 화질을 단계적으로 낮춤 (2초마다 확인, 창이 뒤에 있던 시간은 제외)
+  if (started && !document.hidden) { const fd = now - perf.last; if (fd < 250) { perf.sum += fd; perf.n++; }
+    if (perf.n >= 120) { const avg = perf.sum / perf.n; perf.n = 0; perf.sum = 0;
+      if (avg > 21 && perf.lv < 4) { perf.lv++;
+        if (perf.lv === 1 || perf.lv === 3) { prScale *= 0.78; renderer.setPixelRatio(targetPR()); renderer.setSize(innerWidth, innerHeight); }
+        if (perf.lv === 2) { renderer.shadowMap.type = THREE.PCFShadowMap; sun.shadow.map && sun.shadow.map.dispose(); sun.shadow.map = null; sun.shadow.mapSize.set(1024, 1024); renderer.shadowMap.needsUpdate = true; }
+        if (perf.lv === 4) { prScale *= 0.85; renderer.setPixelRatio(targetPR()); renderer.setSize(innerWidth, innerHeight); } } } }
   perf.last = now;
   stepCat(now, T, dt); stepAnims(now); updateParts(dt); stepHud(now);
   renderer.render(scene, camera);
