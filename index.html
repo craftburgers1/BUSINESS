@@ -1409,7 +1409,11 @@ const cam = { pos: V3(0, 1.18, 1.05), yaw: 0, pitch: -0.14 };
 const vel = { yaw: 0, pitch: 0 };
 let camTween = null, view = 'seat';
 const isPortrait = () => innerWidth / innerHeight < 0.8;
-function seatPose() { const pos = V3(-0.05, 1.2, isPortrait() ? 1.45 : 1.4); return Object.assign({ pos }, lookYP(pos, V3(0.05, 1.12, -0.36))); }
+// 내 자리: 카운터에서 한 걸음 뒤(가게가 더 넓게 보이게) + 사용자가 줌(두 손가락·휠)으로 옮긴 만큼
+const ZM = { x: 0, z: 0 }; try { const z = JSON.parse(localStorage.getItem('solo3d_zoom') || 'null'); if (z && isFinite(z.x) && isFinite(z.z)) { ZM.x = z.x; ZM.z = z.z; } } catch (e) {}
+const ZB = { x0: -2.6, x1: 1.45, z0: 0.55, z1: 2.15 }; // 벽·카운터·직원 책상을 뚫지 않는 범위
+function seatBase() { return V3(-0.05, 1.32, isPortrait() ? 2.05 : 1.95); }
+function seatPose() { const b = seatBase(), pos = V3(THREE.MathUtils.clamp(b.x + ZM.x, ZB.x0, ZB.x1), b.y, THREE.MathUtils.clamp(b.z + ZM.z, ZB.z0, ZB.z1)); return Object.assign({ pos }, lookYP(b, V3(0.05, 1.08, -0.36))); }
 function lookYP(from, to) { const d = to.clone().sub(from).normalize(); return { yaw: Math.atan2(-d.x, -d.z), pitch: Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)) }; }
 function visibleFrac() {
   if (!(innerWidth < 720) || !activeKey) return 1;
@@ -1989,7 +1993,7 @@ function updateOverlays(now) {
   const barEl = document.getElementById('bar'), bt = (innerWidth < 720 && document.body.classList.contains('panel-open')) ? innerHeight - panel.offsetHeight : barEl.getBoundingClientRect().top - 10;
   camera.getWorldDirection(tmpF);
   Object.entries(OBJ).forEach(([k, o]) => {
-    if (activeKey || camTween) { o.el.classList.add('hide'); return; }
+    if (o.noPick || (k === 'supply' && MODE === 'home') || activeKey || camTween) { o.el.classList.add('hide'); return; }
     tmpV.copy(o.anchor).project(camera);
     const behind = o.anchor.clone().sub(camera.position).dot(tmpF) < 0;
     let x = tmpV.x, y = tmpV.y; if (behind) { x = -x; y = -y; }
@@ -3655,6 +3659,25 @@ async function bookSheet() {
 pBody.addEventListener('click', e => { if (activeKey !== 'ledger') return; const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.bkp) { BK.period = b.dataset.bkp; BK.msg = ''; BK.link = ''; bookRefresh(); return; }
   if (b.dataset.bk === 'xlsx' && !BK.busy) bookXlsx(); if (b.dataset.bk === 'gs' && !BK.busy) { loadGisScript().catch(() => {}); bookSheet(); } });
+
+/* ---- 🔍 앞뒤 줌: 폰은 두 손가락 벌리기/오므리기, PC는 마우스 휠·터치패드. 보는 방향으로 걸어가듯 이동 ---- */
+const PTS = new Map(); let pinch = null;
+function zoomBy(m) { // m>0: 앞으로
+  if (activeKey || camTween || view !== 'seat' || !m) return;
+  const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), b = seatBase();
+  const nx = THREE.MathUtils.clamp(cam.pos.x + fx * m, ZB.x0, ZB.x1), nz = THREE.MathUtils.clamp(cam.pos.z + fz * m, ZB.z0, ZB.z1);
+  cam.pos.x = nx; cam.pos.z = nz; ZM.x = nx - b.x; ZM.z = nz - b.z; firstUse(true);
+  clearTimeout(zoomBy.t); zoomBy.t = setTimeout(() => { try { localStorage.setItem('solo3d_zoom', JSON.stringify({ x: +ZM.x.toFixed(3), z: +ZM.z.toFixed(3) })); } catch (e) {} }, 400);
+}
+cv.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse') return; PTS.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (PTS.size === 2) { const [a, b] = [...PTS.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) }; if (drag) { drag = null; cv.classList.remove('dragging'); } vel.yaw = vel.pitch = 0; } }, true);
+cv.addEventListener('pointermove', e => { if (!PTS.has(e.pointerId)) return; PTS.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && PTS.size >= 2) { const [a, b] = [...PTS.values()], d = Math.hypot(a.x - b.x, a.y - b.y); zoomBy((d - pinch.d) * 0.0042); pinch.d = d; e.stopImmediatePropagation(); } }, true);
+const ptEnd = e => { PTS.delete(e.pointerId); if (PTS.size < 2 && pinch) { pinch = null; if (drag) drag = null; } };
+cv.addEventListener('pointerup', ptEnd, true); cv.addEventListener('pointercancel', ptEnd, true);
+document.querySelectorAll('[data-view="seat"]').forEach(b => b.addEventListener('pointerdown', () => { b._wasSeat = view === 'seat' && !activeKey && !camTween; }));
+document.querySelectorAll('[data-view="seat"]').forEach(b => b.addEventListener('click', () => { if (!b._wasSeat || (!ZM.x && !ZM.z)) return; ZM.x = ZM.z = 0; try { localStorage.removeItem('solo3d_zoom'); } catch (e) {} moveTo(seatPose(), 0.6); toast('🔄 처음 자리로 돌아왔어요'); }));
+cv.addEventListener('wheel', e => { e.preventDefault(); const k = e.ctrlKey ? 0.012 : (e.deltaMode === 1 ? 0.045 : 0.0012); zoomBy(THREE.MathUtils.clamp(-e.deltaY * k, -0.35, 0.35)); }, { passive: false });
 setCameraFov();
 const seat0 = seatPose();
 cam.pos.copy(seat0.pos); cam.yaw = seat0.yaw; cam.pitch = seat0.pitch;
