@@ -1411,8 +1411,8 @@ let camTween = null, view = 'seat';
 const isPortrait = () => innerWidth / innerHeight < 0.8;
 // 내 자리: 카운터에서 한 걸음 뒤(가게가 더 넓게 보이게) + 사용자가 줌(두 손가락·휠)으로 옮긴 만큼
 const ZM = { x: 0, z: 0 }; try { const z = JSON.parse(localStorage.getItem('solo3d_zoom') || 'null'); if (z && isFinite(z.x) && isFinite(z.z)) { ZM.x = z.x; ZM.z = z.z; } } catch (e) {}
-const ZB = { x0: -2.6, x1: 1.45, z0: 0.55, z1: 2.15 }; // 벽·카운터·직원 책상을 뚫지 않는 범위
-function seatBase() { return V3(-0.05, 1.32, isPortrait() ? 2.05 : 1.95); }
+const ZB = { x0: -2.6, x1: 1.45, z0: 0.55, z1: 5.6 }; // 뒤로는 뒷벽 밖까지(뒷벽은 밖에서 보면 투명 — 인형의 집처럼 가게 전체가 보임) // 벽·카운터·직원 책상을 뚫지 않는 범위
+function seatBase() { return V3(-0.05, 1.36, isPortrait() ? 2.3 : 2.25); }
 function seatPose() { const b = seatBase(), pos = V3(THREE.MathUtils.clamp(b.x + ZM.x, ZB.x0, ZB.x1), b.y, THREE.MathUtils.clamp(b.z + ZM.z, ZB.z0, ZB.z1)); return Object.assign({ pos }, lookYP(b, V3(0.05, 1.08, -0.36))); }
 function lookYP(from, to) { const d = to.clone().sub(from).normalize(); return { yaw: Math.atan2(-d.x, -d.z), pitch: Math.asin(THREE.MathUtils.clamp(d.y, -1, 1)) }; }
 function visibleFrac() {
@@ -3678,6 +3678,9 @@ cv.addEventListener('pointerup', ptEnd, true); cv.addEventListener('pointercance
 document.querySelectorAll('[data-view="seat"]').forEach(b => b.addEventListener('pointerdown', () => { b._wasSeat = view === 'seat' && !activeKey && !camTween; }));
 document.querySelectorAll('[data-view="seat"]').forEach(b => b.addEventListener('click', () => { if (!b._wasSeat || (!ZM.x && !ZM.z)) return; ZM.x = ZM.z = 0; try { localStorage.removeItem('solo3d_zoom'); } catch (e) {} moveTo(seatPose(), 0.6); toast('🔄 처음 자리로 돌아왔어요'); }));
 cv.addEventListener('wheel', e => { e.preventDefault(); const k = e.ctrlKey ? 0.012 : (e.deltaMode === 1 ? 0.045 : 0.0012); zoomBy(THREE.MathUtils.clamp(-e.deltaY * k, -0.35, 0.35)); }, { passive: false });
+// 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
+const _applyCam_far = applyCam;
+applyCam = function () { _applyCam_far(); const out = cam.pos.z > ROOM.z1 - 0.45; if (back.visible === out) back.visible = !out; };
 setCameraFov();
 const seat0 = seatPose();
 cam.pos.copy(seat0.pos); cam.yaw = seat0.yaw; cam.pitch = seat0.pitch;
