@@ -340,6 +340,8 @@ body.ai-open #xh,body.ai-open #tags{opacity:0}
 .mcard.on{border-color:var(--coral);background:#fff6ef}
 #sm .aisheet{width:min(460px,calc(100vw - 32px))}
 body.sm-open #xh,body.sm-open #tags{opacity:0}
+#sm.peek .aibg{background:rgba(60,40,25,.06)}
+@media (min-width:720px){ #sm.peek{align-items:flex-end;padding-bottom:28px} }
 @media (max-width:719px){ #sm .aisheet{width:100%} #sm{transition:bottom .15s} }
 @media (prefers-reduced-motion:reduce){ .tg .b,.blob{animation:none} }
 </style>
@@ -1550,7 +1552,7 @@ function renderPanel() {
     pTag.textContent = home ? '💻 가계부 노트 · 수입/생활비' : `${e1} ${n1} · ${c.inc}`;
     pTitle.textContent = home ? `${mo.k.m}월 가계부` : `${mo.k.m}월 ${c.inc}`;
     h += cards3([c.hud[0], mo.s], [c.hud[1], mo.exp], [c.hud[2], mo.net]);
-    h += `<div class="psum num">${home ? '🧾 생활비' : '👤 개인'} -${mo.p.toLocaleString('ko-KR')}원 · 이번 달 ${mo.sales.length + mo.ing.length + mo.pers.length}건</div>`;
+    h += `<div class="psum num">${home ? '🧾 생활비' : '👤 개인'} -${mo.p.toLocaleString('ko-KR')}원 · 이번 달 ${mo.sales.length + mo.ing.length + mo.pers.length + (mo.sup ? mo.sup.length : 0)}건</div>`;
     if (home && REAL.on && REAL.status === 'ok') h += `<div class="psum">🏠 가정 방은 체험 데이터 · 내 장부는 식당·미용실 방에서</div>`;
     h += `<div class="sec"><span>최근 ${c.inc}</span><span>${mo.sales.length}건</span></div><div class="rows">`;
     const r = recent(mo.sales);
@@ -2342,11 +2344,11 @@ window.addEventListener('resize', onResize);
 window.addEventListener('orientationchange', () => setTimeout(onResize, 200));
 
 /* =========================================================
-   🎨 3D 테마 레이어 (파스텔 / 닌텐도 팝 / 사이버펑크)
+   🎨 3D 테마 레이어 (파스텔 / 크리스마스 / 사이버펑크)
    - 메시·지오메트리·재질 객체는 새로 만들지 않고 값만 바꿈
    - 업종(방) 색 위에 얹는 레이어: 방 색(THEMED) → 테마 변환 순서라 전환 순서와 무관
    ========================================================= */
-const THEME_KEY = 'solo3d_theme', THEMES = ['pastel', 'nintendo', 'cyber'];
+const THEME_KEY = 'solo3d_theme', THEMES = ['pastel', 'xmas', 'cyber'];
 let THEME = (() => { try { const t = localStorage.getItem(THEME_KEY); return THEMES.includes(t) ? t : 'pastel'; } catch (e) { return 'pastel'; } })();
 const THEMED_MAP = new Map(THEMED.map(([m, c]) => [m, c]));
 const TMATS = new Map(); // 재질 → 원래 값(파스텔)
@@ -2366,52 +2368,55 @@ const lineMat = [...THEMED_MAP.entries()].find(([, c]) => c.restaurant === 0xef8
 // 사이버펑크 네온 악센트: [발광색, 세기]
 const NEON = new Map([[lineMat, [0x22e5ff, 1.6]], [wainM, [0x22e5ff, 0.55]], [wainC, [0xff2fb0, 0.55]], [handleM, [0xff2fb0, 1.2]], [posBody, [0x22e5ff, 0.35]], [frameM, [0xb36bff, 0.6]]]);
 if (winInst) NEON.set(winInst.material, null);
+// 크리스마스: 창틀은 전구처럼 따뜻하게, 카운터 앞 라인은 빨갛게, 손잡이는 금빛
+const NEONX = new Map([[frameM, [0xffc46b, 0.55]], [lineMat, [0xff2a2a, 0.9]], [handleM, [0xffb84a, 0.5]]]);
 counter.children.forEach((o, i) => { // 내 쪽에서 보이는 카운터 몸통·수납칸·상자에도 은은한 네온
   const m = o.material, c0 = m && TMATS.has(m) && TMATS.get(m).c; if (!m || NEON.has(m) || c0 == null) return;
   if (i === 0) NEON.set(m, [0x4a1fb8, 0.35]); else if (c0 === 0xead2a8) NEON.set(m, [0x1fb8ff, 0.3]); else if (i > 2) NEON.set(m, [i % 2 ? 0xff2fb0 : 0x22e5ff, 0.32]);
 });
-const NIGHT = new THREE.Color(0x261a5c), hsl = {};
-const POP_H = [2, 46, 128, 208, 332]; // 닌텐도 팝 원색 색상각
+const NIGHT = new THREE.Color(0x261a5c), XWARM = new THREE.Color(0xffd9a8), hsl = {};
+const POP_H = [358, 44, 138]; // 크리스마스: 빨강·금색·초록
 function toneColor(c) {
-  if (THEME === 'nintendo') {
+  if (THEME === 'xmas') {
     c.getHSL(hsl); const chroma = hsl.s * (1 - Math.abs(2 * hsl.l - 1));
-    if (chroma > 0.11 && hsl.l < 0.85) { // 색 있는 물건 → 빨·노·초·파·핑 원색으로 또렷하게 (피부·크림 같은 아주 옅은 면은 제외)
+    if (chroma > 0.11 && hsl.l < 0.85) { // 색 있는 소품 → 크리스마스 빨강·금색·초록 (피부·크림 같은 아주 옅은 면은 제외)
       const h = hsl.h * 360, near = POP_H.reduce((a, b) => Math.abs(((h - b + 540) % 360) - 180) < Math.abs(((h - a + 540) % 360) - 180) ? b : a);
-      c.setHSL(near / 360, 0.86, hsl.l > 0.75 ? 0.58 : 0.5);
-    } else c.setHSL(hsl.h, Math.min(1, hsl.s * 1.2), Math.min(0.97, hsl.l + 0.02)); // 벽·흰 면은 밝은 크림
+      c.setHSL(near / 360, near === 44 ? 0.75 : 0.62, hsl.l > 0.75 ? 0.5 : 0.4);
+    } else { c.setHSL(hsl.h, Math.min(1, hsl.s * 1.05), hsl.l * 0.92); c.lerp(XWARM, 0.12); } // 벽·흰 면은 따뜻한 저녁빛 크림
   } else if (THEME === 'cyber') { c.getHSL(hsl); c.setHSL(hsl.h, Math.min(1, hsl.s * 1.2), hsl.l * 0.38); c.lerp(NIGHT, 0.45); }
 }
 function themeMat(m, s) {
   const base = THEMED_MAP.has(m) ? THEMED_MAP.get(m)[MODE] : s.c;
-  const nin = THEME === 'nintendo', cyb = THEME === 'cyber';
+  const nin = THEME === 'xmas', cyb = THEME === 'cyber';
   if (m.color && base != null) {
     m.color.setHex(base);
     if (cyb && winInst && m === winInst.material) m.color.setHex(0xffd36b); else toneColor(m.color);
   }
-  if (s.r !== undefined) m.roughness = nin ? s.r * 0.55 : cyb ? s.r * 0.7 : s.r;
+  if (s.r !== undefined) m.roughness = nin ? s.r * 0.8 : cyb ? s.r * 0.7 : s.r;
   if (s.me !== undefined) m.metalness = cyb ? Math.min(1, s.me + 0.28) : s.me;
-  if (s.env !== undefined) m.envMapIntensity = nin ? s.env * 1.35 : cyb ? s.env * 1.25 : s.env;
-  if (s.cc > 0) { m.clearcoat = nin ? 1 : s.cc; m.clearcoatRoughness = nin ? 0.08 : s.ccr; } // 0 → 양수로 바꾸지 않음(셰이더 재컴파일 방지)
+  if (s.env !== undefined) m.envMapIntensity = nin ? s.env * 0.9 : cyb ? s.env * 1.25 : s.env;
+  if (s.cc > 0) { m.clearcoat = s.cc; m.clearcoatRoughness = s.ccr; } // 0 → 양수로 바꾸지 않음(셰이더 재컴파일 방지)
   if (s.em !== null) {
-    const neon = cyb && NEON.get(m), em = neon ? neon[0] : s.em, ei = neon ? neon[1] : s.ei;
+    const neon = cyb ? NEON.get(m) : nin ? NEONX.get(m) : null, em = neon ? neon[0] : s.em, ei = neon ? neon[1] : s.ei;
     m.emissive.setHex(em); m.emissiveIntensity = ei;
     if (m.userData.baseEm) { m.userData.baseEm.setHex(em); m.userData.baseEI = ei; } // 조준 하이라이트 기준값도 같이
   }
 }
 function applyTheme() {
-  const nin = THEME === 'nintendo', cyb = THEME === 'cyber';
+  const nin = THEME === 'xmas', cyb = THEME === 'cyber';
   TMATS.forEach((s, m) => themeMat(m, s));
   rbLed.emissive.setHex(cyb ? 0xff2fd0 : 0xff6f5e);
-  hemiL.color.setHex(cyb ? 0x5a4aa8 : nin ? 0xffffff : LBASE.hs); hemiL.groundColor.setHex(cyb ? 0x120a24 : nin ? 0xf2d6a8 : LBASE.hg);
-  hemiL.intensity = cyb ? 0.6 : nin ? 1.0 : LBASE.hi;
-  sun.color.setHex(cyb ? 0x8fb0ff : nin ? 0xfff6e6 : LBASE.sc); sun.intensity = cyb ? 0.45 : nin ? 3.2 : LBASE.si; sun.shadow.radius = nin ? 1.5 : LBASE.sr;
-  pend.color.setHex(cyb ? 0xff4fd8 : LBASE.pc); pend.intensity = cyb ? 6 : nin ? 4.5 : LBASE.pi;
+  hemiL.color.setHex(cyb ? 0x5a4aa8 : nin ? 0xffe2c4 : LBASE.hs); hemiL.groundColor.setHex(cyb ? 0x120a24 : nin ? 0x6a3a2a : LBASE.hg);
+  hemiL.intensity = cyb ? 0.6 : nin ? 0.75 : LBASE.hi;
+  sun.color.setHex(cyb ? 0x8fb0ff : nin ? 0xa8b8ff : LBASE.sc); sun.intensity = cyb ? 0.45 : nin ? 0.55 : LBASE.si; sun.shadow.radius = LBASE.sr;
+  pend.color.setHex(cyb ? 0xff4fd8 : nin ? 0xffb860 : LBASE.pc); pend.intensity = cyb ? 6 : nin ? 7 : LBASE.pi;
   if (cyb) { coralL.color.setHex(0xff2fb0); mintL.color.setHex(0x22e5ff); }
-  coralL.intensity = cyb ? 8 : LBASE.ci; mintL.intensity = cyb ? 8 : LBASE.mi;
-  renderer.toneMappingExposure = cyb ? 1.1 : nin ? 0.98 : LBASE.exp;
+  if (nin) { coralL.color.setHex(0xff3a2a); mintL.color.setHex(0x3fd97a); }
+  coralL.intensity = cyb ? 8 : nin ? 6 : LBASE.ci; mintL.intensity = cyb ? 8 : nin ? 3 : LBASE.mi;
+  renderer.toneMappingExposure = cyb ? 1.1 : nin ? 1.05 : LBASE.exp;
   if (cyb) { scene.background.setHex(0x140c26); scene.fog.color.setHex(0x1b1030); }
-  else if (nin) { const c = scene.background.getHex(); scene.background.setHex(0xbfe8ff); scene.fog.color.setHex(c); }
-  scene.fog.near = cyb ? 5 : nin ? 14 : LBASE.fn; scene.fog.far = cyb ? 18 : nin ? 30 : LBASE.ff;
+  else if (nin) { scene.background.setHex(0x1f2b4d); scene.fog.color.setHex(0x3b3354); }
+  scene.fog.near = cyb ? 5 : nin ? 9 : LBASE.fn; scene.fog.far = cyb ? 18 : nin ? 24 : LBASE.ff;
   document.body.dataset.theme = THEME;
   document.querySelectorAll('.themes [data-t]').forEach(b => { const on = b.dataset.t === THEME; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
 }
@@ -2465,7 +2470,9 @@ function drawSign() {
   const g = signTex.image.getContext('2d'), w = 1024, h = 284, t = THEME, pad = 90;
   g.clearRect(0, 0, w, h);
   if (t === 'cyber') { g.fillStyle = '#120a24'; g.fillRect(0, 0, w, h); g.strokeStyle = '#ff2fb0'; g.lineWidth = 10; g.shadowColor = '#ff2fb0'; g.shadowBlur = 24; rrect(g, 26, 26, w - 52, h - 52, 30); g.stroke(); g.shadowBlur = 0; }
-  else if (t === 'nintendo') { g.fillStyle = '#ffd23f'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffe58a'; rrect(g, 22, 22, w - 44, h - 44, 40); g.fill(); }
+  else if (t === 'xmas') { g.fillStyle = '#1d5a35'; g.fillRect(0, 0, w, h); g.strokeStyle = '#f2c14e'; g.lineWidth = 8; rrect(g, 24, 24, w - 48, h - 48, 26); g.stroke();
+    g.fillStyle = '#ffffff'; for (let i = 0; i < 26; i++) { g.beginPath(); g.arc(40 + i * 37.5, 14 + (i % 3) * 3, 16 + (i * 7) % 9, 0, Math.PI * 2); g.fill(); } // 위쪽 눈 쌓임
+    ['#ff4a3a', '#ffd25e', '#5be08a', '#6fc3ff'].forEach((col, j) => { for (let i = j; i < 22; i += 4) { g.fillStyle = col; g.beginPath(); g.arc(50 + i * 42, h - 30, 7, 0, Math.PI * 2); g.fill(); } }); } // 아래 전구
   else { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#fffaf0'); gr.addColorStop(1, '#f6e6cc'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(150,100,55,.35)'; g.lineWidth = 4; rrect(g, 24, 24, w - 48, h - 48, 26); g.stroke(); }
   let txt = clipName(storeName()) || STORE_DEF[MODE], size = 150;
   const fit = () => { g.font = `800 ${size}px ${SIGNF}`; return g.measureText(txt).width; };
@@ -2473,7 +2480,7 @@ function drawSign() {
   while (fit() > w - pad * 2 && [...txt].length > 2) txt = [...txt].slice(0, -2).join('') + '…';
   g.textAlign = 'center'; g.textBaseline = 'middle'; const cy = h / 2 + size * 0.04;
   if (t === 'cyber') { g.shadowColor = '#22e5ff'; g.shadowBlur = 34; g.fillStyle = '#d8fdff'; g.fillText(txt, w / 2, cy); g.shadowBlur = 12; g.fillText(txt, w / 2, cy); g.shadowBlur = 0; }
-  else if (t === 'nintendo') { g.lineJoin = 'round'; g.lineWidth = Math.max(10, size * 0.14); g.strokeStyle = '#c0261b'; g.strokeText(txt, w / 2, cy); g.fillStyle = '#ffffff'; g.fillText(txt, w / 2, cy); }
+  else if (t === 'xmas') { g.lineJoin = 'round'; g.lineWidth = Math.max(8, size * 0.1); g.strokeStyle = '#b3261e'; g.strokeText(txt, w / 2, cy); g.shadowColor = '#ffd27a'; g.shadowBlur = 18; g.fillStyle = '#fff4d6'; g.fillText(txt, w / 2, cy); g.shadowBlur = 0; }
   else { g.fillStyle = 'rgba(110,70,35,.22)'; g.fillText(txt, w / 2 + 4, cy + 5); g.fillStyle = '#5b3a22'; g.fillText(txt, w / 2, cy); }
   signTex.needsUpdate = true;
 }
@@ -2521,12 +2528,12 @@ function drawMenu() {
   const g = menuTex.image.getContext('2d'), w = 400, h = 304;
   g.fillStyle = '#3f5f52'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 4; rrect(g, 12, 12, w - 24, h - 24, 14); g.stroke();
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fffaf0'; g.font = `800 52px ${SIGNF}`; g.fillText('🎨 테마', w / 2, 74);
-  const T3 = [['pastel', '#f7c6b0', '파스텔'], ['nintendo', '#e8402f', '닌텐도'], ['cyber', '#ff2fb0', '사이버']];
+  const T3 = [['pastel', '#f7c6b0', '파스텔'], ['xmas', '#d62f2f', '크리스마스'], ['cyber', '#ff2fb0', '사이버']];
   T3.forEach(([t, col, lb], i) => {
     const x = 80 + i * 120, on = t === THEME;
     g.fillStyle = col; g.beginPath(); g.arc(x, 168, 34, 0, Math.PI * 2); g.fill();
     if (on) { g.strokeStyle = '#fff'; g.lineWidth = 7; g.beginPath(); g.arc(x, 168, 44, 0, Math.PI * 2); g.stroke(); }
-    g.fillStyle = on ? '#fff' : 'rgba(255,255,255,.7)'; g.font = `${on ? 800 : 600} 24px ${SIGNF}`; g.fillText(lb, x, 238);
+    g.fillStyle = on ? '#fff' : 'rgba(255,255,255,.7)'; g.font = `${on ? 800 : 600} ${lb.length > 4 ? 20 : 24}px ${SIGNF}`; g.fillText(lb, x, 238);
   });
   menuTex.needsUpdate = true;
 }
@@ -2535,12 +2542,12 @@ function drawMenu() {
 // 판 글자면·간판: 테마별로 직접
 const DECO_FACES = [signFaceM, corkFaceM, menuFaceM];
 function applyDecorTheme() {
-  const t = THEME, cyb = t === 'cyber', nin = t === 'nintendo';
-  signFrameM.color.setHex(cyb ? 0x1a1030 : nin ? 0xe8402f : 0xe9cfa6); signFrameM.roughness = cyb ? 0.35 : nin ? 0.3 : 0.6; signFrameM.metalness = cyb ? 0.5 : 0;
+  const t = THEME, cyb = t === 'cyber', nin = t === 'xmas';
+  signFrameM.color.setHex(cyb ? 0x1a1030 : nin ? 0xb3261e : 0xe9cfa6); signFrameM.roughness = cyb ? 0.35 : nin ? 0.45 : 0.6; signFrameM.metalness = cyb ? 0.5 : 0;
   signFrameM.emissive.setHex(cyb ? 0x3a0a5a : 0x000000); signFrameM.emissiveIntensity = cyb ? 0.6 : 1;
-  signTrimM.color.setHex(cyb ? 0x22e5ff : nin ? 0xffffff : 0xc9a57c); signTrimM.emissive.setHex(cyb ? 0x22e5ff : 0x000000); signTrimM.emissiveIntensity = cyb ? 2.2 : 1;
-  signFaceM.emissiveIntensity = cyb ? 0.95 : nin ? 0.16 : 0.1; signFaceM.roughness = nin ? 0.35 : 0.6;
-  corkFaceM.emissiveIntensity = menuFaceM.emissiveIntensity = cyb ? 0.5 : 0.07;
+  signTrimM.color.setHex(cyb ? 0x22e5ff : nin ? 0xf2c14e : 0xc9a57c); signTrimM.emissive.setHex(cyb ? 0x22e5ff : nin ? 0xffb84a : 0x000000); signTrimM.emissiveIntensity = cyb ? 2.2 : nin ? 0.8 : 1;
+  signFaceM.emissiveIntensity = cyb ? 0.95 : nin ? 0.55 : 0.1; signFaceM.roughness = 0.6;
+  corkFaceM.emissiveIntensity = menuFaceM.emissiveIntensity = cyb ? 0.5 : nin ? 0.3 : 0.07;
   [signFrameM, signTrimM, ...DECO_FACES].forEach(m => { if (m.userData.baseEm) { m.userData.baseEm.copy(m.emissive); m.userData.baseEI = m.emissiveIntensity; } });
   drawSign(); drawMenu();
 }
@@ -2572,7 +2579,8 @@ function renderSm() {
     smBody.innerHTML = `<p class="ailead">어떤 가게로 볼까요? 고르면 그 방으로 바로 옮겨가요.</p><div class="mcards">${Object.entries(MODES).map(([m, c]) => `<button type="button" class="mcard${m === MODE ? ' on' : ''}" data-m2="${m}" aria-pressed="${m === MODE}"><i>${c.icon}</i><b>${c.label}</b>${m === MODE ? '<em>지금</em>' : ''}</button>`).join('')}</div>`;
   } else if (smOpen === 'menu') {
     smTitle.textContent = '🎨 테마 메뉴판';
-    smBody.innerHTML = `<p class="ailead">가게 분위기를 골라 보세요. 다음에 열어도 그대로예요.</p><div class="mcards">${[['pastel', '🎨', '파스텔'], ['nintendo', '🎮', '닌텐도 팝'], ['cyber', '🌆', '사이버펑크']].map(([t, i, l]) => `<button type="button" class="mcard${t === THEME ? ' on' : ''}" data-t2="${t}" aria-pressed="${t === THEME}"><i>${i}</i><b>${l}</b>${t === THEME ? '<em>지금</em>' : ''}</button>`).join('')}</div>`;
+    smBody.innerHTML = `<p class="ailead">눌러 보면 뒤의 가게가 바로 바뀌어요. 마음에 들면 [이걸로 할게요]를 눌러 주세요.</p><div class="mcards">${[['pastel', '🎨', '파스텔'], ['xmas', '🎄', '크리스마스'], ['cyber', '🌆', '사이버펑크']].map(([t, i, l]) => `<button type="button" class="mcard${t === THEME ? ' on' : ''}" data-t2="${t}" aria-pressed="${t === THEME}"><i>${i}</i><b>${l}</b>${t === THEME ? '<em>지금</em>' : ''}</button>`).join('')}</div>
+      <button type="button" class="primary" data-act="theme-done" style="margin-top:10px">✓ 이걸로 할게요</button>`;
   } else if (smOpen === 'sign') {
     smTitle.textContent = '🪧 내 가게 간판';
     const live = isLive();
@@ -2583,6 +2591,8 @@ function renderSm() {
   }
 }
 function openSm(k) {
+  smEl.classList.toggle('peek', k === 'menu');
+  if (k === 'menu') setView('seat'); // 테마는 가게 전체가 보이는 내 자리 시점에서 비교
   smOpen = k; renderSm(); smEl.hidden = false; requestAnimationFrame(() => smEl.classList.add('open'));
   document.body.classList.add('sm-open'); vel.yaw = vel.pitch = 0; smEl.querySelector('.aisheet').scrollTop = 0;
   if (k === 'sign') { const i = smBody.querySelector('#smName'); setTimeout(() => { i.focus({ preventScroll: true }); i.select(); }, COARSE ? 320 : 30); }
@@ -2610,7 +2620,8 @@ smEl.addEventListener('click', e => {
   if (e.target.closest('[data-close]')) { closeSm(); return; }
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.m2) { const m = b.dataset.m2; closeSm(); if (m !== MODE) switchMode(m); return; }
-  if (b.dataset.t2) { setTheme(b.dataset.t2); closeSm(); return; }
+  if (b.dataset.t2) { setTheme(b.dataset.t2); renderSm(); return; } // 닫지 않음: 뒤의 가게가 바로 바뀌는 걸 보면서 비교
+  if (b.dataset.act === 'theme-done') { closeSm(); return; }
   if (b.dataset.nm) { const i = smBody.querySelector('#smName'); i.value = b.dataset.nm; i.classList.remove('err'); i.focus({ preventScroll: true }); return; }
   if (b.dataset.act === 'save-store') saveStore(b);
 });
@@ -2633,13 +2644,109 @@ interact = function (k) {
 };
 
 /* =========================================================
+   📦 부자재 창고 (왼쪽 벽, 메뉴판 아래) — 2D 가계부의 포장재·소모품(계정: 소모품비)
+   - 실데이터: users/{uid}/ledger 의 소모품비 항목을 그대로 보여 주고, 저장도 같은 형식(type 'variable')
+   - 체험: 이 기기 DATA.supplies 에만 저장 (Firestore 쓰기 0건)
+   - 주부·가정 방에서는 숨김(가계부 정산표와 합계가 맞도록)
+   ========================================================= */
+const SUP_ACC = '소모품비', SUP_DEF = { restaurant: ['포장재', '소모품'], salon: ['소모품', '포장재'] };
+const SUP_QUICK = { restaurant: ['포장용기', '비닐봉투', '위생장갑', '키친타월', '세제'], salon: ['수건·타월', '일회용 가운', '위생장갑', '키친타월', '세제'] };
+MODES.restaurant.obj.supply = ['📦', '부자재 창고', '탭해서 열기', '부자재'];
+MODES.salon.obj.supply = ['📦', '소모품 창고', '탭해서 열기', '소모품'];
+REAL.cfgVar = null;
+// 2D 가계부 항목(설정의 변동비 목록) 중 소모품비로 잡히는 것 + 기본 포장재·소모품
+const supCats = () => { const base = SUP_DEF[MODE] || SUP_DEF.restaurant, extra = (isLive() && Array.isArray(REAL.cfgVar) ? REAL.cfgVar : []).filter(c => accountOf(c, '') === SUP_ACC); return [...new Set([...base, ...extra])]; };
+let supCat = null;
+function supSample(mode) {
+  const k = kst(), day = n => `${k.ym}-${String(Math.max(1, k.d - n)).padStart(2, '0')}`;
+  const rows = mode === 'salon' ? [[6, '소모품', 38000, '수건·타월'], [3, '소모품', 21000, '일회용 가운'], [1, '포장재', 12000, '쇼핑백']] : [[6, '포장재', 45000, '포장용기'], [4, '소모품', 18000, '위생장갑'], [2, '포장재', 23000, '비닐봉투'], [1, '소모품', 15000, '키친타월']];
+  return rows.map(([n, category, amount, name]) => ({ id: uid(), date: day(n), category, name, amount }));
+}
+const _loadData_sup = loadData;
+loadData = function (mode = MODE) { const d = _loadData_sup(mode); if (mode !== 'home' && !Array.isArray(d.supplies)) { d.supplies = supSample(mode); try { localStorage.setItem(dkey(mode), JSON.stringify(d)); } catch (e) {} } return d; };
+const _makeSample_sup = makeSample;
+makeSample = function (mode = MODE) { const d = _makeSample_sup(mode); if (mode !== 'home') d.supplies = supSample(mode); return d; };
+if (MODE !== 'home' && !Array.isArray(DATA.supplies)) { DATA.supplies = supSample(MODE); saveData(DATA); }
+// 체험 숫자: 부자재도 이번 달 지출에 포함 (가정 방은 해당 없음)
+const _month_sup = month;
+month = function () { const mo = _month_sup(); const sup = MODE === 'home' ? [] : (DATA.supplies || []).filter(x => String(x.date).startsWith(mo.k.ym)); const su = sum(sup); mo.sup = sup; mo.su = su; mo.exp += su; mo.net -= su; return mo; };
+const _journal_sup = journal;
+journal = function (all) { const E = _journal_sup(all); month().sup.forEach(x => { if (x.amount > 0) E.push({ id: x.id, date: x.date, t: '', memo: x.category + ' · ' + x.name, dr: SUP_ACC, cr: '현금', amt: x.amount }); }); return E; };
+// 3D: 왼쪽 벽 메뉴판 아래 수납 선반 (모델이 오면 교체, 없으면 간단한 선반+상자)
+const SUP_AT = [ROOM.x0 + 0.26, 0, -2.2];
+const supply = new THREE.Group(); supply.position.set(SUP_AT[0], 0, SUP_AT[2]); supply.rotation.y = Math.PI / 2; scene.add(supply);
+{ const wd = S(0xe2b886, 0.6, { map: woodTop }); [0.02, 0.5, 0.98].forEach(y => add(supply, RB(1.1, 0.04, 0.42, 0.015), wd, 0, y, 0)); [-0.53, 0.53].forEach(x => add(supply, RB(0.04, 1.0, 0.42, 0.015), wd, x, 0.5, 0));
+  [[-0.3, 0.06, 0xd9b27c], [0.05, 0.06, 0xd9b27c], [0.33, 0.06, 0xfffaf0], [-0.28, 0.54, 0xfffaf0], [0.1, 0.54, 0xc9a57c]].forEach(([x, y, c]) => add(supply, RB(0.28, 0.3, 0.32, 0.02), S(c, 0.8), x, y + 0.15, 0));
+  supply.traverse(o => { if (o.isMesh) snapMat(o.material); }); }
+register('supply', supply, { emoji: '📦', name: '부자재 창고', short: '부자재', chip: '탭해서 열기', anchor: V3(SUP_AT[0] + 0.05, 1.28, SUP_AT[2]),
+  focus: { t: V3(SUP_AT[0], 0.55, SUP_AT[2]), dir: V3(1, 0.45, 0.25), dist: 1.6, fit: 0.65, hh: 0.62 } });
+{ const o = OBJ.supply, el = document.createElement('button'); el.type = 'button'; el.className = 'tg';
+  el.addEventListener('click', e => { e.stopPropagation(); firstUse(); if (el.classList.contains('edge')) setView('supply'); else interact('supply'); });
+  tagsEl.appendChild(el); o.el = el; }
+function supLabel() { const o = OBJ.supply, d = MC().obj.supply || MODES.restaurant.obj.supply; [o.emoji, o.name, o.chip, o.short] = d; o.el.innerHTML = `<span class="b">${o.emoji}</span><span class="e"><span class="ee"></span>${o.emoji} ${o.short}</span>`; o.el.setAttribute('aria-label', o.name + ' 보기'); o.arrow = o.el.querySelector('.ee'); }
+supLabel();
+const _applyMode3D_sup = applyMode3D;
+applyMode3D = function () { _applyMode3D_sup(); supply.visible = MODE !== 'home'; refreshPickable(); };
+const _relabel_sup = relabel; relabel = function () { _relabel_sup(); supLabel(); };
+const _updateOverlays_sup = updateOverlays;
+updateOverlays = function (now) { _updateOverlays_sup(now); if (MODE === 'home') OBJ.supply.el.classList.add('hide'); };
+// 패널
+function renderSupplyPanel() {
+  const live = isLive(), c = MC(), ob = c.obj.supply || MODES.restaurant.obj.supply, cats = supCats();
+  if (!cats.includes(supCat)) supCat = cats[0];
+  let list, total, k;
+  if (live) { const mo = liveMonth(); k = mo.k; list = mo.etc.filter(x => x.acc === SUP_ACC).map(x => ({ id: x.id, date: x.date, label: (x.category || '') + (x.memo ? ' · ' + x.memo : ''), amount: x.amount, category: x.category })); total = sum(list); }
+  else { const mo = month(); k = mo.k; list = mo.sup.map(x => ({ id: x.id, date: x.date, label: x.category + ' · ' + x.name, amount: x.amount, category: x.category })); total = mo.su; }
+  pTag.textContent = `${ob[0]} ${ob[1]} · ${live ? '☁ ' : ''}${SUP_ACC}`; pTitle.textContent = `${k.m}월 ${ob[3]}`;
+  let h = `<div class="big"><span>이번 달 ${ob[3]} 합계 (계정: ${SUP_ACC})</span><b class="num">${won(total)}</b><em>${list.length}건 · ${cats.map(ct => `${ct} ${won(sum(list.filter(x => x.category === ct)))}`).join(' · ')}</em></div>`;
+  h += `<div class="sec"><span>최근 ${ob[3]}</span></div><div class="rows">`;
+  h += list.slice().sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id)).slice(0, 6).map(x => `<div class="row${x.id === lastNewId ? ' new' : ''}"><div class="l"><span class="d num">${md(x.date)}</span><span>${esc(x.label)}</span></div><b class="num">${won(x.amount)}</b></div>`).join('') || `<div class="empty">이번 달 ${ob[3]} 기록이 없어요.</div>`;
+  h += '</div>';
+  h += !formOpen ? `<button class="primary" data-act="open-form">+ ${ob[3]} 입력</button>` : `<div class="form">
+    <div class="field"><label>항목 (2D 가계부와 같은 이름)</label><div class="seg wrap">${cats.map(x => `<button data-sc="${esc(x)}" class="${x === supCat ? 'on' : ''}">${esc(x)}</button>`).join('')}</div></div>
+    <div class="field"><label for="fName">상세 (메모)</label><input id="fName" autocomplete="off" placeholder="예: ${SUP_QUICK[MODE][0]}" maxlength="30" style="font-size:16px">
+    <div class="qk">${SUP_QUICK[MODE].map(q => `<button data-name="${q}">${q}</button>`).join('')}</div></div>
+    ${amtField('예: 23,000')}</div>
+    <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-supply">${live ? LIVE_SAVE : DEMO_SAVE}</button></div></div>`;
+  h += `<p class="hintp">${live ? '2D 가계부와 같은 장부에 저장돼요. 가계부에서는 변동비 → ' : '체험 데이터라 이 기기에만 저장돼요. 로그인하면 2D 가계부의 '}${cats.join('·')} 항목으로 보여요.</p>`;
+  pBody.innerHTML = h; lastNewId = null;
+}
+const _renderPanel_sup = renderPanel;
+renderPanel = function () { if (activeKey === 'supply') { renderSupplyPanel(); return; } _renderPanel_sup(); };
+pBody.addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b || !pBody.contains(b) || activeKey !== 'supply') return;
+  if (b.dataset.sc) { supCat = b.dataset.sc; pBody.querySelectorAll('[data-sc]').forEach(x => x.classList.toggle('on', x === b)); return; }
+  if (b.dataset.act !== 'save-supply') return;
+  const n = pBody.querySelector('#fName'), i = pBody.querySelector('#fAmt'), memo = (n.value || '').trim().slice(0, 30), amount = Number(digits(i.value));
+  if (!amount || amount > 100000000) { i.classList.remove('err'); void i.offsetWidth; i.classList.add('err'); i.focus(); return; }
+  const date = kst().date;
+  if (isLive()) {
+    if (!REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 저장하지 않았어요', true); return; }
+    const id = newLedgerId(), rec = { id, type: 'variable', category: supCat, amount, date, memo, scope: 'store' };
+    b.disabled = true; b.textContent = '저장 중…';
+    try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), rec); }
+    catch (er) { b.disabled = false; b.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 숫자는 바꾸지 않았어요. 다시 시도해 주세요', true); return; }
+    formOpen = false; lastNewId = id; toast('☁ 내 장부에 저장됐어요 (가계부 앱에도 바로 반영)'); liveRefresh();
+  } else {
+    if (!memo) { n.classList.add('err'); n.focus(); return; }
+    const rec = { id: uid(), date, category: supCat, name: memo, amount };
+    (DATA.supplies = DATA.supplies || []).push(rec); saveData(DATA); lastNewId = rec.id; formOpen = false; renderPanel(); renderHud(true); refreshPos();
+  }
+  floatText('−' + won(amount), V3(SUP_AT[0] + 0.3, 1.2, SUP_AT[2]), true);
+  try { navigator.vibrate && navigator.vibrate(14); } catch (er) {}
+});
+// 실데이터 연결 시 2D 설정의 변동비 항목 목록도 읽어 둠
+const _loadStoreName_sup = loadStoreName;
+loadStoreName = function (F, uid) { _loadStoreName_sup(F, uid); F.getDoc(F.doc(REAL.db, 'users', uid, 'settings', 'config')).then(s => { if (REAL.uid === uid) REAL.cfgVar = s.exists() && Array.isArray((s.data() || {}).variable) ? s.data().variable : null; }).catch(() => {}); };
+
+/* =========================================================
    🧸 Magnific 3D 모델 교체 (models/*.glb, 고급 피규어 느낌)
    - 불러오기 성공한 것만 기존 도형을 숨기고 바꿔 끼움 → 실패·오프라인이면 기존 도형 그대로
    - 물건의 뿌리 그룹(위치·배지·탭·하이라이트·테마)은 그대로, 겉모습만 교체
    ========================================================= */
 const MODEL_DIR = 'models/';
 const gltfL = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-const MA = {}, HIDDEN = new Set();
+const MA = {}, HIDDEN = new Set(), SUPPLY_RY = -Math.PI / 2;
 function fitInto(src, { h, w, d, ry = 0, x = 0, z = 0, back = null }) {
   const pivot = new THREE.Group(); src.rotation.y = ry; pivot.add(src); pivot.updateMatrixWorld(true);
   const s = new THREE.Box3().setFromObject(src).getSize(new THREE.Vector3());
@@ -2675,6 +2782,7 @@ const MSPEC = {
   shelf: g => { hideOld(shelf.children.slice()); putModel(g, shelf, { h: 1.18, ry: -Math.PI / 2 }, [shelf]); },
   table: g => { grpRest.children.filter(c => c.isGroup).forEach(t => { hideOld(t.children.slice()); putModel(g, t, { w: 1.6, ry: Math.PI / 2 }); }); },
   salon: g => { grpSalon.children.filter(c => c.isGroup).forEach(t => { hideOld(t.children.filter(m => !(m.geometry && m.geometry.type === 'CircleGeometry'))); putModel(g, t, { h: 1.85, z: 0.05 }); }); },
+  supply: g => { hideOld(supply.children.slice()); putModel(g, supply, { w: 1.1, h: 1.05, d: 0.45, ry: SUPPLY_RY }, [supply]); },
   sofa: g => { const sofaG = grpHome.children.find(c => c.isGroup && Math.abs(c.position.x + 1) < 0.01 && Math.abs(c.position.z + 3.15) < 0.01); if (!sofaG) return;
     hideOld(sofaG.children.slice()); putModel(g, sofaG, { w: 1.85, ry: -Math.PI / 2 }); }
 };
@@ -2713,11 +2821,63 @@ stepCat = function (now, T, dt) {
   if (MA.safe) drawer.visible = an.drw > 0.02;
 };
 function loadModels() {
-  ['staff', 'owner', 'cat', 'robot', 'pos', 'printer', 'laptop', 'safe', 'fridge', 'fridge2', 'shelf', 'table', 'salon', 'sofa'].forEach(n => {
+  ['staff', 'owner', 'cat', 'robot', 'pos', 'printer', 'laptop', 'safe', 'fridge', 'fridge2', 'shelf', 'table', 'salon', 'sofa', 'supply'].forEach(n => {
     gltfL.loadAsync(MODEL_DIR + n + '.glb').then(g => { try { MSPEC[n](g); window.__solo3dModels = (window.__solo3dModels || 0) + 1; } catch (e) { console.warn('model', n, e); } }).catch(() => {});
   });
 }
 loadModels();
+
+/* =========================================================
+   🎄 크리스마스 테마 장식: 트리(반짝이 전구·별·오너먼트) + 선물 상자 + 창밖 눈
+   - 크리스마스 테마에서만 보임 · 새 조명은 만들지 않음(셰이더 재컴파일 없음)
+   ========================================================= */
+const XTREE_AT = [-1.55, 0, -4.1]; // 창가 왼쪽 구석: 식당 테이블·미용실 화장대·소파·스탠드와 안 겹침
+const xmasGrp = new THREE.Group(); xmasGrp.visible = false; scene.add(xmasGrp);
+const xTree = new THREE.Group(); xTree.position.set(XTREE_AT[0], 0, XTREE_AT[2]); xmasGrp.add(xTree);
+{
+  const pine = new THREE.MeshStandardMaterial({ color: 0x2f7d46, roughness: 0.7 }), pineD = new THREE.MeshStandardMaterial({ color: 0x24653a, roughness: 0.75 });
+  add(xTree, CYL(0.07, 0.09, 0.3, 12), new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.8 }), 0, 0.15, 0);
+  add(xTree, CYL(0.2, 0.24, 0.16, 18), new THREE.MeshStandardMaterial({ color: 0xc23a2e, roughness: 0.5 }), 0, 0.08, 0); // 화분
+  [[0.56, 0.62, 0.55, pineD], [0.45, 0.56, 0.95, pine], [0.33, 0.48, 1.3, pineD], [0.2, 0.38, 1.6, pine]].forEach(([r, h, y, m]) => add(xTree, new THREE.ConeGeometry(r, h, 24, 1), m, 0, y, 0));
+  // 별
+  const st = new THREE.Shape(); for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + Math.PI / 2, rr = i % 2 ? 0.045 : 0.11; st[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr, Math.sin(a) * rr); }
+  const starM = new THREE.MeshStandardMaterial({ color: 0xffd25e, emissive: 0xffc23a, emissiveIntensity: 1.2, roughness: 0.3, metalness: 0.4 });
+  const star = add(xTree, new THREE.ExtrudeGeometry(st, { depth: 0.03, bevelEnabled: false }), starM, 0, 1.86, -0.015, false); xmasGrp.userData.star = star;
+  // 오너먼트(3색) + 전구 줄(인스턴스 1개)
+  const ornM = [0xe23b2e, 0xf2c14e, 0x4a9de0].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.2, roughness: 0.25, metalness: 0.3 }));
+  xmasGrp.userData.orn = ornM;
+  let k = 0; [[0.5, 0.42, 7], [0.4, 0.8, 6], [0.29, 1.15, 5], [0.18, 1.45, 4]].forEach(([r, y, n], ti) => { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + ti * 0.6;
+    add(xTree, SPH(0.035, 12, 10), ornM[k++ % 3], Math.cos(a) * r, y, Math.sin(a) * r, false); } });
+  const bulbM = new THREE.MeshStandardMaterial({ color: 0xfff2c4, emissive: 0xffd27a, emissiveIntensity: 1.5, roughness: 0.4 }); xmasGrp.userData.bulb = bulbM;
+  const N = 46, bulbs = new THREE.InstancedMesh(SPH(0.016, 8, 6), bulbM, N), mt = new THREE.Matrix4();
+  for (let i = 0; i < N; i++) { const t = i / N, y = 0.3 + t * 1.42, r = 0.55 * (1 - t) + 0.05, a = t * Math.PI * 2 * 4.2; bulbs.setMatrixAt(i, mt.makeTranslation(Math.cos(a) * r, y, Math.sin(a) * r)); }
+  xTree.add(bulbs);
+  // 선물 상자
+  [[0.42, 0.18, 0.12, 0xd8402f, 0xf2c14e], [-0.38, 0.22, 0.16, 0x2f8f5a, 0xffffff], [0.1, 0.4, 0.1, 0x4a7fd6, 0xffd25e]].forEach(([x, z, s, c, rb]) => {
+    const gg = new THREE.Group(); gg.position.set(x, 0, z); gg.rotation.y = x * 1.3; xTree.add(gg);
+    add(gg, RB(s * 2, s * 1.6, s * 2, 0.012), new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 }), 0, s * 0.8, 0);
+    const rm = new THREE.MeshStandardMaterial({ color: rb, roughness: 0.4 });
+    add(gg, RB(s * 2.04, s * 1.62, s * 0.35, 0.006), rm, 0, s * 0.8, 0, false); add(gg, RB(s * 0.35, s * 1.62, s * 2.04, 0.006), rm, 0, s * 0.8, 0, false);
+  });
+}
+// 창밖 눈
+const snowN = 260, snowPos = new Float32Array(snowN * 3);
+for (let i = 0; i < snowN; i++) { snowPos[i * 3] = -3 + Math.random() * 5; snowPos[i * 3 + 1] = Math.random() * 4; snowPos[i * 3 + 2] = -5.2 - Math.random() * 3; }
+const snowGeo = new THREE.BufferGeometry(); snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+const snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.9, fog: false, depthWrite: false })); xmasGrp.add(snow);
+const _applyMode3D_xmas = applyMode3D;
+applyMode3D = function () { _applyMode3D_xmas(); xmasGrp.visible = THEME === 'xmas'; };
+const _stepCat_xmas = stepCat;
+stepCat = function (now, T, dt) {
+  _stepCat_xmas(now, T, dt);
+  if (!xmasGrp.visible) return;
+  const u = xmasGrp.userData;
+  u.bulb.emissiveIntensity = RM ? 1.5 : 1.1 + Math.abs(Math.sin(T * 2.2)) * 0.9;
+  u.orn.forEach((m, i) => { m.emissiveIntensity = RM ? 0.25 : 0.12 + Math.max(0, Math.sin(T * 1.7 + i * 2.1)) * 0.45; });
+  if (!RM) { u.star.rotation.y = Math.sin(T * 0.8) * 0.35;
+    for (let i = 0; i < snowN; i++) { let y = snowPos[i * 3 + 1] - dt * (0.35 + (i % 7) * 0.05); if (y < 0) y += 4; snowPos[i * 3 + 1] = y; snowPos[i * 3] += Math.sin(T + i) * dt * 0.05; }
+    snowGeo.attributes.position.needsUpdate = true; }
+};
 
 setCameraFov();
 const seat0 = seatPose();
