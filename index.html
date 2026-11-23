@@ -1006,7 +1006,7 @@ const lf = S(0x86c9a5, 0.6);
 [[0, 0.18, 0, 0.07], [0.05, 0.24, 0.02, 0.05], [-0.05, 0.23, -0.01, 0.055], [0.01, 0.29, -0.01, 0.045]].forEach(([x, y, z, r]) => add(plant, SPH(r, 12, 10), lf, x, y, z));
 
 /* ---- 마스코트 인형 = 사장님 (말 걸기) ---- */
-const owner = new THREE.Group(); owner.position.set(0.85, COUNTER_TOP, -0.55); owner.rotation.y = -0.35; scene.add(owner);
+const owner = new THREE.Group(); owner.position.set(0.26, COUNTER_TOP, -0.08); owner.rotation.y = -0.2; scene.add(owner);
 const doll = new THREE.Group(); owner.add(doll);
 const skin = P(0xffe3c8, 0.55), apronM = P(0xef8a74, 0.5), shirtM = P(0xfff2c4, 0.55);
 add(doll, SPH(0.075, 18, 14), shirtM, 0, 0.075, 0).scale.set(1, 0.95, 0.9);
@@ -1251,7 +1251,7 @@ register('fridge', fridge, { emoji: '🧊', name: '냉장고', chip: '탭해서 
 register('ledger', shelf, { emoji: '📚', name: '세무회계 장부', short: '장부', chip: '탭해서 복식장부 열기', anchor: V3(-1.65, 1.38, -1.05),
   focus: { t: V3(-1.65, 0.68, -1.05), dir: V3(0.35, 0.55, 1), dist: 1.6, fit: 0.5, hh: 0.68 } });
 register('cat', cat, { emoji: '🐱', name: '점장 고양이', chip: '쓰다듬기', anchor: V3(-0.17, 1.27, -0.06), focus: null });
-register('owner', owner, { emoji: '🙋', name: '사장님', chip: '말 걸기', anchor: V3(0.85, 1.28, -0.55),
+register('owner', owner, { emoji: '🙋', name: '사장님', chip: '말 걸기', anchor: V3(0.26, 1.28, -0.08),
   focus: null });
 register('staff', staff, { emoji: '🧑‍🍳', name: '직원', chip: '근태·급여 보기', anchor: V3(1.6, 1.2, 0.6),
   focus: { t: V3(1.6, 0.72, 0.6), dir: V3(-0.85, 0.32, 0.45), dist: 1.7, fit: 0.55, hh: 0.62 } });
