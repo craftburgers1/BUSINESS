@@ -174,6 +174,44 @@ body{-webkit-touch-callout:none}
 .hsub{flex:1 0 100%;padding:3px 15px 0;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #toast{position:fixed;z-index:55;left:0;right:0;margin:0 auto;width:max-content;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);transform:translateY(10px);opacity:0;pointer-events:none;max-width:calc(100vw - 24px);padding:10px 15px;border-radius:14px;background:#3f6f5f;color:#fff;font-size:13px;font-weight:700;line-height:1.45;text-align:center;box-shadow:0 8px 24px rgba(40,60,50,.25);transition:opacity .25s,transform .25s}
 #toast.bad{background:#b9543f}
+.aimodal{position:fixed;inset:0;z-index:58;display:flex;align-items:center;justify-content:center;touch-action:none}
+.aibg{position:absolute;inset:0;background:rgba(60,40,25,.35);opacity:0;transition:opacity .25s}
+.aisheet{position:relative;width:min(580px,calc(100vw - 32px));max-height:86vh;max-height:86dvh;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;border-radius:24px;background:#fffaf3;box-shadow:0 20px 60px rgba(80,50,30,.3);transform:translateY(16px) scale(.97);opacity:0;transition:transform .3s cubic-bezier(.2,.9,.25,1.05),opacity .25s}
+.aimodal.open .aibg{opacity:1}.aimodal.open .aisheet{transform:none;opacity:1}
+.aigrab{display:none}
+.aihead{position:sticky;top:0;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:18px 18px 10px;background:#fffaf3}
+.aihead h2{font-size:18px;font-weight:800;line-height:1.35}
+.aix{width:36px;height:36px;flex:none;border-radius:12px;background:rgba(120,88,60,.08);font-size:15px}
+.aibody{padding:0 18px 20px;user-select:text;-webkit-user-select:text}
+.ailead{font-size:13.5px;line-height:1.6;color:var(--ink);margin-bottom:12px}
+.aipros{display:grid;gap:8px;margin-bottom:14px}
+.aipros>div{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:14px;background:#fff;box-shadow:0 2px 8px rgba(110,70,40,.06)}
+.aipros i{font-style:normal;font-size:20px;line-height:1.2}
+.aipros span{font-size:12.5px;color:var(--muted);line-height:1.5;min-width:0}
+.aipros b{display:block;font-size:13.5px;color:var(--ink);margin-bottom:1px}
+.aistep{margin-bottom:12px;padding:14px;border-radius:18px;background:#fff;box-shadow:0 2px 10px rgba(110,70,40,.07)}
+.aistep>em{display:inline-block;font-style:normal;font-size:11px;font-weight:800;color:#fff;background:var(--coral);border-radius:999px;padding:2px 8px;margin-right:6px}
+.aistep>b{font-size:14.5px;font-weight:800}
+.aistep.full{background:linear-gradient(135deg,#fff3e0,#f3eefc)}
+.aired{color:#d9362b;font-weight:800;font-size:13.5px;margin:10px 0 8px;line-height:1.45}
+.aitip{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
+.aitxt{font-size:13px;line-height:1.6;margin-top:8px}
+.aitog{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;margin-bottom:8px;cursor:pointer}
+.aitog input{width:18px;height:18px;accent-color:var(--coral)}
+.aipre{font-size:12.5px;line-height:1.6;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;background:#fbf5ec;border:1px dashed var(--line2);border-radius:12px;padding:10px 12px;color:var(--ink)}
+.aipre.long{max-height:220px;overflow:auto}
+.aibtn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:46px;margin-top:10px;border-radius:14px;font-size:14.5px;font-weight:800;text-decoration:none;color:#fff;background:var(--mint);box-shadow:inset 0 -3px 0 rgba(20,80,60,.2);white-space:nowrap}
+.aibtn.store{background:#5b7fd0;box-shadow:inset 0 -3px 0 rgba(30,50,110,.2)}
+.aibtn.chrome{background:#f7efe4;color:var(--ink);box-shadow:none}
+.aibtn.copy{background:var(--coral);box-shadow:inset 0 -3px 0 rgba(150,60,40,.2)}
+.aibtn.done{background:var(--pos)}
+body.ai-open #xh,body.ai-open #tags{opacity:0}
+@media (max-width:719px){
+  .aimodal{align-items:flex-end}
+  .aisheet{width:100%;max-height:88vh;max-height:88dvh;border-radius:26px 26px 0 0;transform:translateY(100%);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .aigrab{display:block;width:40px;height:5px;border-radius:5px;background:rgba(120,88,60,.18);margin:8px auto 0}
+  .aihead{padding:10px 14px 8px}.aihead h2{font-size:16px}.aibody{padding:0 14px 18px}
+}
 #toast.show{opacity:1;transform:none}
 .seg.wrap{flex-wrap:wrap}.seg.wrap button{flex:1 0 30%}
 .c-live{background:#eef6ff;color:#3b6aa8}
@@ -354,6 +392,10 @@ body{-webkit-touch-callout:none}
 </div>
 <div id="bubble" role="status" aria-live="polite"></div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="ai" class="aimodal" hidden role="dialog" aria-modal="true" aria-labelledby="aiTitle">
+  <div class="aibg" data-close></div>
+  <div class="aisheet"><div class="aigrab"></div><div class="aihead"><h2 id="aiTitle">🤖 AI 비서(피클)로 10초 자동 입력</h2><button class="aix" type="button" data-close aria-label="닫기">✕</button></div><div class="aibody" id="aiBody"></div></div>
+</div>
 
 <aside id="panel" role="dialog" aria-hidden="true" aria-labelledby="pTitle">
   <div class="grab"></div>
@@ -1229,6 +1271,30 @@ function drawBoard() {
 }
 let stWaveT = -1, stNextWave = 4;
 
+/* ---- 🤖 AI 비서 로봇 (직원 옆 바닥 스탠드 위, 메시 15개) ---- */
+const ROBOT_AT = [2.05, 0, 1.0]; // 직원 오른쪽 뒤(벽 쪽): 냉장고·직원 앞 시선과 안 겹침
+const robot = new THREE.Group(); robot.position.set(ROBOT_AT[0], ROBOT_AT[1], ROBOT_AT[2]); robot.rotation.y = -1.36; scene.add(robot);
+const rbFloat = new THREE.Group(); robot.add(rbFloat);
+const rbLed = new THREE.MeshStandardMaterial({ color: 0xff8a7a, emissive: 0xff6f5e, emissiveIntensity: 1.2, roughness: 0.4 });
+{
+  const standM = P(0xf3e6d6, 0.5), standTop = P(0xffe6a3, 0.45), bodyM = P(0xbfe3f3, 0.4, { clearcoat: 0.8 }), headM = P(0xfffaf3, 0.35, { clearcoat: 0.8 });
+  const faceM = S(0x3f4a66, 0.3), eyeM = new THREE.MeshStandardMaterial({ color: 0x9ff0ff, emissive: 0x6fe6ff, emissiveIntensity: 1.1, roughness: 0.3 }), armM = P(0xc9b3ef, 0.45);
+  add(robot, CYL(0.15, 0.17, 0.03, 24), standM, 0, 0.015, 0);
+  add(robot, CYL(0.028, 0.034, 0.2, 12), standM, 0, 0.13, 0);
+  add(robot, CYL(0.13, 0.12, 0.03, 24), standTop, 0, 0.245, 0);
+  rbFloat.position.y = 0.27;
+  add(rbFloat, RB(0.2, 0.15, 0.16, 0.06), bodyM, 0, 0.1, 0);
+  add(rbFloat, CYL(0.03, 0.03, 0.008, 16), S(0xffd56b, 0.4), 0, 0.11, 0.082, false).rotation.x = Math.PI / 2;
+  const hd = new THREE.Group(); hd.position.y = 0.26; rbFloat.add(hd);
+  add(hd, SPH(0.1, 20, 16), headM, 0, 0, 0).scale.set(1.12, 0.95, 1);
+  add(hd, RB(0.15, 0.085, 0.02, 0.035), faceM, 0, -0.005, 0.088, false);
+  add(hd, SPH(0.014, 10, 8), eyeM, -0.035, 0, 0.1, false); add(hd, SPH(0.014, 10, 8), eyeM, 0.035, 0, 0.1, false);
+  add(hd, CYL(0.006, 0.006, 0.07, 6), S(0x8f7a69, 0.5), 0, 0.12, 0, false);
+  add(hd, SPH(0.022, 12, 10), rbLed, 0, 0.165, 0, false);
+  const arm = side => { const p = new THREE.Group(); p.position.set(0.115 * side, 0.14, 0); rbFloat.add(p); add(p, new THREE.CapsuleGeometry(0.022, 0.07, 4, 8), armM, 0, -0.04, 0); p.rotation.z = 0.35 * side; return p; };
+  arm(-1); arm(1);
+}
+
 /* ---- 상호작용 등록 ---- */
 const OBJ = {};
 function bindRoot(key, root) {
@@ -1255,6 +1321,8 @@ register('owner', owner, { emoji: '🙋', name: '사장님', chip: '말 걸기',
   focus: null });
 register('staff', staff, { emoji: '🧑‍🍳', name: '직원', chip: '근태·급여 보기', anchor: V3(1.6, 1.2, 0.6),
   focus: { t: V3(1.6, 0.72, 0.6), dir: V3(-0.85, 0.32, 0.45), dist: 1.7, fit: 0.55, hh: 0.62 } });
+register('robot', robot, { emoji: '🤖', name: 'AI 비서', chip: '탭해서 자동입력', short: 'AI 비서', anchor: V3(ROBOT_AT[0], 0.86, ROBOT_AT[2]),
+  focus: { t: V3(ROBOT_AT[0], 0.45, ROBOT_AT[2]), dir: V3(-0.9, 0.45, 0.55), dist: 1.3, fit: 0.35, hh: 0.42 } });
 let PICKABLE = [];
 const refreshPickable = () => { PICKABLE = Object.values(OBJ).filter(o => o.root.visible).map(o => o.root); };
 const CAT_AT = { counter: [V3(-0.17, COUNTER_TOP, -0.06), 0.25, 1, V3(-0.17, 1.27, -0.06)], sofa: [V3(-0.62, SOFA_SEAT, -3.05), 0.15, 1.7, V3(-0.62, SOFA_SEAT + 0.62, -3.05)] };
@@ -1269,6 +1337,7 @@ function applyMode3D() {
   pos.visible = printer.visible = !home; laptop.visible = home;
   homeDrawers.visible = home; lock.visible = coinSlot.visible = !home;
   bow.visible = salon;
+  robot.visible = true; // 🤖 AI 비서: 3개 방 모두
   stCap.visible = m === 'restaurant'; stBand.visible = salon; stApronMesh.visible = !home; boardGrp.visible = home;
   const ca = CAT_AT[home ? 'sofa' : 'counter']; cat.position.copy(ca[0]); cat.rotation.y = ca[1]; cat.scale.setScalar(ca[2]);
   OBJ.cat.anchor = ca[3]; OBJ.cat.baseY = cat.position.y;
@@ -1651,6 +1720,7 @@ function interact(k) {
   firstUse();
   if (k === 'owner') { ownerTalk(); return; }
   if (k === 'cat') { catPet(); return; }
+  if (k === 'robot') { openAi(); return; }
   if (activeKey === k) return;
   const prev = activeKey; activeKey = k; formOpen = false; fixedEdit = false; ledgerMore = false; ledgerAll = false;
   if (prev === 'fridge') fridgeOpen(false); if (prev === 'safe') drawerOpen(false);
@@ -1843,6 +1913,7 @@ function switchMode(m) {
     DATA = loadData(m); saleChannel = MC().channels[0]; ledgerAll = false;
     parts.forEach(p => scene.remove(p.m)); parts.length = 0;
     applyMode3D(); relabel(); applyModeUI(); syncFridgeItems(); refreshPos(); renderAuth();
+    if (aiOpen) { aiFood = MODE === 'restaurant'; renderAi(); }
     const st = seatPose(); camTween = null; vel.yaw = vel.pitch = 0; view = 'seat';
     cam.pos.copy(st.pos).add(V3(0, 0.1, 0.3)); cam.yaw = st.yaw + 0.22; cam.pitch = st.pitch + 0.05; applyCam();
     moveTo(st, 0.6);
@@ -1883,6 +1954,18 @@ function updateOverlays(now) {
       o.el.style.transform = `translate3d(${ex.toFixed(1)}px,${ey.toFixed(1)}px,0) translate(-50%,-50%)`;
     }
   });
+  // 🤖 로봇 칩만: 다른 배지와 겹치면 위아래로 비켜서기 (다른 배지 위치는 그대로)
+  const ro = OBJ.robot;
+  if (ro && ro.el && !ro.el.classList.contains('hide')) {
+    const others = Object.values(OBJ).filter(o => o !== ro && o.el && !o.el.classList.contains('hide')).map(o => o.el.getBoundingClientRect());
+    let rr = ro.el.getBoundingClientRect(), dy = 0;
+    const hit = r => others.some(q => q.width && !(r.right <= q.left || q.right <= r.left || r.bottom <= q.top || q.bottom <= r.top));
+    for (let k = 1; k <= 6 && hit({ left: rr.left, right: rr.right, top: rr.top + dy, bottom: rr.bottom + dy }); k++) {
+      const step = (rr.height + 6) * Math.ceil(k / 2) * (k % 2 ? 1 : -1), top = rr.top + step;
+      dy = (top > hb && top + rr.height < bt) ? step : dy;
+    }
+    if (dy) ro.el.style.transform += ` translateY(${dy}px)`;
+  }
   for (let i = floats.length - 1; i >= 0; i--) {
     const f = floats[i], t = (now - f.s) / f.d;
     if (t >= 1) { f.el.remove(); floats.splice(i, 1); continue; }
@@ -1939,6 +2022,7 @@ cv.addEventListener('pointerup', e => endDrag(e, false));
 cv.addEventListener('contextmenu', e => e.preventDefault());
 cv.addEventListener('pointercancel', e => endDrag(e, true));
 window.addEventListener('keydown', e => {
+  if (aiOpen) { if (e.key === 'Escape') closeAi(); return; }
   if (e.target && e.target.tagName === 'INPUT') return;
   if (e.key === 'Escape') { closePanel(); return; }
   if ((e.key === ' ' || e.key === 'Enter') && !activeKey && aimKey && document.activeElement === document.body) { e.preventDefault(); interact(aimKey); return; }
@@ -2151,6 +2235,111 @@ const toastEl = document.getElementById('toast'); let toastT = 0;
 function toast(msg, bad) { toastEl.textContent = msg; toastEl.classList.toggle('bad', !!bad); toastEl.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 3200); }
 
 /* =========================================================
+   🤖 AI 비서(피클) 자동입력 안내 — 별도 오버레이
+   ========================================================= */
+const LEDGER_URL = 'https://craftburgers1.github.io/BUSINESS/', STAFF_URL2 = 'https://craftburgers1.github.io/craftburger/';
+const AI_SHORT = {
+  restaurant: `내 솔로운영 가계부(${LEDGER_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
+  salon: `내 솔로운영 가계부(${LEDGER_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 재료·소모품 주문내역, 그리고 시술 매출 내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
+  home: `내 솔로운영 가계부(${LEDGER_URL})에 들어가서 이 장보기·생활비 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
+  food: `내 솔로운영 가계부(${LEDGER_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.`
+};
+const AI_FULL = {
+  restaurant: `너는 내 매장 전담 비서야. 내 솔로운영 가계부(${LEDGER_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
+
+[진행 순서]
+1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 '이 앱들과 너를 연결하면 내 가게 운영이 구체적으로 어떻게 편해지는지' 쉽고 상세하게 먼저 브리핑해 줘.
+2단계(확인 후 연결): 내가 좋다고 하면 그때부터 가계부·근태앱·배달앱·쇼핑몰을 하나씩 차근차근 연결하자.
+
+[세팅할 자동화 루틴 4가지]
+1. 매일 새벽 3시: 포스·배달앱(배민·쿠팡이츠·요기요·땡겨요) 전날 매출만 가계부에 자동 기록 (수수료·배달비는 매일 넣으면 정산이 안 맞으니 매월 1일 월말 정산내역서 기준으로 한 번에 정리)
+2. 매일 자정: 배민·쿠팡이츠·네이버 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)
+3. 지출 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력
+4. 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.`,
+  salon: `너는 내 미용실 전담 비서야. 내 솔로운영 가계부(${LEDGER_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
+
+[진행 순서]
+1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 '이 앱들과 너를 연결하면 내 미용실 운영이 구체적으로 어떻게 편해지는지' 쉽고 상세하게 먼저 브리핑해 줘.
+2단계(확인 후 연결): 내가 좋다고 하면 그때부터 가계부·근태앱·예약·쇼핑몰을 하나씩 차근차근 연결하자.
+
+[세팅할 자동화 루틴 4가지]
+1. 매일 새벽 3시: 포스·네이버 예약 기준 전날 시술 매출만 가계부에 자동 기록 (카드 수수료는 매일 넣으면 정산이 안 맞으니 매월 1일 월말 정산내역 기준으로 한 번에 정리)
+2. 매일 자정: 네이버·카카오 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)
+3. 재료 주문 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 재료·소모품 주문내역은 날짜·항목별로 가계부에 입력
+4. 시술 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.`,
+  home: `너는 우리집 살림 전담 비서야. 내 솔로운영 가계부(${LEDGER_URL})를 연결해 두고 아래 자동화를 맡아 줘.
+
+[진행 순서]
+1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 가계부 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 '이 앱과 너를 연결하면 우리집 살림이 구체적으로 어떻게 편해지는지' 쉽고 상세하게 먼저 브리핑해 줘.
+2단계(확인 후 연결): 내가 좋다고 하면 그때부터 가계부·카드내역·쇼핑몰을 하나씩 차근차근 연결하자.
+
+[세팅할 자동화 루틴 4가지]
+1. 매월 1일: 관리비·공과금·통신비·보험료 같은 고정지출을 정리해 가계부에 기록하고, 빠진 항목이 있으면 나에게 알림
+2. 장보기 정리: 내가 보내는 장보기 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력
+3. 카드내역 정리: 내가 보내는 카드 사용내역(문자·캡처)을 보고 생활비 항목별로 가계부에 입력
+4. 매주 일요일 밤: 이번 주 지출을 항목별로 정리해서 보고하고, 평소보다 많이 쓴 항목은 알려 줘.`
+};
+const aiEl = document.getElementById('ai'), aiBody = document.getElementById('aiBody');
+let aiOpen = false, aiFood = false;
+function pickleLinks() {
+  const ua = navigator.userAgent || '', android = /Android/i.test(ua), ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const inApp = android && /KAKAOTALK|NAVER\(inapp|NAVER|Instagram|FBAN|FBAV|FB_IAB|Line\//i.test(ua);
+  const store = android ? 'https://play.google.com/store/apps/details?id=com.pickle.client' : ios ? 'https://apps.apple.com/kr/app/id6795790129' : 'https://pickle.com';
+  return { android, ios, inApp, store, label: android ? 'Play 스토어에서 피클 설치·열기' : ios ? 'App Store에서 피클 설치·열기' : '피클 홈페이지 열기',
+    chrome: 'intent://play.google.com/store/apps/details?id=com.pickle.client#Intent;scheme=https;package=com.android.chrome;end' };
+}
+function renderAi() {
+  const L = pickleLinks(), short = aiFood ? AI_SHORT.food : AI_SHORT[MODE], full = AI_FULL[MODE];
+  aiBody.innerHTML = `
+    <p class="ailead">피클(Pickle) AI 비서 앱에 영수증 사진이나 정산·주문 내역을 보내면, 이 가계부에 대신 입력하도록 연결하는 방법입니다.</p>
+    <div class="aipros">
+      <div><i>🧾</i><span><b>영수증 사진만 보내면 자동 입력</b>찍어서 보내기만 하면 날짜·카테고리·금액별로 정리해요.</span></div>
+      <div><i>💰</i><span><b>배달앱·포스 매출은 매일 자동 기록</b>수수료·배달비는 월말 정산서 기준으로 한 번에 맞춰요.</span></div>
+      <div><i>💬</i><span><b>매일 자정 리뷰 답글 + 부정 리뷰 즉시 알림</b>좋은 리뷰엔 답글, 아쉬운 리뷰는 바로 알려 줘요.</span></div>
+      <div><i>📅</i><span><b>예약·주문 메일 오면 알림 + 캘린더 등록</b>놓치는 예약 없이 일정에 바로 넣어 줘요.</span></div>
+    </div>
+    <div class="aistep"><em>1단계</em><b>피클 앱 설치하기</b>
+      <a class="aibtn store" href="${L.store}" target="_blank" rel="noopener">📲 ${L.label}</a>
+      ${L.inApp ? `<p class="aitip">지금 카카오톡·네이버 같은 앱 안의 브라우저예요. 스토어가 안 열리면 크롬으로 열어 주세요.</p><a class="aibtn chrome" href="${L.chrome}">🌐 크롬으로 열기</a>` : ''}
+      <p class="aitip">이미 설치하셨다면 스토어에서 [열기]를 누르면 돼요.</p></div>
+    <div class="aistep"><em>2단계</em><b>피클에게 보낼 말 복사하기</b>
+      <p class="aired">복사 후 피클 앱 채팅창에 붙여넣으세요!</p>
+      <label class="aitog"><input type="checkbox" id="aiFood" ${aiFood ? 'checked' : ''}><span>🍽️ 식당·카페예요</span></label>
+      <div class="aipre" id="aiShort">${esc(short)}</div>
+      <button class="aibtn copy" data-copy="short">📋 피클에게 보낼 말 복사</button></div>
+    <div class="aistep"><em>3단계</em><b>영수증·정산 내역 보내기</b>
+      <p class="aitxt">피클 채팅창에 영수증 사진이나 정산·주문 내역 캡처를 보내세요. 처음 한 번만 피클 브라우저에서 가계부에 직접 로그인해 두면, 다음부터는 사진만 보내도 알아서 입력해 줘요.</p></div>
+    <div class="aistep full"><b>🚀 더 많이 자동화하고 싶다면 (자영업자 풀세팅)</b>
+      <p class="aired">아래 프롬프트를 복사해서 피클 앱 채팅창에 그대로 붙여넣어 주세요!</p>
+      <div class="aipre long" id="aiFull">${esc(full)}</div>
+      <button class="aibtn copy" data-copy="full">📋 풀세팅 루틴 프롬프트 복사</button></div>`;
+}
+function openAi() {
+  aiFood = MODE === 'restaurant'; renderAi();
+  aiEl.hidden = false; requestAnimationFrame(() => aiEl.classList.add('open')); aiOpen = true;
+  document.body.classList.add('ai-open'); vel.yaw = vel.pitch = 0;
+  aiEl.querySelector('.aisheet').scrollTop = 0; aiEl.querySelector('.aix').focus({ preventScroll: true });
+}
+function closeAi() {
+  if (!aiOpen) return; aiOpen = false; aiEl.classList.remove('open'); document.body.classList.remove('ai-open');
+  setTimeout(() => { if (!aiOpen) aiEl.hidden = true; }, 280);
+}
+async function copyText(t) {
+  try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(t); return true; } } catch (e) {}
+  try { const ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px;opacity:0'; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
+}
+aiEl.addEventListener('click', async e => {
+  if (e.target.closest('[data-close]')) { closeAi(); return; }
+  const b = e.target.closest('[data-copy]'); if (!b) return;
+  const t = b.dataset.copy === 'full' ? AI_FULL[MODE] : (aiFood ? AI_SHORT.food : AI_SHORT[MODE]);
+  const ok = await copyText(t), label = b.textContent;
+  if (ok) { b.textContent = '✅ 복사 완료!'; b.classList.add('done'); setTimeout(() => { b.textContent = label; b.classList.remove('done'); }, 2000); }
+  else toast('복사하지 못했어요 — 문구를 길게 눌러 직접 복사해 주세요', true);
+});
+aiEl.addEventListener('change', e => { if (e.target.id === 'aiFood') { aiFood = e.target.checked; document.getElementById('aiShort').textContent = aiFood ? AI_SHORT.food : AI_SHORT[MODE]; } });
+['pointerdown', 'pointermove', 'pointerup', 'wheel', 'touchmove'].forEach(t => aiEl.addEventListener(t, e => e.stopPropagation(), { passive: true }));
+
+/* =========================================================
    11. 크기 변경 · 루프
    ========================================================= */
 function applyCam() { camera.position.copy(cam.pos); camera.rotation.set(cam.pitch, cam.yaw, 0, 'YXZ'); }
@@ -2206,6 +2395,9 @@ function frame(now) {
     if (t >= 1) { waveT = -1; dArmR.rotation.z = 0.2; doll.position.y = 0; }
     else { const up = t < 0.15 ? easeOut(t / 0.15) : t > 0.85 ? 1 - easeIO((t - 0.85) / 0.15) : 1; dArmR.rotation.z = 0.2 + up * (2.3 + Math.sin(t * 30) * 0.4); doll.position.y = Math.abs(Math.sin(t * Math.PI * 3)) * 0.03 * (1 - t); }
   }
+  // 🤖 로봇: 둥실 + 안테나 깜빡
+  if (!RM) { rbFloat.position.y = 0.27 + Math.sin(T * 2.2) * 0.018; rbFloat.rotation.y = Math.sin(T * 0.7) * 0.25; }
+  rbLed.emissiveIntensity = RM ? 1 : (Math.sin(T * 5) > 0.2 ? 1.6 : 0.25);
   // 직원: 살짝 흔들 + 가끔 손 흔들기
   if (!RM) { stBody.rotation.z = Math.sin(T * 1.3) * 0.035; stHead.rotation.y = Math.sin(T * 0.8) * 0.15; stNextWave -= dt; if (stNextWave < 0 && stWaveT < 0) { stWaveT = now; stNextWave = 6 + Math.random() * 4; } }
   if (stWaveT > 0) {
