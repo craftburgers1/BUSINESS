@@ -1379,7 +1379,7 @@ register('staff', staff, { emoji: '🧑‍🍳', name: '직원', chip: '근태·
 register('robot', robot, { emoji: '🤖', name: 'AI 비서', chip: '탭해서 자동입력', short: 'AI 비서', anchor: V3(ROBOT_AT[0], 0.86, ROBOT_AT[2]),
   focus: { t: V3(ROBOT_AT[0], 0.45, ROBOT_AT[2]), dir: V3(-0.9, 0.45, 0.55), dist: 1.3, fit: 0.35, hh: 0.42 } });
 let PICKABLE = [];
-const refreshPickable = () => { PICKABLE = Object.values(OBJ).filter(o => o.root.visible).map(o => o.root); };
+const refreshPickable = () => { PICKABLE = Object.values(OBJ).filter(o => o.root.visible && !o.noPick).map(o => o.root); };
 const CAT_AT = { counter: [V3(CAT_FLOOR[0], CAT_FLOOR[1], CAT_FLOOR[2]), -0.8, 1.25, V3(CAT_FLOOR[0], 0.2, CAT_FLOOR[2])], sofa: [V3(-0.62, SOFA_SEAT, -3.05), 0.15, 1.7, V3(-0.62, SOFA_SEAT + 0.62, -3.05)] };
 // 업종 바꾸기: 색·물건·라벨을 그 방에 맞게
 function applyMode3D() {
@@ -3331,7 +3331,7 @@ function renderMe() {
   smBody.innerHTML = `<div class="stcard">${live ? `<b>🔐 Google 계정 로그인 중</b><p>${esc(u.email || '구글 계정 정보 없음')}</p><p>모든 장부 데이터는 이 구글 계정에 실시간으로 저장돼요. 2D 가계부와 같은 장부예요.</p>` : `<b>🧪 체험 모드</b><p>지금은 이 기기에만 저장되는 체험 데이터예요. 로그인하면 2D 가계부와 같은 내 장부로 바뀌어요.</p>`}</div>
     <div class="factions">${live ? '<button type="button" class="cancel" data-act="me-out">로그아웃</button>' : '<button type="button" class="save" data-act="me-in">Google 로그인</button>'}<a class="ghost linkghost" href="2d.html" style="flex:1;margin:0;height:46px">📊 2D 가계부</a></div>
     <div class="sec" style="margin-top:16px"><span>📖 사용설명서 — 무엇을 누르면 되나요?</span></div>
-    <div class="rows manual">${[['🖥️ 포스 (가정: 노트북)', '이번 달 매출·지출·순익 요약, 매출 입력'], ['🧊 냉장고', '식자재 입력·목록'], ['📦 부자재 창고', '포장재·소모품 입력·목록'], ['💰 금고', '고정비·기타 지출, 순익 계산'], ['📚 장부 책장', '복식장부(자동 분개·시산표)'], ['🧑‍💼 세무담당 직원', 'AI 자동입력 / 직접 입력(수입·고정비·변동비, 항목 관리, 지난달 고정비)'], ['📅 벽걸이 달력', '달력·목록·차트, 날짜 스티커, 내역 삭제'], ['🧑‍🍳 직원', '근태·급여 요약(근태관리 앱 읽기)'], ['💬 칠판', '자유 게시판'], ['🪧 간판 · 📋 게시판 · 🎨 메뉴판', '가게 이름 · 업종 · 테마 바꾸기'], ['📲 오른쪽 위 버튼', '홈 화면에 앱처럼 추가']].map(([a, b]) => `<div class="row"><div class="l"><b>${a}</b></div><span class="d" style="text-align:right">${b}</span></div>`).join('')}</div>
+    <div class="rows manual">${[['🖥️ 포스 (가정: 노트북)', '이번 달 매출·지출·순익 요약, 매출 입력'], ['🧊 냉장고', '식자재 입력·목록'], ['📦 부자재 창고', '포장재·소모품 입력·목록'], ['💰 금고', '고정비·기타 지출, 순익 계산'], ['🧑‍💼 세무담당 직원', 'AI 자동입력 / 직접 입력(수입·고정비·변동비, 항목 관리, 지난달 고정비) · 세무회계 장부(복식장부·시산표) · 영수증함 · 홈택스/카드 엑셀'], ['📅 벽걸이 달력', '달력·목록·차트, 날짜 스티커, 내역 삭제'], ['🧑‍🍳 직원', '근태·급여 요약(근태관리 앱 읽기)'], ['💬 칠판', '자유 게시판'], ['🪧 간판 · 📋 게시판 · 🎨 메뉴판', '가게 이름 · 업종 · 테마 바꾸기'], ['📲 오른쪽 위 버튼', '홈 화면에 앱처럼 추가']].map(([a, b]) => `<div class="row"><div class="l"><b>${a}</b></div><span class="d" style="text-align:right">${b}</span></div>`).join('')}</div>
     <p class="hintp">드래그로 둘러보고, 가운데 ◎로 겨눠서 탭하거나 가장자리 배지를 누르면 돼요.</p>`;
 }
 smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || smOpen !== 'me') return; if (b.dataset.act === 'me-out') { closeSm(); logout(); } if (b.dataset.act === 'me-in') { closeSm(); login(); } });
@@ -3592,6 +3592,17 @@ function installApp() {
 document.getElementById('instBtn').addEventListener('click', installApp);
 const _renderSm_inst = renderSm;
 renderSm = function () { if (smOpen === 'install') return renderInstall(); _renderSm_inst(); };
+
+/* ---- 📚 세무회계 장부(복식장부·시산표)는 세무담당 직원이 맡음: 책장은 장식으로만 ---- */
+OBJ.ledger.noPick = true; OBJ.ledger.focus = OBJ.robot.focus; refreshPickable();
+const _updateOverlays_book = updateOverlays;
+updateOverlays = function (now) { _updateOverlays_book(now); OBJ.ledger.el.classList.add('hide'); };
+const _renderClerk_book = renderClerk;
+renderClerk = function () { _renderClerk_book(); const g = smBody.querySelector('.mcards'); if (!g) return;
+  const card = `<button type="button" class="mcard" data-clerk="book"><i>📚</i><b>${MODE === 'home' ? '정산표' : '세무회계 장부'}</b></button>`;
+  const after = g.querySelector('[data-clerk=manual]'); if (after) after.insertAdjacentHTML('afterend', card); else g.insertAdjacentHTML('beforeend', card);
+  const h = smBody.querySelector('.hintp'); if (h) h.textContent = '세무회계 장부에서 자동 분개된 복식장부·시산표를 볼 수 있어요. 직접 입력은 2D 가계부처럼 수입/매출 · 고정비 · 변동비로 나눠 적어요.'; };
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || smOpen !== 'clerk' || b.dataset.clerk !== 'book') return; closeSm(); setTimeout(() => interact('ledger'), 200); });
 setCameraFov();
 const seat0 = seatPose();
 cam.pos.copy(seat0.pos); cam.yaw = seat0.yaw; cam.pitch = seat0.pitch;
