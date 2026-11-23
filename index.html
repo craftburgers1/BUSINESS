@@ -464,6 +464,44 @@
         </div>
     </div>
 
+    <!-- v16: 🧾 영수증함 모달 -->
+    <div id="receiptBoxModal" onclick="if (event.target === this) closeReceiptBox()" role="dialog" aria-modal="true" aria-labelledby="receiptBoxTitle" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="ios-card bg-white w-full max-w-lg p-5 space-y-3 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                <h3 id="receiptBoxTitle" class="text-sm font-bold text-slate-900">🧾 영수증함</h3>
+                <button type="button" onclick="closeReceiptBox()" aria-label="닫기" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <input type="month" id="receiptMonth" onchange="renderReceiptBox()" class="text-xs font-semibold rounded-xl px-2 py-2 min-w-0">
+                <select id="receiptCategory" onchange="renderReceiptBox()" class="text-xs font-semibold rounded-xl px-2 py-2 min-w-0"><option value="">전체 항목</option></select>
+                <select id="receiptType" onchange="renderReceiptBox()" class="text-xs font-semibold rounded-xl px-2 py-2 min-w-0"><option value="">수입+지출</option><option value="sales">수입만</option><option value="expense">지출만</option></select>
+            </div>
+            <p id="receiptBoxSummary" class="text-[11px] font-semibold text-slate-500">이 달 영수증 0장</p>
+            <div id="receiptGrid" class="grid grid-cols-3 sm:grid-cols-4 gap-2 overflow-y-auto flex-1 min-h-[180px] content-start pr-1"></div>
+            <p class="text-[10px] text-slate-400 leading-relaxed break-keep">사진 원본은 내 구글 드라이브 [솔로운영_영수증] 폴더에 있어요. 거래를 지워도 드라이브 사진은 자동으로 지워지지 않아요.</p>
+            <button type="button" onclick="closeReceiptBox()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+        </div>
+    </div>
+
+    <!-- v16: 🧾 영수증 크게 보기 (영수증함보다 위, 토스트보다 아래) -->
+    <div id="receiptViewerModal" onclick="if (event.target === this) closeReceiptViewer()" role="dialog" aria-modal="true" aria-labelledby="receiptViewerCounter" class="fixed inset-0 bg-slate-900/80 z-[55] hidden flex items-center justify-center p-3">
+        <div class="ios-card bg-white w-full max-w-md p-4 space-y-3 shadow-2xl max-h-[92vh] flex flex-col">
+            <div class="flex justify-between items-center">
+                <p id="receiptViewerCounter" class="text-xs font-bold text-slate-800">🧾 영수증</p>
+                <button type="button" onclick="closeReceiptViewer()" aria-label="닫기" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="receiptViewerStage" class="relative bg-slate-100 rounded-xl flex items-center justify-center min-h-[240px] overflow-hidden">
+                <img id="receiptViewerImg" alt="영수증 사진" class="hidden max-h-[55vh] max-w-full object-contain">
+                <p id="receiptViewerStatus" class="absolute bottom-2 inset-x-2 text-center text-[10px] font-bold text-slate-600 bg-white/85 rounded-lg px-2 py-1 break-keep"></p>
+                <button type="button" id="receiptViewerPrev" onclick="moveReceiptViewer(-1)" aria-label="이전" class="hidden absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 shadow text-slate-700 font-bold">‹</button>
+                <button type="button" id="receiptViewerNext" onclick="moveReceiptViewer(1)" aria-label="다음" class="hidden absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/90 shadow text-slate-700 font-bold">›</button>
+            </div>
+            <div id="receiptViewerInfo" class="text-xs text-slate-800 space-y-0.5 break-all"></div>
+            <a id="receiptViewerDriveLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold text-center transition">구글 드라이브에서 열기 ↗</a>
+            <button type="button" onclick="closeReceiptViewer()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+        </div>
+    </div>
+
     <!-- Header Navigation -->
     <header class="sticky top-0 z-30 ios-header px-4 py-3.5 flex justify-between items-center">
         <div class="flex items-center gap-2.5 cursor-pointer max-sm:min-w-0" onclick="openWizardModal()">
@@ -507,6 +545,11 @@
         <!-- v7: 📖 사용설명서 버튼 -->
         <button type="button" id="manualBtn" onclick="openManualModal()" class="w-full py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">
             📖 사용설명서 <span class="font-medium text-slate-500">· 처음이라면 1분만 읽어 보세요</span>
+        </button>
+
+        <!-- v16: 🧾 영수증함(모아보기) -->
+        <button type="button" id="receiptBoxBtn" onclick="openReceiptBox()" class="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">
+            🧾 영수증함 <span id="receiptBoxCount" class="font-medium text-amber-700">· 이번 달 0장</span>
         </button>
 
         <!-- Date Selection Filter -->
@@ -2124,6 +2167,584 @@
                 if (v15AlertDepth === 0 && v15NativeAlert) { window.alert = v15NativeAlert; v15NativeAlert = null; }
             }
         };
+
+        /* ===================== v16: 🧾 영수증·캡처 → 내 구글 드라이브 ===================== */
+        // 이미지는 사용자 본인 드라이브(앱이 만든 폴더만, drive.file 스코프), Firestore에는 메타데이터+작은 썸네일만.
+        // 토큰: Google Identity Services(GIS) 토큰 클라이언트. 스크립트는 영수증을 쓰려는 순간에만 동적으로 불러옴(HTML에 새 script 태그를 넣지 않음).
+        // 클라이언트 ID가 비어 있거나, 동의를 안 했거나, 체험판이면 영수증 기능만 꺼지고 나머지는 그대로.
+        const DRIVE_OAUTH_CLIENT_ID = ''; // ← Google Cloud 콘솔 > API 및 서비스 > 사용자 인증 정보 > 'OAuth 2.0 클라이언트 ID(웹)'의 클라이언트 ID
+        const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+        const GIS_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+        const DRIVE_API = 'https://www.googleapis.com/drive/v3';
+        const DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3/files';
+        const RECEIPT_ROOT_FOLDER = '솔로운영_영수증';
+        const RECEIPT_MAX_FILES = 5;
+        const RECEIPT_MAX_SIDE = 1200, RECEIPT_QUALITY = 0.72, RECEIPT_MAX_BYTES = 500 * 1024;
+        const RECEIPT_THUMB_W = 160, RECEIPT_THUMB_MAX_BYTES = 8 * 1024, RECEIPT_DOC_MAX_BYTES = 200 * 1024;
+
+        let receiptPending = [];      // 저장 전 첨부: { id, blob, w, h, thumb, origSize, origName }
+        let receiptCompressing = 0;
+        let receiptSaving = false;
+        let driveToken = null;        // { token, exp, uid }
+        let gisLoadPromise = null;
+        const receiptBlobUrlCache = {}; // fileId → objectURL (원본)
+
+        function receiptUnavailableReason() {
+            if (isDemoMode) return '체험판에서는 영수증을 첨부할 수 없어요 (로그인 후 가능)';
+            if (!currentUser) return '로그인 후 영수증을 쓸 수 있어요';
+            if (!DRIVE_OAUTH_CLIENT_ID) return '영수증 보관은 지금은 쓸 수 없어요 (드라이브 연결 준비 중)';
+            return '';
+        }
+
+        // ---- 토큰 ----
+        function loadGisScript() {
+            if (isDemoMode) return Promise.reject(new Error('demo'));
+            if (window.google && window.google.accounts && window.google.accounts.oauth2) return Promise.resolve();
+            if (gisLoadPromise) return gisLoadPromise;
+            gisLoadPromise = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = GIS_SCRIPT_URL;
+                s.async = true;
+                s.onload = () => (window.google && window.google.accounts && window.google.accounts.oauth2) ? resolve() : reject(new Error('gis-missing'));
+                s.onerror = () => { gisLoadPromise = null; reject(new Error('gis-load')); };
+                document.head.appendChild(s);
+            });
+            return gisLoadPromise;
+        }
+
+        function driveTokenKey() { return currentUser ? 'soloDriveToken:' + currentUser.uid : ''; }
+        function driveCachedToken() {
+            if (!currentUser) return null;
+            if (driveToken && driveToken.uid === currentUser.uid && driveToken.exp - 60000 > Date.now()) return driveToken.token;
+            try {
+                const saved = JSON.parse(sessionStorage.getItem(driveTokenKey()) || 'null');
+                if (saved && saved.uid === currentUser.uid && saved.exp - 60000 > Date.now()) { driveToken = saved; return saved.token; }
+            } catch (e) { /* 저장소를 못 쓰면 메모리만 */ }
+            return null;
+        }
+        function driveForgetToken() {
+            driveToken = null;
+            try { if (currentUser) sessionStorage.removeItem(driveTokenKey()); } catch (e) {}
+        }
+
+        // interactive=true 는 사용자가 누른 순간(클릭·저장)에만. 이미 동의했다면 동의 화면 없이 바로 닫힘.
+        function driveGetToken(interactive) {
+            if (isDemoMode) return Promise.reject(new Error('demo'));
+            if (receiptUnavailableReason()) return Promise.reject(new Error('unavailable'));
+            const cached = driveCachedToken();
+            if (cached) return Promise.resolve(cached);
+            if (!interactive) return Promise.reject(new Error('no-token'));
+            const uid = currentUser.uid, email = currentUser.email || '';
+            const request = () => new Promise((resolve, reject) => {
+                let done = false;
+                const client = window.google.accounts.oauth2.initTokenClient({
+                    client_id: DRIVE_OAUTH_CLIENT_ID,
+                    scope: DRIVE_SCOPE,
+                    login_hint: email,
+                    callback: (resp) => {
+                        if (done) return; done = true;
+                        if (!resp || resp.error || !resp.access_token) return reject(new Error((resp && resp.error) || 'token'));
+                        if (window.google.accounts.oauth2.hasGrantedAllScopes && !window.google.accounts.oauth2.hasGrantedAllScopes(resp, DRIVE_SCOPE)) return reject(new Error('denied'));
+                        driveToken = { token: resp.access_token, exp: Date.now() + (Number(resp.expires_in) || 3600) * 1000, uid };
+                        try { sessionStorage.setItem('soloDriveToken:' + uid, JSON.stringify(driveToken)); } catch (e) {}
+                        resolve(driveToken.token);
+                    },
+                    error_callback: (err) => { if (done) return; done = true; reject(new Error((err && err.type) || 'popup')); }
+                });
+                client.requestAccessToken({ prompt: '' });
+            });
+            // GIS가 이미 로드돼 있으면 같은 클릭 안에서 바로 팝업을 엶(팝업 차단 방지)
+            if (window.google && window.google.accounts && window.google.accounts.oauth2) return request();
+            return loadGisScript().then(request);
+        }
+
+        // ---- Drive API ----
+        async function driveFetch(url, opts, token) {
+            if (isDemoMode) throw new Error('demo');
+            const o = Object.assign({}, opts || {});
+            o.headers = Object.assign({}, o.headers || {}, { Authorization: 'Bearer ' + token });
+            const res = await fetch(url, o);
+            if (res.status === 401) { driveForgetToken(); throw new Error('drive-401'); }
+            if (!res.ok) { const err = new Error('drive-' + res.status); err.status = res.status; throw err; }
+            return res;
+        }
+        const driveQ = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+        async function driveFindOrCreateFolder(token, name, parentId) {
+            const q = `name='${driveQ(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${driveQ(parentId || 'root')}' in parents`;
+            const r = await driveFetch(`${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&pageSize=10&spaces=drive`, {}, token);
+            const j = await r.json();
+            if (j.files && j.files.length) return j.files[0].id;
+            const c = await driveFetch(`${DRIVE_API}/files?fields=id`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+                body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: parentId ? [parentId] : ['root'] })
+            }, token);
+            return (await c.json()).id;
+        }
+
+        // 폴더 id는 users/{uid}/settings/config 의 receiptDrive 에 저장해서 다음부터는 찾지 않음
+        async function driveEnsureMonthFolder(token, ym) {
+            if (!storeConfig) storeConfig = {};
+            const cfg = storeConfig.receiptDrive && typeof storeConfig.receiptDrive === 'object' ? storeConfig.receiptDrive : { rootId: '', months: {} };
+            if (!cfg.months) cfg.months = {};
+            let changed = false;
+            if (!cfg.rootId) { cfg.rootId = await driveFindOrCreateFolder(token, RECEIPT_ROOT_FOLDER, ''); cfg.months = {}; changed = true; }
+            if (!cfg.months[ym]) { cfg.months[ym] = await driveFindOrCreateFolder(token, ym, cfg.rootId); changed = true; }
+            storeConfig.receiptDrive = cfg;
+            if (changed && currentUser && !isDemoMode) {
+                try { await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), storeConfig); }
+                catch (e) { console.warn('[영수증] 폴더 id 저장 실패(다음에 다시 찾음)', e); }
+            }
+            return cfg.months[ym];
+        }
+        function driveResetFolders() { if (storeConfig && storeConfig.receiptDrive) storeConfig.receiptDrive = { rootId: '', months: {} }; }
+
+        async function driveUniqueName(token, folderId, base, used) {
+            const q = `'${driveQ(folderId)}' in parents and name contains '${driveQ(base)}' and trashed=false`;
+            const r = await driveFetch(`${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(name)&pageSize=100&spaces=drive`, {}, token);
+            const names = new Set(((await r.json()).files || []).map(f => f.name));
+            (used || []).forEach(n => names.add(n)); // 같은 저장에서 먼저 올린 이름도 피함
+            if (!names.has(base + '.jpg')) return base + '.jpg';
+            for (let i = 1; i < 1000; i++) if (!names.has(`${base}-${i}.jpg`)) return `${base}-${i}.jpg`;
+            return `${base}-${Date.now()}.jpg`;
+        }
+
+        async function driveUploadJpeg(token, folderId, name, blob) {
+            const b = 'solo' + Math.random().toString(36).slice(2);
+            const meta = { name, parents: [folderId], mimeType: 'image/jpeg' };
+            const body = new Blob([
+                `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: image/jpeg\r\n\r\n`,
+                blob, `\r\n--${b}--`
+            ]);
+            const r = await driveFetch(`${DRIVE_UPLOAD_API}?uploadType=multipart&fields=id,name,mimeType,size`, {
+                method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body
+            }, token);
+            return r.json();
+        }
+
+        async function driveGetImageUrl(fileId, interactive) {
+            if (receiptBlobUrlCache[fileId]) return receiptBlobUrlCache[fileId];
+            const token = await driveGetToken(interactive);
+            const r = await driveFetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media`, {}, token);
+            const url = URL.createObjectURL(await r.blob());
+            receiptBlobUrlCache[fileId] = url;
+            return url;
+        }
+
+        // ---- 압축 (긴 변 1200px, JPEG 0.72, 500KB 넘으면 품질 낮춰 재시도, EXIF 회전 반영) ----
+        function canvasToBlob(canvas, q) { return new Promise(res => canvas.toBlob(b => res(b), 'image/jpeg', q)); }
+        async function decodeImageForCanvas(file) {
+            if (window.createImageBitmap) {
+                try { const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); return { src: bmp, w: bmp.width, h: bmp.height }; } catch (e) { /* 아래 <img>로 */ }
+            }
+            const url = URL.createObjectURL(file);
+            try {
+                const img = new Image();
+                img.style.imageOrientation = 'from-image';
+                img.src = url;
+                await img.decode();
+                return { src: img, w: img.naturalWidth, h: img.naturalHeight };
+            } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+        }
+        async function compressReceiptImage(file) {
+            const { src, w, h } = await decodeImageForCanvas(file);
+            const scale = Math.min(1, RECEIPT_MAX_SIDE / Math.max(w, h));
+            const cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+            const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+            const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch); ctx.drawImage(src, 0, 0, cw, ch);
+            let q = RECEIPT_QUALITY, blob = await canvasToBlob(c, q);
+            while (blob && blob.size > RECEIPT_MAX_BYTES && q > 0.35) { q = Math.round((q - 0.12) * 100) / 100; blob = await canvasToBlob(c, q); }
+            // 썸네일: 가로 160px, 8KB 이하 dataURL
+            const tw = RECEIPT_THUMB_W, th = Math.max(1, Math.round(ch * tw / cw));
+            const t = document.createElement('canvas'); t.width = tw; t.height = th;
+            const tctx = t.getContext('2d'); tctx.fillStyle = '#fff'; tctx.fillRect(0, 0, tw, th); tctx.drawImage(c, 0, 0, tw, th);
+            let thumb = '';
+            for (const tq of [0.5, 0.4, 0.3, 0.2]) {
+                const d = t.toDataURL('image/jpeg', tq);
+                if (d.length * 0.75 <= RECEIPT_THUMB_MAX_BYTES) { thumb = d; break; }
+            }
+            if (src && src.close) src.close();
+            return { blob, w: cw, h: ch, thumb, quality: q };
+        }
+
+        // ---- 입력 폼: 📷 첨부 ----
+        function receiptFileInput() {
+            let inp = document.getElementById('receiptFileInput');
+            if (!inp) {
+                inp = document.createElement('input');
+                inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.id = 'receiptFileInput'; inp.className = 'hidden';
+                inp.addEventListener('change', () => { const files = Array.from(inp.files || []); inp.value = ''; addReceiptFiles(files); });
+                document.body.appendChild(inp);
+            }
+            return inp;
+        }
+
+        function onReceiptAttachClick() {
+            if (demoGuard('체험판에서는 영수증을 첨부할 수 없어요 (로그인 후 가능)')) return;
+            const reason = receiptUnavailableReason();
+            if (reason) { showDemoToast(reason); return; }
+            if (receiptPending.length + receiptCompressing >= RECEIPT_MAX_FILES) { showDemoToast(`영수증은 한 번에 ${RECEIPT_MAX_FILES}장까지예요`); return; }
+            loadGisScript().catch(() => {}); // 저장 버튼을 누를 때 바로 쓸 수 있게 미리 불러 둠
+            receiptFileInput().click();
+        }
+
+        async function addReceiptFiles(files) {
+            if (isDemoMode || !files.length) return;
+            const room = RECEIPT_MAX_FILES - receiptPending.length - receiptCompressing;
+            const imgs = files.filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif|gif)$/i.test(f.name || ''));
+            if (imgs.length < files.length) showDemoToast('사진 파일만 첨부할 수 있어요');
+            const take = imgs.slice(0, Math.max(0, room));
+            if (imgs.length > take.length) showDemoToast(`영수증은 한 번에 ${RECEIPT_MAX_FILES}장까지예요`);
+            receiptCompressing += take.length; renderReceiptAttach();
+            for (const f of take) {
+                try {
+                    const r = await compressReceiptImage(f);
+                    receiptPending.push(Object.assign(r, { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6), origSize: f.size, origName: f.name || '' }));
+                } catch (e) {
+                    console.warn('[영수증] 압축 실패', e);
+                    showDemoToast('이 사진은 열 수 없어요 (다른 형식으로 다시 찍어 주세요)');
+                } finally { receiptCompressing--; renderReceiptAttach(); }
+            }
+        }
+
+        function removeReceiptPending(id) {
+            if (receiptSaving) return;
+            receiptPending = receiptPending.filter(p => p.id !== id);
+            renderReceiptAttach();
+        }
+
+        function renderReceiptAttach() {
+            const form = document.querySelector('#form-container form');
+            let box = document.getElementById('receiptAttachBox');
+            if (!form) { if (box) box.remove(); return; }
+            const submit = form.querySelector('button[type="submit"]');
+            if (!box) { box = document.createElement('div'); box.id = 'receiptAttachBox'; box.className = 'space-y-1.5'; }
+            if (box.parentNode !== form || box.nextElementSibling !== submit) form.insertBefore(box, submit);
+            const kb = n => n >= 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + 'MB' : Math.round(n / 1024) + 'KB';
+            box.innerHTML = '';
+            const row = document.createElement('div'); row.className = 'flex flex-wrap items-center gap-1.5';
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.id = 'receiptAttachBtn';
+            btn.className = 'px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-dashed border-slate-300 rounded-lg text-[11px] text-slate-600 font-bold transition';
+            btn.textContent = `📷 영수증·캡처 첨부 (선택 · ${receiptPending.length}/${RECEIPT_MAX_FILES})`;
+            btn.onclick = onReceiptAttachClick;
+            btn.disabled = receiptSaving;
+            row.appendChild(btn);
+            receiptPending.forEach(p => {
+                const chip = document.createElement('span');
+                chip.className = 'receipt-pending-chip inline-flex items-center gap-1 pl-1 pr-1.5 py-0.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] text-slate-600';
+                if (p.thumb) { const im = document.createElement('img'); im.src = p.thumb; im.alt = ''; im.className = 'w-6 h-6 object-cover rounded'; chip.appendChild(im); }
+                const tx = document.createElement('span'); tx.textContent = kb(p.blob.size); chip.appendChild(tx);
+                const x = document.createElement('button'); x.type = 'button'; x.className = 'text-slate-400 hover:text-rose-600 font-bold px-0.5'; x.textContent = '✕'; x.setAttribute('aria-label', '첨부 빼기');
+                x.onclick = () => removeReceiptPending(p.id); chip.appendChild(x);
+                row.appendChild(chip);
+            });
+            box.appendChild(row);
+            const st = document.createElement('p'); st.id = 'receiptAttachStatus'; st.className = 'text-[10px] text-slate-400';
+            st.textContent = receiptCompressing ? `사진 줄이는 중… (${receiptCompressing}장)` : (receiptPending.length ? '저장하면 내 구글 드라이브 [솔로운영_영수증] 폴더에 올라가요' : '');
+            if (!st.textContent) st.className += ' hidden';
+            box.appendChild(st);
+        }
+
+        function setReceiptSaveBusy(on, label) {
+            const form = document.querySelector('#form-container form');
+            const submit = form && form.querySelector('button[type="submit"]');
+            if (submit) {
+                if (on) { if (!submit.dataset.label) submit.dataset.label = submit.innerHTML; submit.disabled = true; submit.classList.add('opacity-60'); submit.textContent = label || '저장 중…'; }
+                else { if (submit.dataset.label) submit.innerHTML = submit.dataset.label; delete submit.dataset.label; submit.disabled = false; submit.classList.remove('opacity-60'); }
+            }
+            const ab = document.getElementById('receiptAttachBtn'); if (ab) ab.disabled = on;
+        }
+
+        function receiptFileBase(entry) {
+            const k = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).replace(':', '');
+            const kind = entry.type === 'sales' ? '수입' : '지출';
+            const cat = String(entry.category || '기타').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 20);
+            return `${entry.date}_${kind}_${cat}_${entry.amount}_${k}`;
+        }
+
+        function receiptMetaFitsDoc(entry, metas) {
+            let list = metas.map(m => Object.assign({}, m));
+            const size = l => new Blob([JSON.stringify(Object.assign({}, entry, { receipts: l }))]).size;
+            if (size(list) > RECEIPT_DOC_MAX_BYTES) list = list.map(m => Object.assign(m, { thumb: '' }));
+            return list;
+        }
+
+        // ---- 저장: (1) 거래 저장(기존 로직) → (2) 드라이브 업로드 → (3) 성공한 파일만 문서에 덧붙임 ----
+        const v16Orig = { handleSaveEntry, deleteEntry, renderDashboard, renderListView, openDayDetailModal };
+
+        handleSaveEntry = async function (e, type) {
+            if (isDemoMode) return v16Orig.handleSaveEntry(e, type);
+            if (receiptSaving || receiptCompressing) { if (e && e.preventDefault) e.preventDefault(); if (receiptCompressing) showDemoToast('사진을 줄이는 중이에요. 잠시 후 다시 눌러 주세요'); return; }
+            const files = receiptPending.slice();
+            receiptSaving = true;
+            setReceiptSaveBusy(true, files.length ? '저장 중… (영수증 준비)' : '저장 중…');
+            // 같은 클릭 안에서 토큰 요청을 먼저 시작(팝업 차단 방지). 실패해도 거래 저장은 그대로 진행.
+            const tokenP = files.length ? driveGetToken(true).catch(err => { console.warn('[영수증] 토큰 없음', err); return null; }) : null;
+            const before = dbData.length;
+            const uid = currentUser && currentUser.uid;
+            try {
+                await v16Orig.handleSaveEntry(e, type);
+            } catch (err) {
+                receiptSaving = false; setReceiptSaveBusy(false);
+                console.error(err); showDemoToast('저장하지 못했어요. 인터넷 연결을 확인해 주세요');
+                return;
+            }
+            const entry = dbData.length > before ? dbData[dbData.length - 1] : null;
+            if (!entry || !files.length) { receiptSaving = false; setReceiptSaveBusy(false); return; }
+            receiptPending = [];
+            renderReceiptAttach();
+            setReceiptSaveBusy(true, '영수증 올리는 중…');
+            const token = await tokenP;
+            const metas = [];
+            let failed = files.length;
+            if (token && uid && currentUser && currentUser.uid === uid) {
+                const ym = String(entry.date || getTodayStr()).slice(0, 7);
+                failed = 0;
+                let folderId = null;
+                try { folderId = await driveEnsureMonthFolder(token, ym); }
+                catch (err) { console.warn('[영수증] 폴더 준비 실패', err); }
+                const base = receiptFileBase(entry);
+                const usedNames = [];
+                for (let i = 0; i < files.length; i++) {
+                    setReceiptSaveBusy(true, `영수증 올리는 중… ${i + 1}/${files.length}`);
+                    const p = files[i];
+                    try {
+                        if (!folderId) throw new Error('no-folder');
+                        let name = await driveUniqueName(token, folderId, base, usedNames);
+                        let up;
+                        try { up = await driveUploadJpeg(token, folderId, name, p.blob); }
+                        catch (err) {
+                            if (err.status !== 404) throw err; // 폴더가 지워졌으면 한 번만 다시 만듦
+                            driveResetFolders(); folderId = await driveEnsureMonthFolder(token, ym);
+                            name = await driveUniqueName(token, folderId, base, usedNames);
+                            up = await driveUploadJpeg(token, folderId, name, p.blob);
+                        }
+                        usedNames.push(up.name || name);
+                        metas.push({ fileId: up.id, name: up.name || name, folderId, mime: 'image/jpeg', size: Number(up.size) || p.blob.size, w: p.w, h: p.h, thumb: p.thumb || '' });
+                    } catch (err) { console.warn('[영수증] 업로드 실패', err); failed++; }
+                }
+            }
+            if (metas.length) {
+                const receipts = receiptMetaFitsDoc(entry, (entry.receipts || []).concat(metas));
+                try {
+                    await window.setDoc(window.doc(window.firebaseDb, "users", uid, "ledger", entry.id), { receipts }, { merge: true });
+                    entry.receipts = receipts;
+                } catch (err) {
+                    console.warn('[영수증] 장부 연결 실패', err);
+                    showDemoToast(`영수증 ${metas.length}장은 드라이브에 올라갔지만 장부에 연결하지 못했어요`);
+                    failed = -1;
+                }
+            }
+            receiptSaving = false; setReceiptSaveBusy(false);
+            renderDashboard();
+            if (failed > 0) showDemoToast(metas.length ? `✅ 저장했어요 · 영수증 ${failed}장은 저장하지 못했어요` : `✅ 거래는 저장했어요 · 영수증 ${failed}장은 저장하지 못했어요${token ? '' : ' (드라이브 권한 없음)'}`);
+            else if (failed === 0) showDemoToast(`✅ 저장했어요 · 영수증 ${metas.length}장`);
+        };
+
+        // 거래 삭제: 드라이브 사진은 자동으로 지우지 않음(안전) → 안내만
+        deleteEntry = async function (id) {
+            const had = !isDemoMode && dbData.some(x => x.id === id && Array.isArray(x.receipts) && x.receipts.length);
+            const r = await v16Orig.deleteEntry(id);
+            if (had && !dbData.some(x => x.id === id)) showDemoToast('거래를 지웠어요 · 드라이브의 영수증 사진은 그대로 남아 있어요');
+            return r;
+        };
+
+        // ---- 🧾 배지 (목록·날짜 상세) ----
+        function decorateReceiptBadges(root) {
+            if (!root) return;
+            root.querySelectorAll('button[onclick^="deleteEntry("]').forEach(b => {
+                const m = /deleteEntry\('([^']*)'\)/.exec(b.getAttribute('onclick') || '');
+                const entry = m && dbData.find(x => x.id === m[1]);
+                const n = entry && Array.isArray(entry.receipts) ? entry.receipts.length : 0;
+                if (!n) return;
+                const holder = b.closest('tr') ? b.closest('tr').children[2] : (b.closest('.flex.justify-between') || b.parentNode).querySelector('.font-bold.text-slate-800');
+                if (!holder || holder.querySelector('.receipt-badge')) return;
+                const badge = document.createElement('button');
+                badge.type = 'button';
+                badge.className = 'receipt-badge ml-1 px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded text-[10px] font-bold';
+                badge.textContent = '🧾' + n;
+                badge.title = '영수증 크게 보기';
+                badge.onclick = (ev) => { ev.stopPropagation(); openReceiptViewerForEntry(entry.id); };
+                holder.appendChild(badge);
+            });
+        }
+        renderListView = function (container, filtered) {
+            const r = v16Orig.renderListView(container, filtered);
+            decorateReceiptBadges(container);
+            return r;
+        };
+        openDayDetailModal = function (dateStr) {
+            const r = v16Orig.openDayDetailModal(dateStr);
+            decorateReceiptBadges(document.getElementById('dayDetailList'));
+            return r;
+        };
+
+        // ---- 대시보드: 영수증함 버튼 장수 + 첨부 칸 ----
+        function countReceipts(list) { return list.reduce((s, x) => s + (Array.isArray(x.receipts) ? x.receipts.length : 0), 0); }
+        function updateReceiptBoxButton() {
+            const el = document.getElementById('receiptBoxCount');
+            if (!el) return;
+            const month = document.getElementById('monthSelect').value;
+            el.textContent = `· ${month === 'ALL' ? '올해' : '이번 달'} ${countReceipts(getFilteredData())}장`;
+        }
+        renderDashboard = function () {
+            const r = v16Orig.renderDashboard();
+            updateReceiptBoxButton();
+            renderReceiptAttach();
+            return r;
+        };
+        const v16OrigSwitchTab = switchTab;
+        switchTab = function (tab) {
+            const r = v16OrigSwitchTab(tab);
+            renderReceiptAttach();
+            return r;
+        };
+
+        // ---- 🧾 영수증함 ----
+        let receiptViewerItems = [], receiptViewerIndex = 0, receiptViewerSeq = 0;
+
+        function openReceiptBox() {
+            if (demoGuard('영수증함은 로그인 후 쓸 수 있어요 (체험판)')) return;
+            const k = getKstParts();
+            const y = document.getElementById('yearSelect').value, m = document.getElementById('monthSelect').value;
+            document.getElementById('receiptMonth').value = (m && m !== 'ALL') ? `${y}-${m}` : `${k.year}-${String(k.month).padStart(2, '0')}`;
+            document.getElementById('receiptCategory').value = '';
+            document.getElementById('receiptType').value = '';
+            renderReceiptBox();
+            document.getElementById('receiptBoxModal').classList.remove('hidden');
+        }
+        function closeReceiptBox() { document.getElementById('receiptBoxModal').classList.add('hidden'); }
+
+        function receiptBoxItems() {
+            const ym = document.getElementById('receiptMonth').value || '';
+            const cat = document.getElementById('receiptCategory').value;
+            const tp = document.getElementById('receiptType').value;
+            const inMonth = dbData.filter(x => Array.isArray(x.receipts) && x.receipts.length && String(x.date || '').slice(0, 7) === ym);
+            const cats = [...new Set(inMonth.map(x => x.category))].sort();
+            const rows = inMonth.filter(x => (!cat || x.category === cat) && (!tp || (tp === 'sales' ? x.type === 'sales' : x.type !== 'sales')))
+                .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+            const items = [];
+            rows.forEach(entry => entry.receipts.forEach((receipt, i) => items.push({ entry, receipt, i })));
+            return { items, cats, monthCount: countReceipts(inMonth) };
+        }
+
+        function renderReceiptBox() {
+            const sel = document.getElementById('receiptCategory');
+            const keep = sel.value;
+            const cats = receiptBoxItems().cats;
+            sel.innerHTML = '';
+            [['', '전체 항목']].concat(cats.map(c => [c, c])).forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); });
+            sel.value = cats.includes(keep) ? keep : '';
+            const { items: shown, monthCount } = receiptBoxItems();
+            document.getElementById('receiptBoxSummary').textContent = `이 달 영수증 ${monthCount}장 · 보이는 것 ${shown.length}장`;
+            const grid = document.getElementById('receiptGrid');
+            grid.innerHTML = '';
+            if (!shown.length) {
+                const p = document.createElement('p'); p.className = 'col-span-3 sm:col-span-4 text-center text-xs text-slate-400 py-8';
+                p.textContent = '이 달에 첨부한 영수증이 없어요. 입력 칸의 📷 버튼으로 첨부해 보세요.';
+                grid.appendChild(p); return;
+            }
+            shown.forEach((it, idx) => {
+                const cell = document.createElement('button');
+                cell.type = 'button';
+                cell.className = 'receipt-cell relative aspect-square bg-slate-100 rounded-lg overflow-hidden border border-slate-200 flex items-center justify-center';
+                cell.onclick = () => openReceiptViewer(shown, idx);
+                const ph = document.createElement('span'); ph.className = 'text-2xl text-slate-300'; ph.textContent = '🧾'; cell.appendChild(ph);
+                const im = document.createElement('img'); im.alt = ''; im.className = 'absolute inset-0 w-full h-full object-cover hidden';
+                im.onload = () => { im.classList.remove('hidden'); ph.classList.add('hidden'); };
+                im.onerror = () => { im.classList.add('hidden'); ph.classList.remove('hidden'); };
+                cell.appendChild(im);
+                if (it.receipt.thumb) im.src = it.receipt.thumb;
+                else if (it.receipt.fileId) driveGetImageUrl(it.receipt.fileId, false).then(u => { im.src = u; }).catch(() => {}); // 토큰이 있을 때만
+                const cap = document.createElement('span');
+                cap.className = 'absolute bottom-0 inset-x-0 bg-slate-900/60 text-white text-[9px] font-bold px-1 py-0.5 truncate text-left';
+                cap.textContent = `${String(it.entry.date).slice(5)} ${Number(it.entry.amount).toLocaleString()}원`;
+                cell.appendChild(cap);
+                grid.appendChild(cell);
+            });
+        }
+
+        function openReceiptViewerForEntry(id) {
+            const entry = dbData.find(x => x.id === id);
+            if (!entry || !Array.isArray(entry.receipts) || !entry.receipts.length) return;
+            openReceiptViewer(entry.receipts.map((receipt, i) => ({ entry, receipt, i })), 0);
+        }
+
+        function openReceiptViewer(items, index) {
+            if (demoGuard('영수증함은 로그인 후 쓸 수 있어요 (체험판)')) return;
+            receiptViewerItems = items || [];
+            receiptViewerIndex = Math.max(0, Math.min(index || 0, receiptViewerItems.length - 1));
+            document.getElementById('receiptViewerModal').classList.remove('hidden');
+            showReceiptViewerItem();
+        }
+        function closeReceiptViewer() { document.getElementById('receiptViewerModal').classList.add('hidden'); receiptViewerSeq++; }
+        function moveReceiptViewer(step) {
+            if (receiptViewerItems.length < 2) return;
+            receiptViewerIndex = (receiptViewerIndex + step + receiptViewerItems.length) % receiptViewerItems.length;
+            showReceiptViewerItem();
+        }
+
+        function showReceiptViewerItem() {
+            const it = receiptViewerItems[receiptViewerIndex];
+            if (!it) return;
+            const seq = ++receiptViewerSeq;
+            const { entry, receipt } = it;
+            const img = document.getElementById('receiptViewerImg');
+            const status = document.getElementById('receiptViewerStatus');
+            document.getElementById('receiptViewerCounter').textContent = `🧾 영수증 ${receiptViewerIndex + 1} / ${receiptViewerItems.length}`;
+            const many = receiptViewerItems.length > 1;
+            document.getElementById('receiptViewerPrev').classList.toggle('hidden', !many);
+            document.getElementById('receiptViewerNext').classList.toggle('hidden', !many);
+            const info = document.getElementById('receiptViewerInfo');
+            info.innerHTML = '';
+            [['날짜', entry.date], ['구분', entry.type === 'sales' ? '수입' : (entry.type === 'fixed' ? '고정비' : '변동비')], ['항목', entry.category],
+             ['금액', Number(entry.amount).toLocaleString() + '원'], ['메모', entry.memo || '-']].forEach(([k, v]) => {
+                const row = document.createElement('p'); const b = document.createElement('b'); b.className = 'text-slate-500 font-medium mr-1.5'; b.textContent = k;
+                row.appendChild(b); row.appendChild(document.createTextNode(String(v))); info.appendChild(row);
+            });
+            const link = document.getElementById('receiptViewerDriveLink');
+            if (receipt.fileId) { link.href = 'https://drive.google.com/file/d/' + encodeURIComponent(receipt.fileId) + '/view'; link.classList.remove('hidden'); }
+            else link.classList.add('hidden');
+            img.classList.add('hidden'); img.removeAttribute('src');
+            if (receipt.thumb) { img.src = receipt.thumb; img.classList.remove('hidden'); }
+            status.textContent = receipt.fileId ? '원본 불러오는 중…' : '원본이 없어요';
+            status.classList.remove('hidden');
+            if (!receipt.fileId) return;
+            const unavailable = receiptUnavailableReason();
+            if (unavailable) { status.textContent = receipt.thumb ? '작은 사진만 보여요 · ' + unavailable : unavailable; return; }
+            driveGetImageUrl(receipt.fileId, true).then(url => {
+                if (seq !== receiptViewerSeq) return;
+                img.src = url; img.classList.remove('hidden'); status.classList.add('hidden');
+            }).catch(err => {
+                if (seq !== receiptViewerSeq) return;
+                status.textContent = (receipt.thumb ? '작은 사진만 보여요 · ' : '') + '원본을 불러오지 못했어요 (드라이브에서 열기를 눌러 보세요)';
+                console.warn('[영수증] 원본 불러오기 실패', err);
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const v = document.getElementById('receiptViewerModal');
+            if (v && !v.classList.contains('hidden')) {
+                if (e.key === 'Escape') closeReceiptViewer();
+                else if (e.key === 'ArrowLeft') moveReceiptViewer(-1);
+                else if (e.key === 'ArrowRight') moveReceiptViewer(1);
+                return;
+            }
+            const b = document.getElementById('receiptBoxModal');
+            if (e.key === 'Escape' && b && !b.classList.contains('hidden')) closeReceiptBox();
+        });
+        (function () {
+            const stage = document.getElementById('receiptViewerStage');
+            if (!stage) return;
+            let x0 = null;
+            stage.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+            stage.addEventListener('touchend', e => {
+                if (x0 === null) return;
+                const dx = e.changedTouches[0].clientX - x0; x0 = null;
+                if (Math.abs(dx) > 40) moveReceiptViewer(dx < 0 ? 1 : -1);
+            });
+        })();
     </script>
 </body>
 </html>
