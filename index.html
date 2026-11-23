@@ -86,6 +86,7 @@ body.panel-open #xh,body.moving #xh{opacity:0}
 @keyframes wig{20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}
 #bubble{position:fixed;z-index:19;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 82px);max-width:250px;padding:12px 14px;border-radius:18px 18px 6px 18px;background:#fffaf2;font-size:13.5px;line-height:1.55;box-shadow:0 8px 24px rgba(110,70,40,.2);opacity:0;transform:translateY(8px) scale(.95);transform-origin:100% 100%;transition:all .25s cubic-bezier(.3,1.5,.5,1);pointer-events:none}
 #bubble.show{opacity:1;transform:none}
+#bubble[data-brief].show{pointer-events:auto;cursor:pointer}
 #bubble b{color:var(--coral-d)}
 #hint{position:fixed;z-index:17;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 26px);font-size:12.5px;color:var(--ink);background:rgba(255,250,243,.82);padding:7px 14px;border-radius:999px;white-space:nowrap;box-shadow:0 3px 12px rgba(110,70,40,.12);pointer-events:none;transition:opacity .5s}
 #hint.gone{opacity:0}
@@ -2302,15 +2303,15 @@ function toast(msg, bad) { toastEl.textContent = msg; toastEl.classList.toggle('
 /* =========================================================
    🤖 AI 비서(피클) 자동입력 안내 — 별도 오버레이
    ========================================================= */
-const LEDGER_URL = 'https://craftburgers1.github.io/BUSINESS/', STAFF_URL2 = 'https://craftburgers1.github.io/craftburger/';
+const PICKLE_URL = 'https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle', LEDGER_URL = 'https://craftburgers1.github.io/BUSINESS/', STAFF_URL2 = 'https://craftburgers1.github.io/craftburger/';
 const AI_SHORT = {
-  restaurant: `내 솔로운영 가계부(${LEDGER_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
-  salon: `내 솔로운영 가계부(${LEDGER_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 재료·소모품 주문내역, 그리고 시술 매출 내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
-  home: `내 솔로운영 가계부(${LEDGER_URL})에 들어가서 이 장보기·생활비 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
-  food: `내 솔로운영 가계부(${LEDGER_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.`
+  restaurant: `내 솔로운영 가계부(${PICKLE_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
+  salon: `내 솔로운영 가계부(${PICKLE_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 재료·소모품 주문내역, 그리고 시술 매출 내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
+  home: `내 솔로운영 가계부(${PICKLE_URL})에 들어가서 이 장보기·생활비 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
+  food: `내 솔로운영 가계부(${PICKLE_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`
 };
 const AI_FULL = {
-  restaurant: `너는 내 매장 전담 비서야. 내 솔로운영 가계부(${LEDGER_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
+  restaurant: `너는 내 매장 전담 비서야. 내 솔로운영 가계부(${PICKLE_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
 
 [진행 순서]
 1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 '이 앱들과 너를 연결하면 내 가게 운영이 구체적으로 어떻게 편해지는지' 쉽고 상세하게 먼저 브리핑해 줘.
@@ -2321,7 +2322,7 @@ const AI_FULL = {
 2. 매일 자정: 배민·쿠팡이츠·네이버 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)
 3. 지출 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력
 4. 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.`,
-  salon: `너는 내 미용실 전담 비서야. 내 솔로운영 가계부(${LEDGER_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
+  salon: `너는 내 미용실 전담 비서야. 내 솔로운영 가계부(${PICKLE_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
 
 [진행 순서]
 1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 '이 앱들과 너를 연결하면 내 미용실 운영이 구체적으로 어떻게 편해지는지' 쉽고 상세하게 먼저 브리핑해 줘.
@@ -2332,7 +2333,7 @@ const AI_FULL = {
 2. 매일 자정: 네이버·카카오 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)
 3. 재료 주문 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 재료·소모품 주문내역은 날짜·항목별로 가계부에 입력
 4. 시술 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.`,
-  home: `너는 우리집 살림 전담 비서야. 내 솔로운영 가계부(${LEDGER_URL})를 연결해 두고 아래 자동화를 맡아 줘.
+  home: `너는 우리집 살림 전담 비서야. 내 솔로운영 가계부(${PICKLE_URL})를 연결해 두고 아래 자동화를 맡아 줘.
 
 [진행 순서]
 1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 가계부 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 '이 앱과 너를 연결하면 우리집 살림이 구체적으로 어떻게 편해지는지' 쉽고 상세하게 먼저 브리핑해 줘.
@@ -3025,7 +3026,7 @@ async function saveEntry(btn) {
   if (isLive()) {
     // 가드: 로그인한 본인 장부에만, 실데이터 모드에서만 (체험 모드는 Firestore 쓰기 0건)
     if (!REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 저장하지 않았어요', true); return; }
-    const id = newLedgerId(), rec = Object.assign({ id, type, date, category, amount, memo }, scope ? { scope } : {});
+    const id = newLedgerId(), rec = Object.assign({ id, type, date, category, amount, memo }, scope ? { scope } : {}, BY.v === 'pickle' ? { by: 'pickle' } : {});
     btn.disabled = true; btn.textContent = '저장 중…';
     try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), rec); }
     catch (e) { btn.disabled = false; btn.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 숫자는 바꾸지 않았어요. 다시 시도해 주세요', true); return; }
@@ -3089,7 +3090,7 @@ loadStoreName = function (F, uid) {
 };
 // 모든 내역을 2D와 같은 모양(type·date·category·amount·memo·scope)으로
 function allEntries() {
-  if (isLive()) return REAL.docs.map(d => ({ id: String(d.id), type: d.type, date: String(d.date || ''), category: d.category || '', amount: Number(d.amount) || 0, memo: d.memo || '', scope: d.scope || null, live: true }));
+  if (isLive()) return REAL.docs.map(d => ({ id: String(d.id), type: d.type, date: String(d.date || ''), category: d.category || '', amount: Number(d.amount) || 0, memo: d.memo || '', scope: d.scope || null, by: d.by || null, live: true }));
   const k = kst(), E = [], home = MODE === 'home';
   DATA.sales.forEach(x => E.push({ id: x.id, type: 'sales', date: x.date, category: x.channel, amount: x.amount, memo: x.time || '', src: 'sales' }));
   DATA.ingredients.forEach(x => E.push({ id: x.id, type: 'variable', date: x.date, category: MC().varW, amount: x.amount, memo: x.name, src: 'ingredients' }));
@@ -3150,7 +3151,7 @@ function renderDay() {
   let h = `<div class="sec"><span>🏷️ 그날 기분 스티커</span></div><div class="stk">${V18_STICKERS.map(s => `<button type="button" data-stk="${s}" class="${s === cur ? 'on' : ''}" aria-pressed="${s === cur}" aria-label="스티커 ${s}">${s}</button>`).join('')}<button type="button" data-stk="" class="x">✖ 지우기</button></div>`;
   h += `<div class="sec" style="margin-top:12px"><span>수입·지출 내역</span></div><div class="rows">`;
   h += E.map(x => { const s = x.type === 'sales', canDel = isLive() || (x.src && x.src !== 'fixed');
-    return `<div class="row"><div class="l"><span class="chip" style="background:${s ? '#e5f6ef;color:#2c8a6e' : '#ffe9e1;color:#c85a43'}">${s ? '수입' : x.type === 'fixed' ? '고정비' : '지출'}</span><span><b>${esc(x.category)}</b>${x.memo ? ` <span class="d">${esc(x.memo)}</span>` : ''}${x.scope === 'personal' ? ' <span class="d">👛개인</span>' : ''}</span></div>
+    return `<div class="row"><div class="l"><span class="chip" style="background:${s ? '#e5f6ef;color:#2c8a6e' : '#ffe9e1;color:#c85a43'}">${s ? '수입' : x.type === 'fixed' ? '고정비' : '지출'}</span><span><b>${esc(x.category)}</b>${x.memo ? ` <span class="d">${esc(x.memo)}</span>` : ''}${x.by === 'pickle' ? ' <span class="chip" style="background:#e8f0ff;color:#2f5fd0">🤖 피클</span>' : ''}${x.scope === 'personal' ? ' <span class="d">👛개인</span>' : ''}</span></div>
       <div style="display:flex;align-items:center;gap:6px"><b class="num" style="color:${s ? 'var(--pos)' : 'var(--neg)'}">${s ? '+' : '-'}${won(x.amount)}</b>${canDel ? `<button type="button" class="del${CAL.delArm === x.id ? ' arm' : ''}" data-del="${esc(x.id)}" aria-label="삭제">${CAL.delArm === x.id ? '삭제?' : '🗑'}</button>` : ''}</div></div>`; }).join('') || '<div class="empty">등록된 수입/지출 내역이 없어요.</div>';
   h += `</div><div class="factions" style="margin-top:12px"><button type="button" class="cancel" data-act="day-back">← 달력</button><button type="button" class="save" data-act="day-add">✍️ 이 날짜에 입력</button></div>`;
   smBody.innerHTML = h;
@@ -3201,7 +3202,7 @@ function renderCalList() {
   smTitle.textContent = `📋 ${CAL.y}년 ${CAL.m}월 내역`;
   let h = calTabs() + calBar() + `<div class="seg" style="margin-bottom:8px">${[['all', '전체'], ['in', '수입'], ['out', '지출']].map(([v, l]) => `<button type="button" data-cflt="${v}" class="${CAL.filter === v ? 'on' : ''}">${l}</button>`).join('')}</div><div class="rows">`;
   h += E.map(x => { const s = x.type === 'sales', canDel = isLive() || (x.src && x.src !== 'fixed');
-    return `<div class="row"><div class="l"><span class="d num">${md(x.date)}</span><span><b>${esc(x.category)}</b>${x.memo ? ` <span class="d">${esc(x.memo)}</span>` : ''}${isPers(x) ? ' <span class="d">👛개인</span>' : ''}</span></div>
+    return `<div class="row"><div class="l"><span class="d num">${md(x.date)}</span><span><b>${esc(x.category)}</b>${x.memo ? ` <span class="d">${esc(x.memo)}</span>` : ''}${x.by === 'pickle' ? ' <span class="chip" style="background:#e8f0ff;color:#2f5fd0">🤖 피클</span>' : ''}${isPers(x) ? ' <span class="d">👛개인</span>' : ''}</span></div>
       <div style="display:flex;align-items:center;gap:6px"><b class="num" style="color:${s ? 'var(--pos)' : 'var(--neg)'}">${s ? '+' : '-'}${won(x.amount)}</b>${canDel ? `<button type="button" class="del${CAL.delArm === x.id ? ' arm' : ''}" data-del="${esc(x.id)}" aria-label="삭제">${CAL.delArm === x.id ? '삭제?' : '🗑'}</button>` : ''}</div></div>`; }).join('') || '<div class="empty">이 달 내역이 없어요.</div>';
   h += `</div><p class="hintp">${E.length}건 · 🗑을 두 번 누르면 삭제돼요${isLive() ? ' (2D 가계부에서도 지워져요)' : ''}.</p>`;
   smBody.innerHTML = h;
@@ -3698,6 +3699,7 @@ const TOUR = () => { const c = MC(), home = MODE === 'home'; return [
   ['👆', '둘러보기 · 줌', '화면을 <b>드래그</b>하면 고개를 돌려요. <b>두 손가락</b>을 벌리거나 오므리면(PC는 휠) 앞뒤로 움직이고, 아래 <b>➖ ➕</b> 버튼으로도 돼요.'],
   ['🎯', '물건·사람을 탭하세요', `<b>${OBJ.pos.emoji} ${OBJ.pos.name}</b>는 이번 달 요약, <b>🧊 냉장고</b>는 ${esc(c.varW)}, <b>${OBJ.safe.emoji} ${OBJ.safe.name}</b>는 고정비, <b>📅 달력</b>은 날짜별 내역이에요.`],
   ['🧑‍💼', '입력은 세무담당 직원에게', '<b>AI 자동입력</b>(영수증 사진·주문내역), <b>직접 입력</b>, ' + (home ? '정산표' : '세무회계 장부(복식부기)') + ', 영수증함, 홈택스 엑셀을 모두 맡아요.'],
+  ['🤖', '피클을 연결하면 자동으로 채워져요', 'AI 비서 <b>피클</b>을 연결하면 배민·쿠팡이츠·요기요 매출과 수수료, 영수증이 <b>매일 자동으로</b> 들어오고, 직원이 아침마다 브리핑해 줘요. 세무담당 직원 → <b>AI 자동입력</b>에서 연결해요.'],
   ['☁️', '내 장부로 쓰려면 로그인', '지금은 <b>체험 데이터</b>예요. 오른쪽 위 <b>Google 로그인</b>을 하면 내 장부가 저장되고 2D 가계부와 똑같이 연동돼요. 📲 버튼으로 홈 화면에 앱처럼 추가할 수 있어요.']]; };
 function renderTour() { const T = TOUR(), [ic, t, d] = T[tourI], last = tourI === T.length - 1;
   smTitle.textContent = `처음 안내 ${tourI + 1} / ${T.length}`;
@@ -3713,6 +3715,115 @@ smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (
 const _renderMe_tour = renderMe; renderMe = function () { _renderMe_tour(); const f = smBody.querySelector('.factions'); if (f) f.insertAdjacentHTML('afterend', '<button type="button" class="ghost" data-act="tour-again" style="margin-top:8px">👋 처음 안내 다시 보기</button>'); };
 { let seen = false; try { seen = !!localStorage.getItem(TOUR_KEY); } catch (e) { seen = true; }
   if (!seen) { const tryOpen = n => setTimeout(() => { if (!started || camTween || switching) { if (n < 40) tryOpen(n + 1); return; } if (!smOpen && !aiOpen && !activeKey) openTour(); }, n ? 400 : 2600); tryOpen(0); } }
+/* ---- ✍️ 입력한 사람 (🙋 주인장 / 🤖 피클): 2D v21과 같은 필드(by:'pickle'). 기본 주인장, 피클 전용 주소(?by=pickle)로 오면 자동 피클 ---- */
+const BY = { v: 'owner' };
+try { if (/[?&]by=pickle\b/.test(location.search)) sessionStorage.setItem('soloBy', 'pickle'); if (sessionStorage.getItem('soloBy') === 'pickle') BY.v = 'pickle'; } catch (e) {}
+const _renderEntry_by = renderEntry;
+renderEntry = function () { _renderEntry_by(); if (!isLive()) return; const f = smBody.querySelector('.factions'); if (!f) return;
+  f.insertAdjacentHTML('beforebegin', `<div class="field"><label>입력한 사람</label><div class="seg">${[['owner', '🙋 주인장'], ['pickle', '🤖 피클']].map(([v, l]) => `<button type="button" data-eby="${v}" class="${v === BY.v ? 'on' : ''}" aria-pressed="${v === BY.v}">${l}</button>`).join('')}</div></div>`); };
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || smOpen !== 'entry' || !b.dataset.eby) return; BY.v = b.dataset.eby === 'pickle' ? 'pickle' : 'owner';
+  try { if (BY.v === 'pickle') sessionStorage.setItem('soloBy', 'pickle'); else sessionStorage.removeItem('soloBy'); } catch (er) {}
+  smBody.querySelectorAll('[data-eby]').forEach(x => { const on = x.dataset.eby === BY.v; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); }); });
+// 세무담당 직원의 피클 브리핑 (내 장부일 때만)
+const _renderClerk_by = renderClerk;
+renderClerk = function () { _renderClerk_by(); if (!isLive()) return; const k = kst(), P = REAL.docs.filter(d => d.by === 'pickle' && String(d.date || '').startsWith(k.ym)); const lead = smBody.querySelector('.ailead'); if (!lead) return;
+  const sum = (a, f) => a.filter(f).reduce((t, d) => t + (Number(d.amount) || 0), 0), last = P.map(d => String(d.date)).sort().pop();
+  const L = last ? P.filter(d => d.date === last) : [];
+  lead.insertAdjacentHTML('afterend', `<div class="pnote" style="color:#2f5fd0;background:#e8f0ff;margin:0 0 10px">${P.length ? `🤖 피클이 이번 달 <b>${P.length}건</b> 넣었어요 (매출 ${won(sum(P, d => d.type === 'sales'))} · 지출 ${won(sum(P, d => d.type !== 'sales'))}). 최근 ${md(last)}에 ${L.length}건 — 매출 ${won(sum(L, d => d.type === 'sales'))}, 지출 ${won(sum(L, d => d.type !== 'sales'))}.` : '🤖 이번 달 피클이 넣은 내역은 아직 없어요. AI 자동입력에서 피클에게 보낼 말을 다시 복사해 주면, 피클이 넣은 건 🤖 표시가 붙어요.'}</div>`); };
+/* ---- 📊 오늘 브리핑 · 한 줄 진단 · 성적표 공유 (세무담당 직원) ----
+   이미 장부에 있는 데이터만으로 계산(새 저장 없음). 계정 분류는 복식장부와 같은 accountOf. 개인 지출은 제외. */
+const dayAdd = (ds, n) => { const d = new Date(ds + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const ymAdd = (ym, n) => { let y = +ym.slice(0, 4), m = +ym.slice(5) + n; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}-${String(m).padStart(2, '0')}`; };
+function briefData() {
+  const k = kst(), E = allEntries(), biz = E.filter(x => !isPers(x));
+  const mon = ym => { const A = biz.filter(x => x.date.startsWith(ym)), o = { ym, sales: 0, exp: 0, acc: {}, n: A.length, days: new Set() };
+    A.forEach(x => { if (x.type === 'sales') { o.sales += x.amount; o.days.add(x.date); } else { const a = accountOf(x.category || '', x.memo || ''); o.exp += x.amount; o.acc[a] = (o.acc[a] || 0) + x.amount; } });
+    o.net = o.sales - o.exp; return o; };
+  const cur = mon(k.ym), prev = mon(ymAdd(k.ym, -1)), y = dayAdd(k.date, -1), w = dayAdd(y, -7);
+  const daySales = d => biz.filter(x => x.date === d && x.type === 'sales').reduce((s, x) => s + x.amount, 0);
+  const pk = E.filter(x => x.by === 'pickle' && x.date.startsWith(k.ym));
+  return { k, cur, prev, y, ySales: daySales(y), wSales: daySales(w), tSales: daySales(k.date), pickle: pk.length, pickleY: pk.filter(x => x.date === y).length, total: E.length };
+}
+const bpct = (a, b) => b > 0 ? a / b * 100 : null;
+const RATIOS = [['식자재비', '🥬 식자재비'], ['지급수수료', '🛵 배달·결제 수수료'], ['인건비', '🧑‍🍳 인건비'], ['임차료', '🏠 임차료']];
+function briefLines(B) { // 한 줄 진단들
+  const L = [], c = B.cur, p = B.prev;
+  RATIOS.forEach(([a, label]) => { const r = bpct(c.acc[a] || 0, c.sales), q = bpct(p.acc[a] || 0, p.sales); if (r == null || !(c.acc[a] > 0)) return;
+    const d = q != null && p.acc[a] > 0 ? r - q : null;
+    L.push({ label, r, d, txt: `${label}가 매출의 <b>${r.toFixed(1)}%</b>` + (d == null ? '' : Math.abs(d) < 0.5 ? ' · 지난달과 비슷해요' : ` · 지난달보다 <b style="color:${d > 0 ? 'var(--neg)' : 'var(--pos)'}">${d > 0 ? '+' : ''}${d.toFixed(1)}%p</b>`) }); });
+  return L;
+}
+function briefShort(B) {
+  const home = MODE === 'home';
+  if (home) return `이번 달 수입 <b>${won(B.cur.sales)}</b> · 지출 <b>${won(B.cur.exp)}</b>`;
+  let s = B.ySales > 0 ? `어제 매출 <b>${won(B.ySales)}</b>` + (B.wSales > 0 ? ` (지난주 같은 요일보다 <b>${B.ySales >= B.wSales ? '+' : ''}${((B.ySales - B.wSales) / B.wSales * 100).toFixed(0)}%</b>)` : '') : '어제 매출은 아직 안 들어왔어요';
+  if (B.pickleY) s += `<br>🤖 피클이 어제 ${B.pickleY}건 넣었어요`;
+  return s + `<br>이번 달 순익 <b>${won(B.cur.net)}</b> · <u>자세히 ▸</u>`;
+}
+function renderBrief() {
+  const B = briefData(), c = B.cur, p = B.prev, L = briefLines(B), home = MODE === 'home', days = c.days.size, live = isLive();
+  smTitle.textContent = `📊 ${+B.k.ym.slice(5)}월 브리핑`;
+  const grow = p.sales > 0 && c.sales > 0 ? (c.sales / Math.max(1, days)) / (p.sales / Math.max(1, p.days.size)) * 100 - 100 : null;
+  let h = home ? '' : `<div class="pnote" style="margin:0 0 10px">${B.ySales > 0 ? `☀️ 어제(${md(B.y)}) 매출 <b>${won(B.ySales)}</b>${B.wSales > 0 ? ` · 지난주 같은 요일 ${won(B.wSales)} 대비 <b>${B.ySales >= B.wSales ? '+' : ''}${((B.ySales - B.wSales) / B.wSales * 100).toFixed(0)}%</b>` : ''}` : `☀️ 어제(${md(B.y)}) 매출이 아직 없어요. 피클이나 직접 입력으로 넣어 주세요.`}${B.tSales > 0 ? `<br>오늘 지금까지 <b>${won(B.tSales)}</b>` : ''}</div>`;
+  h += `<div class="cards3" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 10px">${[[home ? '수입' : '매출', c.sales, 'var(--pos)'], ['지출', c.exp, 'var(--neg)'], [home ? '남은 돈' : '순익', c.net, c.net >= 0 ? 'var(--pos)' : 'var(--neg)']].map(([a, v, col]) => `<div class="instcard" style="margin:0;padding:9px 8px;text-align:center"><p style="margin:0">${a}</p><p class="ib num" style="color:${col};font-size:13px;white-space:nowrap">${won(v)}</p></div>`).join('')}</div>`;
+  if (!home) {
+    h += `<div class="sec"><span>💡 한 줄 진단 (매출 대비 비율)</span></div><div class="rows">`;
+    h += L.length ? L.map(x => `<div class="row" style="display:block"><span>${x.txt}</span><div style="height:6px;border-radius:3px;background:#f1ece4;margin-top:6px;overflow:hidden"><i style="display:block;height:100%;width:${Math.min(100, x.r).toFixed(1)}%;background:var(--coral);border-radius:3px"></i></div></div>`).join('') : `<p class="empty">이번 달 매출과 지출이 들어오면 비율을 보여드려요.</p>`;
+    h += `</div>`;
+    if (days) h += `<p class="hintp">매출이 있는 날 ${days}일 · 하루 평균 <b>${won(Math.round(c.sales / days))}</b>${grow == null ? '' : ` · 지난달 하루 평균보다 <b>${grow >= 0 ? '+' : ''}${grow.toFixed(0)}%</b>`}</p>`;
+  }
+  h += `<div class="pnote" style="color:#2f5fd0;background:#e8f0ff;margin:10px 0">${B.pickle ? `🤖 피클이 이번 달 <b>${B.pickle}건</b>을 대신 넣었어요${B.total ? ` (전체 ${c.n}건 중)` : ''}.` : live ? '🤖 피클을 연결하면 배민·쿠팡이츠·요기요 매출과 영수증이 매일 자동으로 들어오고, 여기서 바로 브리핑돼요.' : '🧪 지금은 체험 데이터예요. 로그인 후 피클을 연결하면 매출·영수증이 매일 자동으로 들어와요.'}</div>`;
+  if (!B.pickle) h += `<button type="button" class="ghost" data-act="brief-ai" style="margin:0 0 8px">🤖 피클 연결 방법 보기</button>`;
+  if (!home) h += `<button type="button" class="primary" data-act="brief-share">🏆 이번 달 성적표 이미지 만들기 (금액은 숨김)</button><p class="hintp">성적표에는 금액 대신 비율과 성장률만 들어가요. 가게 이름도 넣지 않아요.</p>`;
+  h += `<p class="hintp">참고용 관리 지표예요. 개인 지출은 빼고, 장부에 입력된 내용으로만 계산해요.</p>`;
+  smBody.innerHTML = h;
+}
+// 🏆 성적표 이미지 (금액·상호 없음: 비율·성장률만)
+function reportCard() {
+  const B = briefData(), c = B.cur, p = B.prev, L = briefLines(B), W = 1080, H = 1350, cvs = document.createElement('canvas'); cvs.width = W; cvs.height = H; const x = cvs.getContext('2d');
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#fff3e2'); g.addColorStop(1, '#ffe1d6'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const F = (s, wt) => `${wt || 800} ${s}px "Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif`;
+  x.fillStyle = '#4a3b30'; x.textBaseline = 'top'; x.font = F(44, 700); x.fillText(`${B.k.y}년 ${B.k.m}월`, 90, 100);
+  x.font = F(84, 900); x.fillText('우리 가게 성적표 🏆', 90, 165);
+  const margin = c.sales > 0 ? c.net / c.sales * 100 : null, dp = c.days.size, grow = p.sales > 0 && dp ? (c.sales / dp) / (p.sales / Math.max(1, p.days.size)) * 100 - 100 : null;
+  const card = (y, h) => { x.fillStyle = '#ffffff'; x.beginPath(); x.roundRect(70, y, W - 140, h, 36); x.fill(); };
+  card(310, 250); x.fillStyle = '#8a7667'; x.font = F(38, 700); x.fillText('순이익률', 120, 350); x.fillText('하루 매출 성장', 580, 350); x.font = F(28, 600); x.fillText('지난달 하루 평균 대비', 580, 505); x.font = F(38, 700);
+  x.font = F(96, 900); x.fillStyle = margin != null && margin >= 0 ? '#2c8a6e' : '#c85a43'; x.fillText(margin == null ? '-' : `${margin.toFixed(1)}%`, 120, 410);
+  x.fillStyle = grow != null && grow >= 0 ? '#2c8a6e' : '#c85a43'; x.fillText(grow == null ? '-' : `${grow >= 0 ? '+' : ''}${grow.toFixed(0)}%`, 580, 410);
+  card(600, 110 + Math.max(1, L.length) * 130); x.fillStyle = '#8a7667'; x.font = F(38, 700); x.fillText('매출 대비 비용 비율', 120, 635);
+  if (!L.length) { x.font = F(40, 600); x.fillText('이번 달 지출이 아직 없어요', 120, 720); }
+  L.forEach((r, i) => { const y = 710 + i * 130; x.fillStyle = '#4a3b30'; x.font = F(44, 800); x.fillText(r.label, 120, y); x.textAlign = 'right'; x.fillText(`${r.r.toFixed(1)}%`, W - 120, y); x.textAlign = 'left';
+    x.fillStyle = '#f1ece4'; x.beginPath(); x.roundRect(120, y + 66, W - 240, 18, 9); x.fill(); x.fillStyle = '#ef8a74'; x.beginPath(); x.roundRect(120, y + 66, Math.max(18, (W - 240) * Math.min(100, r.r) / 100), 18, 9); x.fill(); });
+  x.fillStyle = '#8a7667'; x.font = F(34, 600); x.fillText(`기록한 날 ${dp}일 · 전표 ${c.n}건` + (B.pickle ? ` · 🤖 자동입력 ${B.pickle}건` : ''), 90, H - 190);
+  x.fillStyle = '#4a3b30'; x.font = F(40, 800); x.fillText('솔로운영 3D 가계부', 90, H - 130); x.fillStyle = '#8a7667'; x.font = F(30, 600); x.fillText('craftburgers1.github.io/BUSINESS', 90, H - 78);
+  return cvs;
+}
+async function shareReport(btn) {
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '만드는 중…';
+  try { const blob = await new Promise(r => reportCard().toBlob(r, 'image/png')), k = kst(), name = `솔로운영_성적표_${k.ym}.png`, file = new File([blob], name, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: '우리 가게 성적표' }); } catch (e) { if (!(e && e.name === 'AbortError')) throw e; } }
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); toast('🏆 성적표 이미지를 받았어요'); }
+  } catch (e) { toast('성적표를 만들지 못했어요. 다시 눌러 주세요', true); }
+  btn.disabled = false; btn.textContent = old;
+}
+const _renderSm_brief = renderSm; renderSm = function () { if (smOpen === 'brief') return renderBrief(); _renderSm_brief(); };
+const _renderClerk_brief = renderClerk;
+renderClerk = function () { _renderClerk_brief(); const g = smBody.querySelector('.mcards'); if (g) g.insertAdjacentHTML('afterbegin', `<button type="button" class="mcard" data-clerk="brief" style="grid-column:1/-1;flex-direction:row;gap:10px;min-height:56px"><i>📊</i><b>오늘 브리핑 · 한 줄 진단</b></button>`); };
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+  if (smOpen === 'clerk' && b.dataset.clerk === 'brief') { smOpen = 'brief'; renderSm(); smEl.querySelector('.aisheet').scrollTop = 0; return; }
+  if (smOpen === 'brief' && b.dataset.act === 'brief-share') { shareReport(b); return; }
+  if (smOpen === 'brief' && b.dataset.act === 'brief-ai') { closeSm(); setTimeout(openAi, 300); } });
+// 하루에 한 번: 앱을 열면 말풍선으로 짧은 브리핑 (누르면 자세히)
+bubble.addEventListener('click', () => { if (!bubble.dataset.brief) return; delete bubble.dataset.brief; bubble.classList.remove('show'); if (activeKey) closePanel(); openSm('brief'); });
+function dailyBrief(n) { setTimeout(() => { let seen = ''; try { seen = localStorage.getItem('solo3d_brief') || ''; } catch (e) { return; } const k = kst(); if (seen >= k.date) return;
+    if (!started || camTween || switching || smOpen || aiOpen || activeKey || (REAL.on && REAL.status !== 'ok')) { if (n < 60) dailyBrief(n + 1); return; }
+    const B = briefData(); if (!B.cur.n && !B.ySales) return;
+    try { localStorage.setItem('solo3d_brief', k.date); } catch (e) {}
+    bubble.innerHTML = briefShort(B); bubble.dataset.brief = '1'; bubble.classList.add('show');
+    clearTimeout(bubbleTimer); bubbleTimer = setTimeout(() => { bubble.classList.remove('show'); delete bubble.dataset.brief; }, 9000);
+    face.classList.remove('wiggle'); void face.offsetWidth; face.classList.add('wiggle'); }, n ? 700 : 5200); }
+dailyBrief(0);
+const _ownerTalk_brief = ownerTalk; ownerTalk = function () { delete bubble.dataset.brief; _ownerTalk_brief(); };
 // 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
 const _applyCam_far = applyCam;
 applyCam = function () { _applyCam_far(); const out = cam.pos.z > ROOM.z1 - 0.45; if (back.visible === out) back.visible = !out; };

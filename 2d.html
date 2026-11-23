@@ -908,9 +908,9 @@
         const PICKLE_INVITE_URL = 'https://pickle.com'; // v6: 피클 초대 링크. 빈 문자열('')이면 1단계 버튼 대신 안내 문구가 나옵니다.
         const PICKLE_STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=com.pickle.client'; // v9: 안드로이드(Play 스토어)
         const PICKLE_STORE_URL_IOS = 'https://apps.apple.com/kr/app/id6795790129'; // v9: 아이폰·아이패드(App Store). PC·기타는 PICKLE_INVITE_URL
-        const PICKLE_MESSAGE = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v6: 2단계 복사 문장
-        const PICKLE_MESSAGE_RESTAURANT = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v8: 식당·카페 토글 체크 시 문장
-        const PICKLE_FULL_ROUTINE_PROMPT = '너는 내 매장 전담 비서야. 내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/)와 근태관리(https://craftburgers1.github.io/craftburger/)를 연결해 두고 아래 자동화를 맡아 줘.\n\n[진행 순서]\n1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 \'이 앱들과 너를 연결하면 내 가게 운영이 구체적으로 어떻게 편해지는지\' 쉽고 상세하게 먼저 브리핑해 줘.\n2단계(확인 후 연결): 내가 좋다고 하면 그때부터 가계부·근태앱·배달앱·쇼핑몰을 하나씩 차근차근 연결하자.\n\n[세팅할 자동화 루틴 4가지]\n1. 매일 새벽 3시: 포스·배달앱(배민·쿠팡이츠·요기요·땡겨요) 전날 매출만 가계부에 자동 기록 (수수료·배달비는 매일 넣으면 정산이 안 맞으니 매월 1일 월말 정산내역서 기준으로 한 번에 정리)\n2. 매일 자정: 배민·쿠팡이츠·네이버 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)\n3. 지출 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력\n4. 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.'; // v12: 자영업자 풀세팅 루틴 프롬프트(선 브리핑 → 확인 후 연결)
+        const PICKLE_MESSAGE = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v6: 2단계 복사 문장
+        const PICKLE_MESSAGE_RESTAURANT = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v8: 식당·카페 토글 체크 시 문장
+        const PICKLE_FULL_ROUTINE_PROMPT = '너는 내 매장 전담 비서야. 내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle)와 근태관리(https://craftburgers1.github.io/craftburger/)를 연결해 두고 아래 자동화를 맡아 줘.\n\n[진행 순서]\n1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 \'이 앱들과 너를 연결하면 내 가게 운영이 구체적으로 어떻게 편해지는지\' 쉽고 상세하게 먼저 브리핑해 줘.\n2단계(확인 후 연결): 내가 좋다고 하면 그때부터 가계부·근태앱·배달앱·쇼핑몰을 하나씩 차근차근 연결하자.\n\n[세팅할 자동화 루틴 4가지]\n1. 매일 새벽 3시: 포스·배달앱(배민·쿠팡이츠·요기요·땡겨요) 전날 매출만 가계부에 자동 기록 (수수료·배달비는 매일 넣으면 정산이 안 맞으니 매월 1일 월말 정산내역서 기준으로 한 번에 정리)\n2. 매일 자정: 배민·쿠팡이츠·네이버 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)\n3. 지출 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력\n4. 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.'; // v12: 자영업자 풀세팅 루틴 프롬프트(선 브리핑 → 확인 후 연결)
         let currentUser = null;
         let storeConfig = null;
         let dbData = [];
@@ -1388,7 +1388,8 @@
                 category: category,
                 amount: amount,
                 memo: memo,
-                ...v17ScopeField(type) // v17: 지출에만 scope('store'|'personal'), 수입은 그대로
+                ...v17ScopeField(type), // v17: 지출에만 scope('store'|'personal'), 수입은 그대로
+                ...v21ByField() // v21: 피클이 넣은 것만 by:'pickle' (주인장은 필드 없음)
             };
 
             await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", newEntry.id), newEntry);
@@ -2167,7 +2168,7 @@
             const amount = parseInt(document.getElementById('inputAmount').value) || 0;
             const memo = document.getElementById('inputMemo').value || '';
             const category = type === 'sales' ? document.getElementById('salesType').value : document.getElementById('inputCategory').value;
-            dbData.push({ id: 'demo-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6), type, date, category, amount, memo, ...v17ScopeField(type) });
+            dbData.push({ id: 'demo-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6), type, date, category, amount, memo, ...v17ScopeField(type), ...v21ByField() });
             document.getElementById('inputAmount').value = '';
             document.getElementById('inputMemo').value = '';
             renderDashboard();
@@ -3738,6 +3739,62 @@
             const b = document.getElementById('hometaxModal');
             if (b && !b.classList.contains('hidden')) closeHometaxModal();
         });
+
+        /* ===================== v21: ✍️ 입력한 사람 (🙋 주인장 / 🤖 피클) =====================
+           피클(AI 비서)이 넣은 내역을 구분. 기본은 주인장(필드 없음), 피클은 by:'pickle'.
+           피클에게 주는 주소(…/2d.html?by=pickle)로 들어오면 자동으로 피클로 맞춰짐. 3D와 같은 필드. */
+        const V21_BY_KEY = 'soloBy';
+        let v21By = 'owner';
+        try { if (/[?&]by=pickle\b/.test(location.search)) sessionStorage.setItem(V21_BY_KEY, 'pickle'); if (sessionStorage.getItem(V21_BY_KEY) === 'pickle') v21By = 'pickle'; } catch (e) { if (/[?&]by=pickle\b/.test(location.search)) v21By = 'pickle'; }
+        function v21ByField() { return v21By === 'pickle' ? { by: 'pickle' } : {}; }
+        function v21SetBy(v) {
+            v21By = v === 'pickle' ? 'pickle' : 'owner';
+            try { if (v21By === 'pickle') sessionStorage.setItem(V21_BY_KEY, 'pickle'); else sessionStorage.removeItem(V21_BY_KEY); } catch (e) { /* 무시 */ }
+            document.querySelectorAll('#byToggle button[data-by]').forEach(b => {
+                const on = b.dataset.by === v21By;
+                b.classList.toggle('bg-white', on); b.classList.toggle('shadow-sm', on);
+                b.classList.toggle('text-slate-800', on); b.classList.toggle('text-slate-500', !on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+        }
+        function v21RenderByToggle() {
+            const form = document.querySelector('#form-container form');
+            if (!form || document.getElementById('byToggle')) return;
+            const wrap = document.createElement('div');
+            wrap.id = 'byToggle'; wrap.className = 'flex items-center gap-2';
+            const lab = document.createElement('span'); lab.className = 'text-[11px] font-bold text-slate-500'; lab.textContent = '입력한 사람';
+            const seg = document.createElement('div');
+            seg.className = 'inline-flex bg-slate-100 p-0.5 rounded-lg'; seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', '입력한 사람');
+            [['owner', '🙋 주인장'], ['pickle', '🤖 피클']].forEach(([v, label]) => {
+                const b = document.createElement('button');
+                b.type = 'button'; b.dataset.by = v; b.textContent = label;
+                b.className = 'px-2.5 py-1 rounded-md text-[11px] font-bold transition';
+                b.onclick = () => v21SetBy(v);
+                seg.appendChild(b);
+            });
+            wrap.appendChild(lab); wrap.appendChild(seg);
+            const submit = form.querySelector('button[type="submit"]');
+            if (submit) form.insertBefore(wrap, submit); else form.appendChild(wrap);
+            v21SetBy(v21By);
+        }
+        function v21BadgeRows(root) {
+            if (!root) return;
+            root.querySelectorAll('button[onclick^="deleteEntry("]').forEach(btn => {
+                const m = /deleteEntry\('([^']+)'\)/.exec(btn.getAttribute('onclick') || ''); if (!m) return;
+                const item = dbData.find(x => String(x.id) === m[1]); if (!item || item.by !== 'pickle') return;
+                const tr = btn.closest('tr'); const td = tr ? tr.children[2] : null; const host = td || btn.parentNode; if (!host || host.querySelector('.v21-by')) return;
+                const sp = document.createElement('span'); sp.className = 'v21-by ml-1 px-1 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200 whitespace-nowrap'; sp.textContent = '🤖 피클'; sp.title = 'AI 비서 피클이 입력';
+                if (td) td.appendChild(sp); else host.insertBefore(sp, btn);
+            });
+        }
+        try {
+            const fc = document.getElementById('form-container');
+            if (fc) { new MutationObserver(() => v21RenderByToggle()).observe(fc, { childList: true, subtree: false }); v21RenderByToggle(); }
+            const hc = document.getElementById('history-container');
+            if (hc) { new MutationObserver(() => v21BadgeRows(hc)).observe(hc, { childList: true, subtree: true }); }
+            const dm = document.getElementById('dayDetailModal');
+            if (dm) { new MutationObserver(() => v21BadgeRows(dm)).observe(dm, { childList: true, subtree: true }); }
+        } catch (e) { /* 표시만 빠짐 */ }
 
         /* ===================== v19.1: 📲 홈 화면 추가 — 브라우저 자동 감지 안내 ===================== */
         // v18 installApp·installGuideModal(열고 닫는 방식)은 그대로 두고 감싸기만 함. 장부·KPI·복식장부와 무관.
