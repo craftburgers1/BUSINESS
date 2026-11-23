@@ -708,7 +708,8 @@ const hm = m => `${Math.floor(m / 60)}시간${m % 60 ? ' ' + (m % 60) + '분' : 
    ========================================================= */
 const stage = document.getElementById('stage');
 let renderer;
-try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); }
+const QS = new URLSearchParams(location.search);
+try { renderer = new THREE.WebGLRenderer({ antialias: !QS.has('naa'), powerPreference: 'high-performance' }); }
 catch (e) { window.__solo3dFail && window.__solo3dFail(); throw e; }
 // 🩺 그래픽 진단: 주소 끝에 ?diag 를 붙이면 그래픽카드 이름·초당 프레임 표시. 그래픽 가속이 꺼져 있으면(소프트웨어 렌더링) 자동 저화질 + 안내
 const GPU_NAME = (() => { try { const g = renderer.getContext(), x = g.getExtension('WEBGL_debug_renderer_info'); return x ? String(g.getParameter(x.UNMASKED_RENDERER_WEBGL)) : String(g.getParameter(g.RENDERER)); } catch (e) { return '?'; } })();
@@ -716,8 +717,8 @@ const SOFT_GPU = /swiftshader|basic render|llvmpipe|software|microsoft basic/i.t
 const DIAG = /[?&]diag/.test(location.search);
 // 화질 예산: PC는 창이 커서(예: 2560×1440×2배 = 1,470만 화소) 폰(360×720×1.5배 ≈ 58만)보다 수십 배 많이 그림 → 화소 수 상한을 둠
 const PX_BUDGET = COARSE ? 1.1e6 : 2.4e6; let prScale = 1;
-function targetPR() { const d = window.devicePixelRatio || 1, cap = Math.min(d, COARSE ? 1.5 : 2), fit = Math.sqrt(PX_BUDGET / Math.max(1, innerWidth * innerHeight)); return Math.max(0.5, Math.min(cap, fit) * prScale); }
-if (SOFT_GPU) { prScale = 0.6; renderer.shadowMap.enabled = false; }
+function targetPR() { if (QS.has('pr')) return +QS.get('pr'); const d = window.devicePixelRatio || 1, cap = Math.min(d, COARSE ? 1.5 : 2), fit = Math.sqrt(PX_BUDGET / Math.max(1, innerWidth * innerHeight)); return Math.max(0.5, Math.min(cap, fit) * prScale); }
+if (SOFT_GPU) prScale = 0.6;
 renderer.setPixelRatio(targetPR());
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -725,6 +726,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.92;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+if (SOFT_GPU || QS.has('ns')) renderer.shadowMap.enabled = false; if (QS.has('nt')) renderer.toneMapping = THREE.NoToneMapping;
 stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -3604,7 +3606,7 @@ function frame(now) {
   // 끊기면 자동으로 화질을 단계적으로 낮춤 (2초마다 확인, 창이 뒤에 있던 시간은 제외)
   if (started && !document.hidden) { const fd = now - perf.last; if (fd < 250) { perf.sum += fd; perf.n++; }
     if (perf.n >= 120) { const avg = perf.sum / perf.n; perf.n = 0; perf.sum = 0;
-      if (avg > 21 && perf.lv < 4) { perf.lv++;
+      if (avg > 21 && perf.lv < 4 && !QS.has('pr')) { perf.lv++;
         if (perf.lv === 1 || perf.lv === 3) { prScale *= 0.78; renderer.setPixelRatio(targetPR()); renderer.setSize(innerWidth, innerHeight); }
         if (perf.lv === 2) { renderer.shadowMap.type = THREE.PCFShadowMap; sun.shadow.map && sun.shadow.map.dispose(); sun.shadow.map = null; sun.shadow.mapSize.set(1024, 1024); renderer.shadowMap.needsUpdate = true; }
         if (perf.lv === 4) { prScale *= 0.85; renderer.setPixelRatio(targetPR()); renderer.setSize(innerWidth, innerHeight); } } } }
