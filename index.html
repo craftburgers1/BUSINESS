@@ -374,6 +374,20 @@ body.sm-open #xh,body.sm-open #tags{opacity:0}
 .post .ph{display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px}.post .ph .d{margin-left:auto}
 .post .pc{font-size:13.5px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
 .manual .row{align-items:flex-start}.manual .d{font-size:12px}
+.rcbtn{height:34px;padding:0 10px;border-radius:10px;border:1.5px dashed var(--line2);background:#fff;font-size:12px;font-weight:800;color:var(--muted)}
+.rcchip{position:relative;display:inline-block;margin:6px 6px 0 0}.rcchip img{width:44px;height:44px;object-fit:cover;border-radius:8px;display:block}
+.rcchip button{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#4a3b30;color:#fff;font-size:11px}
+.rcgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.rcgrid>button{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#f4ece1;display:flex;align-items:center;justify-content:center;font-size:24px}
+.rcgrid img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.rcgrid em{position:absolute;left:0;right:0;bottom:0;background:rgba(40,30,20,.6);color:#fff;font-style:normal;font-size:10px;font-weight:700;padding:2px 4px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rcview{display:flex;justify-content:center;margin:0 0 10px;background:#f4ece1;border-radius:14px;min-height:160px;align-items:center;font-size:40px}
+.rcview img{max-width:100%;max-height:55vh;border-radius:12px}
+.htbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 8px}.htbar button{height:28px;padding:0 9px;border-radius:9px;background:#fff;border:1px solid var(--line2);font-size:11.5px;font-weight:800}
+.htlist{display:grid;gap:6px}.htrow{display:flex;align-items:flex-start;gap:8px;background:#fff;border-radius:12px;padding:8px 10px;box-shadow:0 1px 4px rgba(110,70,40,.06)}
+.htrow.done{opacity:.6}.htrow input{margin-top:4px;width:17px;height:17px;accent-color:var(--coral)}
+.htm{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;font-size:12.5px}.htm>b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.htsel{display:flex;gap:4px}.htsel select{height:28px;border-radius:8px;border:1px solid var(--line2);background:#fffaf3;font-size:12px;max-width:50%}
 @media (prefers-reduced-motion:reduce){ .tg .b,.blob{animation:none} }
 </style>
 <script type="importmap">
@@ -3290,6 +3304,224 @@ smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (
 const _interact_p = interact;
 interact = function (k) { if (k === 'community') { firstUse(); if (activeKey) closePanel(); BBS.posts = null; BBS.form = false; openSm('community' === k ? 'bbs' : k); return; } return _interact_p(k); };
 const _stopLive_p = stopLive; stopLive = function () { BBS.posts = null; _stopLive_p(); };
+
+/* =========================================================
+   🧾 영수증함 · 📷 영수증 첨부 · 📥 홈택스/카드 엑셀 업로드 — 2D 가계부와 같은 저장소·같은 형식
+   - 사진: 사장님 구글 드라이브 [솔로운영_영수증]/YYYY-MM (drive.file), 장부 문서엔 receipts 메타+작은 썸네일
+   - 엑셀: 홈택스 사업용 카드·현금영수증·세금계산서 (.xlsx/.xls/.csv) → 변동비로 추가(중복 건너뜀)
+   ========================================================= */
+const DRIVE_OAUTH_CLIENT_ID = '327718577440-7unk22te5b409hj5ikoa0uo1dhgf4a9q.apps.googleusercontent.com', DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const GIS_SCRIPT_URL = 'https://accounts.google.com/gsi/client', DRIVE_API = 'https://www.googleapis.com/drive/v3', DRIVE_UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3/files';
+const RECEIPT_ROOT_FOLDER = '솔로운영_영수증', RECEIPT_MAX_FILES = 5, RECEIPT_MAX_SIDE = 1200, RECEIPT_QUALITY = 0.72, RECEIPT_MAX_BYTES = 500 * 1024, RECEIPT_THUMB_W = 160, RECEIPT_THUMB_MAX_BYTES = 8 * 1024, RECEIPT_DOC_MAX_BYTES = 200 * 1024;
+let driveToken = null, gisLoadPromise = null, rcPending = [], rcBusy = 0; const rcBlobCache = {};
+const rcUid = () => (REAL.on && REAL.status === 'ok' && fbAuth && fbAuth.currentUser && fbAuth.currentUser.uid === REAL.uid) ? REAL.uid : null;
+function loadGisScript() {
+  if (window.google && window.google.accounts && window.google.accounts.oauth2) return Promise.resolve();
+  if (gisLoadPromise) return gisLoadPromise;
+  gisLoadPromise = new Promise((res, rej) => { const s = document.createElement('script'); s.src = GIS_SCRIPT_URL; s.async = true; s.onload = () => (window.google && window.google.accounts && window.google.accounts.oauth2) ? res() : rej(new Error('gis')); s.onerror = () => { gisLoadPromise = null; rej(new Error('gis-load')); }; document.head.appendChild(s); });
+  return gisLoadPromise;
+}
+function driveCachedToken() { const uid = rcUid(); if (!uid) return null; if (driveToken && driveToken.uid === uid && driveToken.exp - 60000 > Date.now()) return driveToken.token;
+  try { const s = JSON.parse(sessionStorage.getItem('soloDriveToken:' + uid) || 'null'); if (s && s.uid === uid && s.exp - 60000 > Date.now()) { driveToken = s; return s.token; } } catch (e) {} return null; }
+function driveGetToken(interactive) {
+  const uid = rcUid(); if (!uid) return Promise.reject(new Error('login'));
+  const c = driveCachedToken(); if (c) return Promise.resolve(c); if (!interactive) return Promise.reject(new Error('no-token'));
+  const req = () => new Promise((res, rej) => { let done = false;
+    const client = window.google.accounts.oauth2.initTokenClient({ client_id: DRIVE_OAUTH_CLIENT_ID, scope: DRIVE_SCOPE, login_hint: (fbAuth.currentUser && fbAuth.currentUser.email) || '',
+      callback: r => { if (done) return; done = true; if (!r || r.error || !r.access_token) return rej(new Error('token')); driveToken = { token: r.access_token, exp: Date.now() + (Number(r.expires_in) || 3600) * 1000, uid }; try { sessionStorage.setItem('soloDriveToken:' + uid, JSON.stringify(driveToken)); } catch (e) {} res(driveToken.token); },
+      error_callback: er => { if (done) return; done = true; rej(new Error((er && er.type) || 'popup')); } });
+    client.requestAccessToken({ prompt: '' }); });
+  if (window.google && window.google.accounts && window.google.accounts.oauth2) return req(); // 같은 클릭 안에서 팝업(차단 방지)
+  return loadGisScript().then(req);
+}
+async function driveFetch(url, opts, token) { const o = Object.assign({}, opts || {}); o.headers = Object.assign({}, o.headers || {}, { Authorization: 'Bearer ' + token }); const r = await fetch(url, o);
+  if (r.status === 401) { driveToken = null; try { sessionStorage.removeItem('soloDriveToken:' + REAL.uid); } catch (e) {} throw new Error('drive-401'); } if (!r.ok) { const e = new Error('drive-' + r.status); e.status = r.status; throw e; } return r; }
+const driveQ = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+async function driveFolder(token, name, parent) {
+  const q = `name='${driveQ(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${driveQ(parent || 'root')}' in parents`;
+  const j = await (await driveFetch(`${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&pageSize=10&spaces=drive`, {}, token)).json(); if (j.files && j.files.length) return j.files[0].id;
+  return (await (await driveFetch(`${DRIVE_API}/files?fields=id`, { method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: parent ? [parent] : ['root'] }) }, token)).json()).id;
+}
+// 폴더 id는 2D와 같은 settings/config.receiptDrive 에 (다른 설정은 merge로 보존)
+async function driveMonthFolder(token, ym, reset) {
+  const cfg = !reset && REAL.cfg && REAL.cfg.receiptDrive && typeof REAL.cfg.receiptDrive === 'object' ? JSON.parse(JSON.stringify(REAL.cfg.receiptDrive)) : { rootId: '', months: {} }; cfg.months = cfg.months || {}; let ch = false;
+  if (!cfg.rootId) { cfg.rootId = await driveFolder(token, RECEIPT_ROOT_FOLDER, ''); cfg.months = {}; ch = true; }
+  if (!cfg.months[ym]) { cfg.months[ym] = await driveFolder(token, ym, cfg.rootId); ch = true; }
+  REAL.cfg = Object.assign({}, REAL.cfg || {}, { receiptDrive: cfg });
+  if (ch && rcUid()) { try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'settings', 'config'), { receiptDrive: cfg }, { merge: true }); } catch (e) {} }
+  return cfg.months[ym];
+}
+async function driveUniqueName(token, folder, base, used) {
+  const q = `'${driveQ(folder)}' in parents and name contains '${driveQ(base)}' and trashed=false`;
+  const names = new Set(((await (await driveFetch(`${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(name)&pageSize=100&spaces=drive`, {}, token)).json()).files || []).map(f => f.name)); (used || []).forEach(n => names.add(n));
+  if (!names.has(base + '.jpg')) return base + '.jpg'; for (let i = 1; i < 1000; i++) if (!names.has(`${base}-${i}.jpg`)) return `${base}-${i}.jpg`; return `${base}-${Date.now()}.jpg`;
+}
+async function driveUpload(token, folder, name, blob) { const b = 'solo' + Math.random().toString(36).slice(2);
+  const body = new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name, parents: [folder], mimeType: 'image/jpeg' })}\r\n--${b}\r\nContent-Type: image/jpeg\r\n\r\n`, blob, `\r\n--${b}--`]);
+  return (await driveFetch(`${DRIVE_UPLOAD_API}?uploadType=multipart&fields=id,name,mimeType,size`, { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body }, token)).json(); }
+async function driveImageUrl(fileId, interactive) { if (rcBlobCache[fileId]) return rcBlobCache[fileId]; const t = await driveGetToken(interactive);
+  const u = URL.createObjectURL(await (await driveFetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media`, {}, t)).blob()); rcBlobCache[fileId] = u; return u; }
+// 압축: 긴 변 1200px, JPEG 0.72(500KB 넘으면 낮춤), 썸네일 160px·8KB (2D와 같음)
+const toBlob = (c, q) => new Promise(r => c.toBlob(b => r(b), 'image/jpeg', q));
+async function decodeImg(file) { if (window.createImageBitmap) { try { const b = await createImageBitmap(file, { imageOrientation: 'from-image' }); return { src: b, w: b.width, h: b.height }; } catch (e) {} }
+  const url = URL.createObjectURL(file); try { const im = new Image(); im.src = url; await im.decode(); return { src: im, w: im.naturalWidth, h: im.naturalHeight }; } finally { setTimeout(() => URL.revokeObjectURL(url), 1000); } }
+async function compressReceipt(file) {
+  const { src, w, h } = await decodeImg(file), sc = Math.min(1, RECEIPT_MAX_SIDE / Math.max(w, h)), cw = Math.max(1, Math.round(w * sc)), ch = Math.max(1, Math.round(h * sc));
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cw, ch); x.drawImage(src, 0, 0, cw, ch);
+  let q = RECEIPT_QUALITY, blob = await toBlob(c, q); while (blob && blob.size > RECEIPT_MAX_BYTES && q > 0.35) { q = Math.round((q - 0.12) * 100) / 100; blob = await toBlob(c, q); }
+  const tw = RECEIPT_THUMB_W, th = Math.max(1, Math.round(ch * tw / cw)), t = document.createElement('canvas'); t.width = tw; t.height = th; const tx = t.getContext('2d'); tx.fillStyle = '#fff'; tx.fillRect(0, 0, tw, th); tx.drawImage(c, 0, 0, tw, th);
+  let thumb = ''; for (const tq of [0.5, 0.4, 0.3, 0.2]) { const d = t.toDataURL('image/jpeg', tq); if (d.length * 0.75 <= RECEIPT_THUMB_MAX_BYTES) { thumb = d; break; } }
+  if (src && src.close) src.close(); return { blob, w: cw, h: ch, thumb };
+}
+function rcFileInput() { let i = document.getElementById('rcFile'); if (!i) { i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.multiple = true; i.id = 'rcFile'; i.hidden = true;
+  i.addEventListener('change', async () => { const fs = Array.from(i.files || []).filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif|gif)$/i.test(f.name || '')).slice(0, Math.max(0, RECEIPT_MAX_FILES - rcPending.length - rcBusy)); i.value = '';
+    rcBusy += fs.length; rcRender(); for (const f of fs) { try { rcPending.push(Object.assign(await compressReceipt(f), { id: uid() })); } catch (e) { toast('이 사진은 열 수 없어요 (다른 형식으로 다시 찍어 주세요)', true); } finally { rcBusy--; rcRender(); } } });
+  document.body.appendChild(i); } return i; }
+function rcRender() { const box = smBody.querySelector('#rcBox'); if (!box) return;
+  box.innerHTML = `<button type="button" class="rcbtn" data-act="rc-add">📷 영수증·캡처 첨부 (선택 · ${rcPending.length}/${RECEIPT_MAX_FILES})</button>${rcPending.map(p => `<span class="rcchip"><img src="${p.thumb}" alt=""><button type="button" data-rcx="${p.id}" aria-label="빼기">✕</button></span>`).join('')}<p class="hintp" style="margin:4px 0 0">${rcBusy ? `사진 줄이는 중… (${rcBusy}장)` : rcUid() ? '저장하면 내 구글 드라이브 [솔로운영_영수증] 폴더에 올라가요 (2D 영수증함에도 보여요)' : '영수증 첨부는 로그인(내 장부) 후 쓸 수 있어요'}</p>`; }
+// 직접 입력 폼에 📷 첨부 칸
+const _renderEntry_rc = renderEntry;
+renderEntry = function () { _renderEntry_rc(); const f = smBody.querySelector('.factions'); if (f) { f.insertAdjacentHTML('beforebegin', '<div class="field" id="rcBox"></div>'); rcRender(); } };
+const _saveEntry_rc = saveEntry;
+saveEntry = async function (btn) {
+  if (rcBusy) { toast('사진을 줄이는 중이에요. 잠시 후 다시 눌러 주세요', true); return; }
+  const files = isLive() ? rcPending.slice() : [], tokenP = files.length ? driveGetToken(true).catch(() => null) : null; // 같은 클릭 안에서 토큰 요청 시작
+  const before = lastNewId; await _saveEntry_rc(btn);
+  if (!files.length || lastNewId === before || !lastNewId) return;
+  rcPending = []; const id = lastNewId, entry = REAL.docs.find(d => String(d.id) === id) || { id, date: kst().date, type: EN.type, category: EN.cat, amount: 0 };
+  toast('🧾 영수증 올리는 중…'); const token = await tokenP, metas = []; let failed = files.length;
+  if (token && rcUid()) { failed = 0; const ym = String(entry.date || kst().date).slice(0, 7); let folder = null; try { folder = await driveMonthFolder(token, ym); } catch (e) {}
+    const hm = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).replace(':', '');
+    const base = `${entry.date}_${entry.type === 'sales' ? '수입' : '지출'}_${String(entry.category || '기타').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 20)}_${entry.amount}_${hm}`, used = [];
+    for (const p of files) { try { if (!folder) throw new Error('no-folder'); let name = await driveUniqueName(token, folder, base, used), up;
+        try { up = await driveUpload(token, folder, name, p.blob); } catch (e) { if (e.status !== 404) throw e; folder = await driveMonthFolder(token, ym, true); name = await driveUniqueName(token, folder, base, used); up = await driveUpload(token, folder, name, p.blob); }
+        used.push(up.name || name); metas.push({ fileId: up.id, name: up.name || name, folderId: folder, mime: 'image/jpeg', size: Number(up.size) || p.blob.size, w: p.w, h: p.h, thumb: p.thumb || '' }); } catch (e) { failed++; } } }
+  if (metas.length) { let list = (entry.receipts || []).concat(metas); if (new Blob([JSON.stringify(Object.assign({}, entry, { receipts: list }))]).size > RECEIPT_DOC_MAX_BYTES) list = list.map(m => Object.assign({}, m, { thumb: '' }));
+    try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), { receipts: list }, { merge: true }); } catch (e) { toast(`영수증 ${metas.length}장은 드라이브에 올라갔지만 장부에 연결하지 못했어요`, true); return; } }
+  toast(failed ? (metas.length ? `✅ 저장했어요 · 영수증 ${failed}장은 저장하지 못했어요` : `✅ 거래는 저장했어요 · 영수증 ${failed}장은 저장하지 못했어요`) : `✅ 저장했어요 · 영수증 ${metas.length}장`, failed > 0);
+};
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || smOpen !== 'entry') return;
+  if (b.dataset.act === 'rc-add') { if (!isLive()) { toast('체험판에서는 영수증을 첨부할 수 없어요 (로그인 후 가능)', true); return; } if (rcPending.length + rcBusy >= RECEIPT_MAX_FILES) { toast(`영수증은 한 번에 ${RECEIPT_MAX_FILES}장까지예요`, true); return; } loadGisScript().catch(() => {}); rcFileInput().click(); }
+  if (b.dataset.rcx) { rcPending = rcPending.filter(p => p.id !== b.dataset.rcx); rcRender(); } });
+
+/* ---- 🧾 영수증함 + 보기 ---- */
+const RCB = { ym: null, cat: '', type: '', view: null, idx: 0 };
+function rcItems() { const ym = RCB.ym, inM = REAL.docs.filter(x => Array.isArray(x.receipts) && x.receipts.length && String(x.date || '').slice(0, 7) === ym);
+  const cats = [...new Set(inM.map(x => x.category))].sort(), rows = inM.filter(x => (!RCB.cat || x.category === RCB.cat) && (!RCB.type || (RCB.type === 'sales' ? x.type === 'sales' : x.type !== 'sales'))).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const items = []; rows.forEach(en => en.receipts.forEach((r, i) => items.push({ en, r, i }))); return { items, cats, count: inM.reduce((s, x) => s + x.receipts.length, 0) }; }
+function renderRcBox() {
+  smTitle.textContent = '🧾 영수증함';
+  if (!isLive()) { smBody.innerHTML = '<p class="ailead">영수증함은 로그인(내 장부 연동) 후 쓸 수 있어요. 2D 가계부와 같은 영수증함이에요.</p><button type="button" class="primary" data-act="bbs-login">Google 로그인으로 내 장부 연동</button>'; return; }
+  const { items, cats, count } = rcItems(), [y, m] = RCB.ym.split('-').map(Number);
+  smBody.innerHTML = `<div class="calbar"><button type="button" data-rcm="-1">◀</button><b>${y}년 ${m}월</b><button type="button" data-rcm="1">▶</button></div>
+    <div class="seg wrap" style="margin-bottom:6px">${[['', '전체'], ['sales', '수입'], ['out', '지출']].map(([v, l]) => `<button type="button" data-rct="${v}" class="${RCB.type === v ? 'on' : ''}">${l}</button>`).join('')}</div>
+    ${cats.length ? `<div class="qk" style="margin:0 0 8px"><button type="button" data-rcc="" class="${RCB.cat ? '' : 'on'}">전체 항목</button>${cats.map(c => `<button type="button" data-rcc="${esc(c)}" class="${RCB.cat === c ? 'on' : ''}">${esc(c)}</button>`).join('')}</div>` : ''}
+    <p class="hintp" style="margin:0 0 8px">이 달 영수증 ${count}장 · 보이는 것 ${items.length}장</p>
+    <div class="rcgrid">${items.map((it, i) => `<button type="button" data-rcv="${i}">${it.r.thumb ? `<img src="${it.r.thumb}" alt="">` : '<span>🧾</span>'}<em>${String(it.en.date).slice(5)} ${Number(it.en.amount).toLocaleString()}원</em></button>`).join('') || '<p class="empty" style="grid-column:1/-1">이 달에 첨부한 영수증이 없어요. 직접 입력의 📷 버튼으로 첨부해 보세요.</p>'}</div>`;
+}
+function renderRcView() {
+  const { items } = rcItems(), it = items[RCB.idx]; if (!it) { smOpen = 'rcbox'; return renderRcBox(); }
+  smTitle.textContent = `🧾 영수증 ${RCB.idx + 1} / ${items.length}`;
+  const en = it.en, url = rcBlobCache[it.r.fileId];
+  smBody.innerHTML = `<div class="rcview">${url || it.r.thumb ? `<img id="rcImg" src="${url || it.r.thumb}" alt="영수증">` : '<span>🧾</span>'}</div>
+    ${url ? '' : `<button type="button" class="ghost" data-act="rc-orig" style="margin:0 0 10px">🔍 원본 크게 보기 (구글 드라이브)</button>`}
+    <div class="rows">${[['날짜', en.date], ['구분', en.type === 'sales' ? '수입' : en.type === 'fixed' ? '고정비' : '변동비'], ['항목', en.category], ['금액', won(Number(en.amount) || 0)], ['메모', en.memo || '-']].map(([a, b]) => `<div class="row"><div class="l"><span class="d">${a}</span></div><b>${esc(b)}</b></div>`).join('')}</div>
+    <div class="factions" style="margin-top:12px"><button type="button" class="cancel" data-act="rc-back">← 영수증함</button>${items.length > 1 ? '<button type="button" class="cancel" data-rcs="-1">◀</button><button type="button" class="cancel" data-rcs="1">▶</button>' : ''}</div>`;
+  if (!url && it.r.fileId) driveImageUrl(it.r.fileId, false).then(() => { if (smOpen === 'rcview') renderSm(); }).catch(() => {}); // 이미 동의했으면 조용히 원본
+}
+/* ---- 📥 홈택스/카드 엑셀 업로드 (2D v19와 같은 규칙) ---- */
+const V19_SHEETJS_URLS = ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'];
+const V19_ACCOUNT_TO_ITEM = { '식자재비': '식자재', '소모품비': '소모품', '지급수수료': '배달앱 수수료', '임차료': '월세', '통신비': '통신비', '수도광열비': '관리비', '인건비': '인건비', '광고선전비': '광고비' };
+const V19_DEFAULT_ITEMS = ['식자재', '포장재', '소모품', '광고비', '배달앱 수수료', '월세', '관리비', '통신비', '보험료', '인건비', '기타 지출'];
+const HT = { rows: [], file: '', status: '파일을 고르면 여기에 미리보기가 나와요.', saving: false }; let sheetP = null;
+function loadSheetJS() { if (window.XLSX) return Promise.resolve(window.XLSX); if (sheetP) return sheetP;
+  const ld = u => new Promise((res, rej) => { const s = document.createElement('script'); s.src = u; s.async = true; s.onload = () => window.XLSX ? res(window.XLSX) : rej(new Error('x')); s.onerror = () => rej(new Error('x')); document.head.appendChild(s); });
+  sheetP = ld(V19_SHEETJS_URLS[0]).catch(() => ld(V19_SHEETJS_URLS[1])).catch(e => { sheetP = null; throw e; }); return sheetP; }
+function parseCsv(t) { const rows = []; let row = [], cell = '', q = false; for (let i = 0; i < t.length; i++) { const c = t[i];
+  if (q) { if (c === '"') { if (t[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; } else if (c === '"') q = true; else if (c === ',') { row.push(cell); cell = ''; }
+  else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; } else cell += c; } if (cell !== '' || row.length) { row.push(cell); rows.push(row); } return rows; }
+function decodeText(buf) { try { return new TextDecoder('utf-8', { fatal: true }).decode(buf).replace(/^﻿/, ''); } catch (e) { try { return new TextDecoder('euc-kr').decode(buf); } catch (e2) { return new TextDecoder('utf-8').decode(buf); } } }
+function htDate(v) { if (v == null || v === '') return ''; const p = n => String(n).padStart(2, '0');
+  if (v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${p(v.getMonth() + 1)}-${p(v.getDate())}`;
+  if (typeof v === 'number' && v > 20000 && v < 80000) { const d = new Date(Math.round((Math.floor(v) - 25569) * 86400000)); return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`; }
+  const s = String(v).trim(); let m = /^(\d{4})[.\-\/]\s*(\d{1,2})[.\-\/]\s*(\d{1,2})/.exec(s) || /^(\d{4})(\d{2})(\d{2})(?!\d)/.exec(s); if (!m) return '';
+  const y = +m[1], mo = +m[2], d = +m[3]; return mo < 1 || mo > 12 || d < 1 || d > 31 ? '' : `${y}-${p(mo)}-${p(d)}`; }
+function htAmount(v) { if (typeof v === 'number') return Math.floor(Math.abs(v)); const n = parseFloat(String(v == null ? '' : v).replace(/[,\s원₩]/g, '').replace(/[()\-]/g, '')); return isFinite(n) ? Math.floor(Math.abs(n)) : 0; }
+const normM = s => String(s == null ? '' : s).toLowerCase().replace(/\s+/g, '').replace(/㈜|\(주\)|주식회사|유한회사/g, '').replace(/[.,\-()\[\]·\/]/g, '');
+const dupKey = (d, a, m) => `${d}|${Number(a) || 0}|${normM(m)}`;
+function htExisting() { const s = new Set(); allEntries().forEach(x => { s.add(dupKey(x.date, x.amount, x.memo)); s.add(dupKey(x.date, x.amount, x.category)); }); return s; }
+function htHeader(t) { const H = c => String(c == null ? '' : c).replace(/\s+/g, ''), pick = (cs, ns) => { for (const n of ns) { const i = cs.findIndex(c => c === n); if (i >= 0) return i; } for (const n of ns) { const i = cs.findIndex(c => c.includes(n)); if (i >= 0) return i; } return -1; };
+  for (let r = 0; r < Math.min(15, t.length); r++) { const cs = (t[r] || []).map(H), di = pick(cs, ['승인일자', '사용일자', '거래일자', '일자', '날짜', '사용일']), mi = pick(cs, ['가맹점명', '가맹점', '사용처', '상호', '거래처']), ai = pick(cs, ['합계금액', '금액', '사용금액', '승인금액', '공급대가']);
+    if (di >= 0 && mi >= 0 && ai >= 0) return { row: r, di, mi, ai }; } return null; }
+function htOptions() { const c = isLive() && REAL.cfg ? REAL.cfg : null; const list = c ? [].concat(c.fixed || [], c.variable || [], ['기타 지출']) : [].concat(catList('fixed'), catList('variable'), ['기타 지출']); return [...new Set(list.filter(Boolean))].length ? [...new Set(list.filter(Boolean))] : V19_DEFAULT_ITEMS.slice(); }
+function htGuess(m, opts) { const want = V19_ACCOUNT_TO_ITEM[accountOf('', m)]; if (want && opts.includes(want)) return want; if (want) { const n = opts.find(o => o.includes(want) || want.includes(o)); if (n) return n; } return opts.includes('기타 지출') ? '기타 지출' : opts[opts.length - 1]; }
+function htInput() { let i = document.getElementById('htFile3'); if (!i) { i = document.createElement('input'); i.type = 'file'; i.accept = '.xlsx,.xls,.csv'; i.id = 'htFile3'; i.hidden = true; i.addEventListener('change', () => { const f = i.files && i.files[0]; i.value = ''; if (f) htRead(f); }); document.body.appendChild(i); } return i; }
+async function htRead(file) {
+  HT.rows = []; HT.file = file.name; HT.status = `📄 ${file.name} · 읽는 중…`; renderSm();
+  try { const buf = await file.arrayBuffer(); let t;
+    if (/\.csv$/i.test(file.name)) t = parseCsv(decodeText(new Uint8Array(buf)));
+    else { let X; try { X = await loadSheetJS(); } catch (e) { HT.status = '⚠ 엑셀 라이브러리를 못 불러왔어요. CSV로 올려 주세요 (인터넷 연결 확인)'; return renderSm(); }
+      const wb = X.read(buf, { type: 'array', cellDates: true }); t = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' }); }
+    const hd = htHeader(t); if (!hd) { HT.status = '⚠ 승인일자·가맹점명·금액 열을 찾지 못했어요. 홈택스에서 받은 원본 그대로 올려 주세요'; return renderSm(); }
+    const ex = htExisting(), seen = new Set(), opts = htOptions(); let total = 0;
+    for (let r = hd.row + 1; r < t.length; r++) { const l = t[r] || []; if (!l.some(c => String(c).trim() !== '')) continue; total++;
+      const date = htDate(l[hd.di]), merchant = String(l[hd.mi] == null ? '' : l[hd.mi]).trim(), amount = htAmount(l[hd.ai]); if (!date || !merchant || !amount) continue;
+      const key = dupKey(date, amount, merchant), status = ex.has(key) ? 'dup' : seen.has(key) ? 'filedup' : 'new'; seen.add(key);
+      HT.rows.push({ date, merchant, amount, key, status, checked: status === 'new', scope: 'store', category: htGuess(merchant, opts) }); }
+    HT.status = HT.rows.length === total ? `📄 ${file.name} · ${total}건 읽음` : `📄 ${file.name} · ${total}건 중 ${HT.rows.length}건만 읽음`;
+  } catch (e) { HT.status = '⚠ 파일을 읽지 못했어요. 홈택스에서 받은 원본(.xlsx/.xls/.csv)인지 확인해 주세요'; }
+  renderSm();
+}
+function renderHt() {
+  smTitle.textContent = '📥 홈택스/카드 엑셀 업로드';
+  const rows = HT.rows, sel = rows.filter(r => r.checked && r.status !== 'saved').length, dup = rows.filter(r => r.status === 'dup').length, opts = htOptions();
+  const badge = { new: ['새 항목', '#f1ece4', '#6f5c4f'], dup: ['중복 건너뜀', '#ffe9e1', '#c85a43'], filedup: ['파일 내 중복', '#fff1d6', '#9a6a12'], saved: ['저장됨', '#e5f6ef', '#2c8a6e'] };
+  smBody.innerHTML = `<p class="ailead">국세청 홈택스 사업용 신용카드·현금영수증·세금계산서 엑셀(.xlsx/.xls/.csv)을 올리면 장부에 한 번에 넣어요. 이미 있는 내역(날짜·금액·가맹점이 같은 것)은 건너뛰어요.</p>
+    <button type="button" class="primary" data-act="ht-pick" style="margin:0 0 8px">📂 엑셀 파일 고르기</button><p class="hintp" style="margin:0 0 8px">${esc(HT.status)}</p>
+    ${rows.length ? `<div class="htbar"><label class="aitog" style="margin:0"><input type="checkbox" data-htall ${rows.filter(r => r.status !== 'saved').every(r => r.checked) ? 'checked' : ''}><span>전체 선택</span></label><button type="button" data-htsc="store">🏪 전체 가게</button><button type="button" data-htsc="personal">👤 전체 개인</button><span class="d">선택 ${sel}건 · 중복 ${dup}건</span></div>
+    <div class="htlist">${rows.map((r, i) => `<div class="htrow${r.status === 'saved' ? ' done' : ''}"><input type="checkbox" data-htc="${i}" ${r.checked ? 'checked' : ''} ${r.status === 'saved' ? 'disabled' : ''}><div class="htm"><b>${esc(r.merchant)}</b><span class="d num">${r.date} · <b style="color:var(--neg)">${Number(r.amount).toLocaleString()}원</b></span>
+      <div class="htsel"><select data-hts="${i}" ${r.status === 'saved' ? 'disabled' : ''}><option value="store" ${r.scope === 'store' ? 'selected' : ''}>🏪 가게</option><option value="personal" ${r.scope === 'personal' ? 'selected' : ''}>👤 개인</option></select><select data-htcat="${i}" ${r.status === 'saved' ? 'disabled' : ''}>${opts.map(o => `<option ${o === r.category ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div></div>
+      <span class="chip" style="background:${badge[r.status][1]};color:${badge[r.status][2]}">${badge[r.status][0]}</span></div>`).join('')}</div>
+    <button type="button" class="primary" data-act="ht-save" ${sel && !HT.saving ? '' : 'disabled'} style="margin-top:10px">${HT.saving ? '저장 중…' : `선택한 ${sel}건 장부에 추가`}</button>` : ''}
+    <p class="hintp">${isLive() ? '☁ 2D 가계부와 같은 장부에 변동비로 저장돼요.' : '🧪 체험 모드라 이 기기에만 저장돼요.'}</p>`;
+}
+async function htSave() {
+  if (HT.saving) return; const targets = HT.rows.filter(r => r.checked && r.status !== 'saved'); if (!targets.length) return;
+  if (isLive() && !rcUid()) { toast('로그인 상태를 확인할 수 없어 저장하지 않았어요', true); return; }
+  HT.saving = true; renderSm(); const keys = htExisting(), base = String(Date.now()); let saved = 0, failed = 0;
+  for (let i = 0; i < targets.length; i++) { const r = targets[i]; if (keys.has(r.key)) { r.status = 'dup'; r.checked = false; continue; }
+    const en = { id: base + '-' + i, type: 'variable', date: r.date, category: r.category, amount: r.amount, memo: r.merchant, scope: r.scope === 'personal' ? 'personal' : 'store' };
+    try { if (isLive()) await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', en.id), en);
+      else { const id = uid(); if (en.scope === 'personal') (DATA.personal = DATA.personal || []).push({ id, date: en.date, name: en.category + ' · ' + en.memo, amount: en.amount }); else { const acc = accountOf(en.category, en.memo);
+        if (acc === '식자재비') DATA.ingredients.push({ id, date: en.date, name: en.memo, amount: en.amount }); else if (acc === SUP_ACC && MODE !== 'home') (DATA.supplies = DATA.supplies || []).push({ id, date: en.date, category: en.category, name: en.memo, amount: en.amount }); else if (MODE !== 'home') (DATA.others = DATA.others || []).push({ id, date: en.date, category: en.category, name: en.memo, amount: en.amount, acc }); else (DATA.personal = DATA.personal || []).push({ id, date: en.date, name: en.category + ' · ' + en.memo, amount: en.amount }); } }
+      keys.add(r.key); r.status = 'saved'; r.checked = false; saved++; } catch (e) { failed++; } }
+  if (!isLive()) { saveData(DATA); syncFridgeItems(); refreshPos(); renderHud(true); } else liveRefresh();
+  HT.saving = false; const dupT = HT.rows.filter(r => r.status === 'dup').length; HT.status = `${saved}건 저장했어요 (중복 건너뜀 ${dupT}건)` + (failed ? ` · ${failed}건은 저장하지 못했어요` : '') + (isLive() ? '' : ' · 체험: 이 기기에만');
+  toast(HT.status, failed > 0); renderSm();
+}
+const _renderSm_rc = renderSm;
+renderSm = function () { if (smOpen === 'rcbox') return renderRcBox(); if (smOpen === 'rcview') return renderRcView(); if (smOpen === 'ht') return renderHt(); _renderSm_rc(); };
+smEl.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (smOpen === 'clerk' && b.dataset.clerk === 'rc') { const t = kst(); RCB.ym = t.ym; RCB.cat = ''; RCB.type = ''; smOpen = 'rcbox'; renderSm(); return; }
+  if (smOpen === 'clerk' && b.dataset.clerk === 'ht') { smOpen = 'ht'; renderSm(); return; }
+  if (smOpen === 'rcbox') { if (b.dataset.act === 'bbs-login') { closeSm(); login(); return; }
+    if (b.dataset.rcm) { let [y, m] = RCB.ym.split('-').map(Number); m += +b.dataset.rcm; if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; } RCB.ym = `${y}-${String(m).padStart(2, '0')}`; RCB.cat = ''; renderSm(); return; }
+    if (b.dataset.rct !== undefined) { RCB.type = b.dataset.rct; renderSm(); return; } if (b.dataset.rcc !== undefined) { RCB.cat = b.dataset.rcc; renderSm(); return; }
+    if (b.dataset.rcv) { RCB.idx = +b.dataset.rcv; smOpen = 'rcview'; renderSm(); return; } }
+  if (smOpen === 'rcview') { if (b.dataset.act === 'rc-back') { smOpen = 'rcbox'; renderSm(); return; }
+    if (b.dataset.rcs) { const n = rcItems().items.length; RCB.idx = (RCB.idx + +b.dataset.rcs + n) % n; renderSm(); return; }
+    if (b.dataset.act === 'rc-orig') { const it = rcItems().items[RCB.idx]; if (it && it.r.fileId) { b.textContent = '불러오는 중…'; driveImageUrl(it.r.fileId, true).then(() => renderSm()).catch(() => { b.textContent = '🔍 원본 크게 보기 (구글 드라이브)'; toast('원본을 불러오지 못했어요 (드라이브 권한을 허용해 주세요)', true); }); } } }
+  if (smOpen === 'ht') { if (b.dataset.act === 'ht-pick') htInput().click(); if (b.dataset.act === 'ht-save') htSave();
+    if (b.dataset.htsc) { HT.rows.forEach(r => { if (r.status !== 'saved') r.scope = b.dataset.htsc; }); renderSm(); } }
+});
+smEl.addEventListener('change', e => { if (smOpen !== 'ht') return; const t = e.target;
+  if (t.dataset.htall !== undefined) { HT.rows.forEach(r => { if (r.status !== 'saved') r.checked = t.checked; }); renderSm(); }
+  if (t.dataset.htc) { HT.rows[+t.dataset.htc].checked = t.checked; renderSm(); }
+  if (t.dataset.hts) HT.rows[+t.dataset.hts].scope = t.value; if (t.dataset.htcat) HT.rows[+t.dataset.htcat].category = t.value; });
+// 세무담당 메뉴: 4가지
+const _renderClerk_rc = renderClerk;
+renderClerk = function () { _renderClerk_rc(); const g = smBody.querySelector('.mcards'); if (g) g.insertAdjacentHTML('beforeend', '<button type="button" class="mcard" data-clerk="rc"><i>🧾</i><b>영수증함</b></button><button type="button" class="mcard" data-clerk="ht"><i>📥</i><b>홈택스/카드 엑셀</b></button>'); };
 
 setCameraFov();
 const seat0 = seatPose();
