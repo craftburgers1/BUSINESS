@@ -343,6 +343,27 @@ body.sm-open #xh,body.sm-open #tags{opacity:0}
 #sm.peek .aibg{background:rgba(60,40,25,.06)}
 @media (min-width:720px){ #sm.peek{align-items:flex-end;padding-bottom:28px} }
 @media (max-width:719px){ #sm .aisheet{width:100%} #sm{transition:bottom .15s} }
+/* 📅 달력 모달 (2D 달력과 같은 정보) */
+.calbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px}
+.calbar button{width:38px;height:34px;border-radius:11px;background:#f7efe4;font-weight:800}
+.calbar b{font-size:15px}
+.calsum{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin:0 2px 8px}
+.calgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.calhead span{text-align:center;font-size:11px;font-weight:800;color:var(--muted);padding:2px 0}
+.calgrid .sun{color:#e0503a}.calgrid .sat{color:#3b6ad6}
+.calday{min-height:54px;padding:3px 3px 2px;border-radius:9px;background:#fbf7f1;display:flex;flex-direction:column;align-items:stretch;gap:1px;text-align:right;border:1px solid transparent;min-width:0}
+.calday.has{background:#fff;box-shadow:0 1px 4px rgba(110,70,40,.08)}
+.calday.today{border-color:var(--coral)}
+.calday .cd{display:flex;justify-content:space-between;font-size:11px;font-weight:700;text-align:left}
+.calday .cd em{font-style:normal;font-size:12px}
+.calday .cs,.calday .ce{font-size:9.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calday .cs{color:var(--pos)}.calday .ce{color:var(--neg)}
+.stk{display:flex;flex-wrap:wrap;gap:5px}
+.stk button{width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid var(--line2);font-size:18px}
+.stk button.on{background:#fff3e0;border-color:var(--coral)}
+.stk button.x{width:auto;padding:0 10px;font-size:12px;font-weight:800;color:var(--muted)}
+.row .del{height:28px;min-width:30px;padding:0 6px;border-radius:8px;background:#f7efe4;font-size:13px}
+.row .del.arm{background:var(--neg);color:#fff;font-size:11.5px;font-weight:800}
 @media (prefers-reduced-motion:reduce){ .tg .b,.blob{animation:none} }
 </style>
 <script type="importmap">
@@ -559,13 +580,7 @@ function month() {
 }
 /* ---- 복식장부: 자동 분개 + 시산표 ---- */
 function fixedAcc(name) {
-  const n = String(name);
-  if (/임차|월세|임대/.test(n)) return '임차료';
-  if (/공과금|전기|수도|가스|광열/.test(n)) return '수도광열비';
-  if (/통신|인터넷|전화/.test(n)) return '통신비';
-  if (/세금|공과|부가세|부가가치/.test(n)) return '세금과공과';
-  if (/인건|급여|알바|직원/.test(n)) return '인건비';
-  return '기타경비';
+  return accountOf(name, ''); // 2D 가계부와 같은 계정 규칙(카테고리 → 메모 순서)
 }
 function journal(all) {
   const mo = month(), ym = mo.k.ym, E = [], c = MC();
@@ -1495,7 +1510,7 @@ function renderLivePanel() {
       <div class="field"><label for="fName">품목·상세 (메모로 저장)</label><input id="fName" autocomplete="off" placeholder="예: 코스트코 채소" maxlength="30" style="font-size:16px">
       <div class="qk">${c.quickVar.map(q => `<button data-name="${q}">${q}</button>`).join('')}</div></div>
       ${amtField('예: 38,000')}</div>
-      <p class="hintp" style="margin:0 0 10px">카테고리는 <b>식자재</b>로 저장돼 가계부에서도 식자재비로 잡혀요.</p>
+      <p class="hintp" style="margin:0 0 10px">항목은 <b>${esc(fridgeCat())}</b>(으)로 저장돼 2D 가계부에서도 같은 항목·식자재비로 잡혀요.</p>
       <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-ing">${LIVE_SAVE}</button></div></div>`;
   } else if (activeKey === 'safe') {
     pTag.textContent = `${e1} ${n1} · ☁ 고정비·기타`; pTitle.textContent = `${mo.k.m}월 그 외 사업 지출`;
@@ -2120,7 +2135,7 @@ async function liveSave(act, btn) {
   else if (act === 'save-ing') {
     const n = pBody.querySelector('#fName'), memo = (n.value || '').trim().slice(0, 30);
     if (!memo) { n.classList.add('err'); n.focus(); return; }
-    rec = { id, type: 'variable', category: '식자재', amount, date, memo, scope: 'store' };
+    rec = { id, type: 'variable', category: fridgeCat(), amount, date, memo, scope: 'store' };
   } else rec = { id, type: 'fixed', category: fixCat, amount, date, memo: (pBody.querySelector('#fMemo').value || '').trim().slice(0, 40), scope: 'store' };
   // 가드: 로그인한 본인 장부에만, 실데이터 모드에서만 저장
   if (!isLive() || !REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 저장하지 않았어요', true); return; }
@@ -2632,6 +2647,7 @@ window.addEventListener('keydown', e => {
   if (!smOpen) return;
   e.stopImmediatePropagation();
   if (e.key === 'Escape') { e.preventDefault(); closeSm(); }
+  else if (e.key === 'Enter' && smOpen === 'entry' && e.target && e.target.tagName === 'INPUT') { e.preventDefault(); const b = smBody.querySelector('[data-act="entry-save"]'); b && !b.disabled && saveEntry(b); }
   else if (e.key === 'Enter' && smOpen === 'sign' && e.target && e.target.id === 'smName') { e.preventDefault(); const b = smBody.querySelector('[data-act="save-store"]'); b && !b.disabled && saveStore(b); }
 }, true);
 // 폰 키보드가 올라오면 시트를 그만큼 올림
@@ -2673,13 +2689,13 @@ month = function () { const mo = _month_sup(); const sup = MODE === 'home' ? [] 
 const _journal_sup = journal;
 journal = function (all) { const E = _journal_sup(all); month().sup.forEach(x => { if (x.amount > 0) E.push({ id: x.id, date: x.date, t: '', memo: x.category + ' · ' + x.name, dr: SUP_ACC, cr: '현금', amt: x.amount }); }); return E; };
 // 3D: 왼쪽 벽 메뉴판 아래 수납 선반 (모델이 오면 교체, 없으면 간단한 선반+상자)
-const SUP_AT = [ROOM.x0 + 0.26, 0, -2.2];
-const supply = new THREE.Group(); supply.position.set(SUP_AT[0], 0, SUP_AT[2]); supply.rotation.y = Math.PI / 2; scene.add(supply);
+const SUP_AT = [-2.95, 1.22, ROOM.z0 + 0.2]; // 홀 쪽 창문 왼쪽 벽에 거는 벽장: 카운터·화분 위로 보여서 내 자리에서 잘 보임
+const supply = new THREE.Group(); supply.position.set(SUP_AT[0], SUP_AT[1], SUP_AT[2]); supply.scale.setScalar(0.9); scene.add(supply);
 { const wd = S(0xe2b886, 0.6, { map: woodTop }); [0.02, 0.5, 0.98].forEach(y => add(supply, RB(1.1, 0.04, 0.42, 0.015), wd, 0, y, 0)); [-0.53, 0.53].forEach(x => add(supply, RB(0.04, 1.0, 0.42, 0.015), wd, x, 0.5, 0));
   [[-0.3, 0.06, 0xd9b27c], [0.05, 0.06, 0xd9b27c], [0.33, 0.06, 0xfffaf0], [-0.28, 0.54, 0xfffaf0], [0.1, 0.54, 0xc9a57c]].forEach(([x, y, c]) => add(supply, RB(0.28, 0.3, 0.32, 0.02), S(c, 0.8), x, y + 0.15, 0));
   supply.traverse(o => { if (o.isMesh) snapMat(o.material); }); }
-register('supply', supply, { emoji: '📦', name: '부자재 창고', short: '부자재', chip: '탭해서 열기', anchor: V3(SUP_AT[0] + 0.05, 1.28, SUP_AT[2]),
-  focus: { t: V3(SUP_AT[0], 0.55, SUP_AT[2]), dir: V3(1, 0.45, 0.25), dist: 1.6, fit: 0.65, hh: 0.62 } });
+register('supply', supply, { emoji: '📦', name: '부자재 창고', short: '부자재', chip: '탭해서 열기', anchor: V3(SUP_AT[0], SUP_AT[1] + 0.98, SUP_AT[2] + 0.05),
+  focus: { t: V3(SUP_AT[0], SUP_AT[1] + 0.45, SUP_AT[2]), dir: V3(0.25, 0.08, 1), dist: 1.5, fit: 0.6, hh: 0.55 } });
 { const o = OBJ.supply, el = document.createElement('button'); el.type = 'button'; el.className = 'tg';
   el.addEventListener('click', e => { e.stopPropagation(); firstUse(); if (el.classList.contains('edge')) setView('supply'); else interact('supply'); });
   tagsEl.appendChild(el); o.el = el; }
@@ -2732,7 +2748,7 @@ pBody.addEventListener('click', async e => {
     const rec = { id: uid(), date, category: supCat, name: memo, amount };
     (DATA.supplies = DATA.supplies || []).push(rec); saveData(DATA); lastNewId = rec.id; formOpen = false; renderPanel(); renderHud(true); refreshPos();
   }
-  floatText('−' + won(amount), V3(SUP_AT[0] + 0.3, 1.2, SUP_AT[2]), true);
+  floatText('−' + won(amount), V3(SUP_AT[0], SUP_AT[1] + 0.6, SUP_AT[2] + 0.3), true);
   try { navigator.vibrate && navigator.vibrate(14); } catch (er) {}
 });
 // 실데이터 연결 시 2D 설정의 변동비 항목 목록도 읽어 둠
@@ -2746,7 +2762,7 @@ loadStoreName = function (F, uid) { _loadStoreName_sup(F, uid); F.getDoc(F.doc(R
    ========================================================= */
 const MODEL_DIR = 'models/';
 const gltfL = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-const MA = {}, HIDDEN = new Set(), SUPPLY_RY = -Math.PI / 2;
+const MA = {}, HIDDEN = new Set(), SUPPLY_RY = -Math.PI / 2, CLERK_RY = 0;
 function fitInto(src, { h, w, d, ry = 0, x = 0, z = 0, back = null }) {
   const pivot = new THREE.Group(); src.rotation.y = ry; pivot.add(src); pivot.updateMatrixWorld(true);
   const s = new THREE.Box3().setFromObject(src).getSize(new THREE.Vector3());
@@ -2769,7 +2785,7 @@ const MSPEC = {
   staff: g => { hideOld([stBody]); MA.staff = putModel(g, staff, { h: 1.15, ry: -Math.PI / 2 }, [staff]); },
   owner: g => { hideOld([doll]); MA.owner = putModel(g, owner, { h: 0.24, ry: -Math.PI / 2 }, [owner]); },
   cat: g => { hideOld(cat.children.slice()); MA.cat = putModel(g, cat, { h: 0.24, ry: -Math.PI / 2 }, [cat]); },
-  robot: g => { hideOld(robot.children.slice()); MA.robot = putModel(g, robot, { h: 0.86, ry: -Math.PI / 2 }, [robot]); },
+  clerk: g => { hideOld(robot.children.slice()); MA.clerk = putModel(g, robot, { h: 0.95, w: 0.8, ry: CLERK_RY }, [robot]); },
   pos: g => { hideOld(pos.children.filter(c => c !== screenPivot)); hideOld(screenPivot.children.filter(c => c.material !== screenMat));
     MA.pos = putModel(g, pos, { w: 0.42, h: 0.4, ry: -Math.PI / 2 }, [pos]); fitScreen(MA.pos, screenPivot, 'pos'); },
   printer: g => { hideOld(printer.children.slice()); putModel(g, printer, { w: 0.2, h: 0.16 }); },
@@ -2782,7 +2798,7 @@ const MSPEC = {
   shelf: g => { hideOld(shelf.children.slice()); putModel(g, shelf, { h: 1.18, ry: -Math.PI / 2 }, [shelf]); },
   table: g => { grpRest.children.filter(c => c.isGroup).forEach(t => { hideOld(t.children.slice()); putModel(g, t, { w: 1.6, ry: Math.PI / 2 }); }); },
   salon: g => { grpSalon.children.filter(c => c.isGroup).forEach(t => { hideOld(t.children.filter(m => !(m.geometry && m.geometry.type === 'CircleGeometry'))); putModel(g, t, { h: 1.85, z: 0.05 }); }); },
-  supply: g => { hideOld(supply.children.slice()); putModel(g, supply, { w: 1.1, h: 1.05, d: 0.45, ry: SUPPLY_RY }, [supply]); },
+  supply: g => { hideOld(supply.children.slice()); putModel(g, supply, { w: 1.2, h: 1.0, d: 0.4, ry: SUPPLY_RY }, [supply]); }, // 그룹 0.9배 → 벽장 높이 약 0.9m(바닥에서 1.22~2.12m)
   sofa: g => { const sofaG = grpHome.children.find(c => c.isGroup && Math.abs(c.position.x + 1) < 0.01 && Math.abs(c.position.z + 3.15) < 0.01); if (!sofaG) return;
     hideOld(sofaG.children.slice()); putModel(g, sofaG, { w: 1.85, ry: -Math.PI / 2 }); }
 };
@@ -2816,12 +2832,12 @@ stepCat = function (now, T, dt) {
   if (MA.staff) { MA.staff.rotation.z = stBody.rotation.z; MA.staff.rotation.y = stHead.rotation.y * 0.35; let hop = 0; if (stWaveT > 0) { const t = (now - stWaveT) / 1400; if (t < 1) hop = Math.abs(Math.sin(t * Math.PI * 3)) * 0.06 * (1 - t); } MA.staff.position.y = hop; }
   if (MA.owner) { MA.owner.scale.y = doll.scale.y; MA.owner.position.y = doll.position.y; MA.owner.rotation.z = dhead.rotation.z * 0.6 + (waveT > 0 ? Math.sin((now - waveT) / 1600 * 30) * 0.14 : 0); }
   if (MA.cat) { MA.cat.scale.y = catBody.scale.y; MA.cat.rotation.z = catHead.rotation.z * 0.45; }
-  if (MA.robot) { MA.robot.position.y = (rbFloat.position.y - 0.27) * 0.6; MA.robot.rotation.y = rbFloat.rotation.y * 0.4; }
+  if (MA.clerk && !RM) { MA.clerk.rotation.z = Math.sin(T * 1.1) * 0.012; MA.clerk.position.y = Math.abs(Math.sin(T * 2.4)) * 0.004; } // 앉아서 일하는 작은 움직임
   if (MA.fridgeShut) { const op = an.door > 0.06; MA.fridgeOpen.visible = op; MA.fridgeShut.visible = !op; if (op && an.dt > an.df) { const s = 1 + Math.sin(Math.min(1, an.door) * Math.PI) * 0.03; MA.fridgeOpenP.scale.set(s, 1, s); } }
   if (MA.safe) drawer.visible = an.drw > 0.02;
 };
 function loadModels() {
-  ['staff', 'owner', 'cat', 'robot', 'pos', 'printer', 'laptop', 'safe', 'fridge', 'fridge2', 'shelf', 'table', 'salon', 'sofa', 'supply'].forEach(n => {
+  ['staff', 'owner', 'cat', 'robot', 'pos', 'printer', 'laptop', 'safe', 'fridge', 'fridge2', 'shelf', 'table', 'salon', 'sofa', 'supply', 'clerk'].forEach(n => {
     gltfL.loadAsync(MODEL_DIR + n + '.glb').then(g => { try { MSPEC[n](g); window.__solo3dModels = (window.__solo3dModels || 0) + 1; } catch (e) { console.warn('model', n, e); } }).catch(() => {});
   });
 }
@@ -2831,7 +2847,7 @@ loadModels();
    🎄 크리스마스 테마 장식: 트리(반짝이 전구·별·오너먼트) + 선물 상자 + 창밖 눈
    - 크리스마스 테마에서만 보임 · 새 조명은 만들지 않음(셰이더 재컴파일 없음)
    ========================================================= */
-const XTREE_AT = [-1.55, 0, -4.1]; // 창가 왼쪽 구석: 식당 테이블·미용실 화장대·소파·스탠드와 안 겹침
+const XTREE_AT = [-1.55, 0, -4.1]; // 창가 왼쪽: 식당 테이블·미용실 화장대·소파·스탠드·벽장과 안 겹침
 const xmasGrp = new THREE.Group(); xmasGrp.visible = false; scene.add(xmasGrp);
 const xTree = new THREE.Group(); xTree.position.set(XTREE_AT[0], 0, XTREE_AT[2]); xmasGrp.add(xTree);
 {
@@ -2878,6 +2894,228 @@ stepCat = function (now, T, dt) {
     for (let i = 0; i < snowN; i++) { let y = snowPos[i * 3 + 1] - dt * (0.35 + (i % 7) * 0.05); if (y < 0) y += 4; snowPos[i * 3 + 1] = y; snowPos[i * 3] += Math.sin(T + i) * dt * 0.05; }
     snowGeo.attributes.position.needsUpdate = true; }
 };
+
+/* =========================================================
+   🧑‍💼 세무담당 직원 (예전 🤖 AI 비서 자리) — 탭하면 [AI 자동입력 / 직접 입력]
+   - 직접 입력은 2D 가계부와 같은 칸: 수입/매출 · 고정비 · 변동비, 날짜·항목·금액·메모·가게/개인(지출만)
+   - 실데이터: 2D와 똑같은 형식으로 users/{uid}/ledger 에 저장 / 체험: 이 기기에만 (Firestore 쓰기 0건)
+   ========================================================= */
+['restaurant', 'salon', 'home'].forEach(m => { MODES[m].obj.robot = ['🧑‍💼', '세무담당 직원', '탭해서 입력하기', '세무담당']; });
+robot.position.z = 1.25; OBJ.robot.anchor = V3(ROBOT_AT[0], 1.08, 1.25); OBJ.robot.baseY = robot.position.y;
+OBJ.robot.focus = { t: V3(ROBOT_AT[0], 0.6, 1.25), dir: V3(-0.9, 0.5, 0.45), dist: 1.4, fit: 0.45, hh: 0.5 };
+REAL.cfg = null; // 2D 가계부 설정(settings/config): sales·fixed·variable 항목 목록
+const ENTRY_DEF = {
+  restaurant: { sales: ['홀 매출', '배민 매출', '쿠팡이츠 매출'], fixed: ['월세', '관리비', '통신비', '보험료', '인건비'], variable: ['식자재', '포장재', '소모품', '광고비', '배달앱 수수료'] },
+  salon: { sales: ['일일 총매출', '시술/서비스 매출', '제품 판매 매출'], fixed: ['매장 임대료', '상가 관리비', '전기/가스 공과금', '세무사 비용'], variable: ['소모품', '마케팅/광고비', '카드 수수료', '기타 변동비'] },
+  home: { sales: ['월급', '용돈', '부수입'], fixed: ['관리비', '공과금', '교육비', '통신비', '보험'], variable: ['마트', '시장', '온라인 장보기', '외식', '생활용품'] }
+};
+const ENTRY_TYPES = [['sales', '수입/매출'], ['fixed', '고정비'], ['variable', '변동비']];
+const entryCats = t => { const c = isLive() && REAL.cfg && Array.isArray(REAL.cfg[t]) && REAL.cfg[t].length ? REAL.cfg[t] : ENTRY_DEF[MODE][t]; return c.length ? c : ['기타 지출']; };
+const EN = { type: 'variable', cat: null, scope: 'store' };
+// 2D 가계부 설정 목록과 3D 실데이터 입력칸을 항상 같게: 포스 매출 채널 = sales, 금고 고정비 = fixed, 냉장고 = variable 중 식자재비 항목
+function fridgeCat() { const v = REAL.cfg && Array.isArray(REAL.cfg.variable) ? REAL.cfg.variable : []; return v.find(c => accountOf(c, '') === '식자재비') || '식자재'; }
+function syncCfgLists() {
+  const c = REAL.cfg || {};
+  if (Array.isArray(c.sales) && c.sales.length) { LIVE_CH.splice(0, LIVE_CH.length, ...c.sales); if (!LIVE_CH.includes(saleChannel)) saleChannel = LIVE_CH[0]; }
+  if (Array.isArray(c.fixed) && c.fixed.length) { LIVE_FIX.splice(0, LIVE_FIX.length, ...c.fixed); if (!LIVE_FIX.includes(fixCat)) fixCat = LIVE_FIX[0]; }
+  if (activeKey && !formOpen) renderPanel();
+}
+const _loadStoreName_entry = loadStoreName;
+loadStoreName = function (F, uid) { _loadStoreName_entry(F, uid); F.getDoc(F.doc(REAL.db, 'users', uid, 'settings', 'config')).then(s => { if (REAL.uid === uid) { REAL.cfg = s.exists() ? (s.data() || null) : null; syncCfgLists(); } }).catch(() => {}); };
+// 체험: 식자재·부자재·개인·고정비 외의 사업 지출(광고비·수수료 등)
+const _month_entry = month;
+month = function () { const mo = _month_entry(); const oth = MODE === 'home' ? [] : (DATA.others || []).filter(x => String(x.date).startsWith(mo.k.ym)); const o = sum(oth); mo.oth = oth; mo.ot = o; mo.exp += o; mo.net -= o; return mo; };
+const _journal_entry = journal;
+journal = function (all) { const E = _journal_entry(all); month().oth.forEach(x => { if (x.amount > 0) E.push({ id: x.id, date: x.date, t: '', memo: x.category + (x.name ? ' · ' + x.name : ''), dr: x.acc || '기타비용', cr: '현금', amt: x.amount }); }); return E; };
+function renderEntry() {
+  const live = isLive(), home = MODE === 'home', cats = entryCats(EN.type);
+  if (!cats.includes(EN.cat)) EN.cat = cats[0];
+  smTitle.textContent = '✍️ 직접 입력';
+  smBody.innerHTML = `<div class="mode" role="tablist">${ENTRY_TYPES.map(([t, l]) => `<button type="button" data-et="${t}" class="${t === EN.type ? 'on' : ''}" role="tab" aria-selected="${t === EN.type}">${home && t === 'sales' ? '수입' : l}</button>`).join('')}</div>
+    <div class="form" style="margin-top:0">
+      <div class="field"><label for="enDate">날짜</label><input id="enDate" type="date" value="${kst().date}" style="font-size:16px"></div>
+      <div class="field"><label>항목 (2D 가계부와 같은 목록)</label><div class="seg wrap">${cats.map(x => `<button type="button" data-ecat="${esc(x)}" class="${x === EN.cat ? 'on' : ''}">${esc(x)}</button>`).join('')}</div></div>
+      <div class="field"><label for="fAmt2">금액(원)</label><input id="fAmt2" class="num" inputmode="numeric" autocomplete="off" placeholder="${EN.type === 'sales' ? '예: 412,000' : '예: 38,000'}" maxlength="13">
+        <div class="qk"><button type="button" data-eadd="10000">+1만</button><button type="button" data-eadd="50000">+5만</button><button type="button" data-eadd="100000">+10만</button><button type="button" data-eadd="1000000">+100만</button></div></div>
+      <div class="field"><label for="enMemo">메모</label><input id="enMemo" autocomplete="off" maxlength="40" placeholder="${EN.type === 'sales' ? '예: 토요일 매출' : '예: 마트 장보기'}" style="font-size:16px"></div>
+      ${EN.type !== 'sales' && !home ? `<div class="field"><label>구분</label><div class="seg">${[['store', '🏪 가게'], ['personal', '👛 개인']].map(([v, l]) => `<button type="button" data-esc="${v}" class="${v === EN.scope ? 'on' : ''}">${l}</button>`).join('')}</div></div>` : ''}
+      <div class="factions"><button type="button" class="cancel" data-act="entry-back">← 뒤로</button><button type="button" class="save" data-act="entry-save">${live ? LIVE_SAVE : DEMO_SAVE}</button></div>
+      <p class="hintp">${live ? '☁ 2D 가계부와 같은 장부에 저장돼요. 가계부 앱에도 바로 보여요.' : '🧪 체험 모드라 이 기기에만 저장돼요. 로그인하면 2D 가계부와 같은 장부에 저장돼요.'}</p></div>`;
+}
+function renderClerk() {
+  smTitle.textContent = '🧑‍💼 세무담당 직원';
+  smBody.innerHTML = `<p class="ailead">무엇을 도와드릴까요? 영수증·주문내역은 AI가 대신 넣고, 바로 적을 건 여기서 직접 입력해요.</p>
+    <div class="mcards" style="grid-template-columns:repeat(2,minmax(0,1fr))"><button type="button" class="mcard" data-clerk="ai"><i>🤖</i><b>AI 자동입력</b></button><button type="button" class="mcard" data-clerk="manual"><i>✍️</i><b>직접 입력</b></button></div>
+    <p class="hintp">직접 입력은 2D 가계부처럼 수입/매출 · 고정비 · 변동비로 나눠 적어요.</p>`;
+}
+const _renderSm_entry = renderSm;
+renderSm = function () { if (smOpen === 'clerk') renderClerk(); else if (smOpen === 'entry') renderEntry(); else _renderSm_entry(); };
+async function saveEntry(btn) {
+  const amtIn = smBody.querySelector('#fAmt2'), amount = Number(digits(amtIn.value)), memo = (smBody.querySelector('#enMemo').value || '').trim().slice(0, 40);
+  const date = smBody.querySelector('#enDate').value || kst().date, type = EN.type, category = EN.cat, home = MODE === 'home';
+  if (!amount || amount > 100000000) { amtIn.classList.remove('err'); void amtIn.offsetWidth; amtIn.classList.add('err'); amtIn.focus(); return; }
+  const scope = type === 'sales' ? null : (home ? 'personal' : EN.scope);
+  if (isLive()) {
+    // 가드: 로그인한 본인 장부에만, 실데이터 모드에서만 (체험 모드는 Firestore 쓰기 0건)
+    if (!REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 저장하지 않았어요', true); return; }
+    const id = newLedgerId(), rec = Object.assign({ id, type, date, category, amount, memo }, scope ? { scope } : {});
+    btn.disabled = true; btn.textContent = '저장 중…';
+    try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), rec); }
+    catch (e) { btn.disabled = false; btn.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 숫자는 바꾸지 않았어요. 다시 시도해 주세요', true); return; }
+    lastNewId = id; toast('☁ 내 장부에 저장됐어요 (가계부 앱에도 바로 반영)'); liveRefresh();
+  } else {
+    const id = uid(), name = memo || category;
+    if (type === 'sales') DATA.sales.push({ id, date, time: date === kst().date ? kst().time : '', amount, channel: category });
+    else if (type === 'fixed') { const f = DATA.fixed.find(x => x.name === category); if (f) f.amount = amount; else DATA.fixed.push({ name: category, amount }); }
+    else if (home) { if (/마트|시장|장보기|식비|과일|간식/.test(category)) DATA.ingredients.push({ id, date, name, amount }); else (DATA.personal = DATA.personal || []).push({ id, date, name: category + (memo ? ' · ' + memo : ''), amount }); }
+    else if (scope === 'personal') (DATA.personal = DATA.personal || []).push({ id, date, name: category + (memo ? ' · ' + memo : ''), amount });
+    else { const acc = accountOf(category, memo);
+      if (acc === '식자재비') DATA.ingredients.push({ id, date, name, amount });
+      else if (acc === SUP_ACC) (DATA.supplies = DATA.supplies || []).push({ id, date, category, name, amount });
+      else (DATA.others = DATA.others || []).push({ id, date, category, name: memo, amount, acc }); }
+    saveData(DATA); lastNewId = id; syncFridgeItems(); refreshPos(); renderHud(true); if (activeKey) renderPanel();
+    toast(`🧪 ${type === 'sales' ? (home ? '수입' : '매출') : type === 'fixed' ? '고정비' : '변동비'} ${won(amount)} 입력했어요 (체험 · 이 기기에만)`);
+  }
+  floatText((type === 'sales' ? '+' : '−') + won(amount), V3(ROBOT_AT[0] - 0.2, 1.3, 1.25), type !== 'sales');
+  if (type === 'sales') screenGlow = 1;
+  closeSm();
+}
+smEl.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !(smOpen === 'clerk' || smOpen === 'entry')) return;
+  if (b.dataset.clerk === 'ai') { closeSm(); setTimeout(openAi, 300); return; }
+  if (b.dataset.clerk === 'manual') { smOpen = 'entry'; renderSm(); setTimeout(() => { const i = smBody.querySelector('#fAmt2'); i && i.focus({ preventScroll: true }); }, COARSE ? 320 : 30); return; }
+  if (b.dataset.et) { EN.type = b.dataset.et; renderSm(); return; }
+  if (b.dataset.ecat) { EN.cat = b.dataset.ecat; smBody.querySelectorAll('[data-ecat]').forEach(x => x.classList.toggle('on', x === b)); return; }
+  if (b.dataset.esc) { EN.scope = b.dataset.esc; smBody.querySelectorAll('[data-esc]').forEach(x => x.classList.toggle('on', x === b)); return; }
+  if (b.dataset.eadd) { const i = smBody.querySelector('#fAmt2'); i.value = Math.min(Number(digits(i.value) || 0) + Number(b.dataset.eadd), 9999999999).toLocaleString('ko-KR'); i.classList.remove('err'); return; }
+  if (b.dataset.act === 'entry-back') { smOpen = 'clerk'; renderSm(); return; }
+  if (b.dataset.act === 'entry-save' && !b.disabled) saveEntry(b);
+});
+smBody.addEventListener('input', e => { if (e.target.id === 'fAmt2') { const d = digits(e.target.value).slice(0, 10); e.target.value = d ? Number(d).toLocaleString('ko-KR') : ''; } });
+const _interact_entry = interact;
+interact = function (k) { if (k === 'robot') { firstUse(); if (activeKey) closePanel(); openSm('clerk'); return; } return _interact_entry(k); };
+
+/* =========================================================
+   📅 벽걸이 달력 (창문 오른쪽 벽) — 2D 가계부 달력과 같은 화면·같은 데이터
+   - 칸마다 그날 수입 +만 / 지출 -만, 날짜 스티커
+   - 날짜 탭 → 그날 내역(삭제) + 스티커 + 이 날짜로 입력
+   - 스티커: 2D와 같은 저장소 (기기: soloGagebuStickers:uid|demo, 로그인: settings/stickers {map, updatedAt})
+   ========================================================= */
+const V18_STICKERS = ['😊', '🔥', '💸', '🎉', '☕', '🌧️', '💪', '🍻', '🛍️', '❤️'];
+const stickerKey = () => 'soloGagebuStickers:' + (REAL.on && REAL.status === 'ok' && REAL.uid ? REAL.uid : 'demo');
+function loadStickers() { try { const m = JSON.parse(localStorage.getItem(stickerKey()) || '{}'); return m && typeof m === 'object' && !Array.isArray(m) ? m : {}; } catch (e) { return {}; } }
+function saveStickers(map) {
+  try { localStorage.setItem(stickerKey(), JSON.stringify(map)); } catch (e) {}
+  // 로그인한 본인 장부일 때만 클라우드 (체험 모드는 Firestore 쓰기 0건)
+  if (REAL.on && REAL.status === 'ok' && REAL.db && FSm && fbAuth && fbAuth.currentUser && fbAuth.currentUser.uid === REAL.uid)
+    FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'settings', 'stickers'), { map, updatedAt: Date.now() }).catch(() => {});
+}
+// 로그인 후: 클라우드 스티커와 기기 스티커 병합(같은 날짜는 클라우드 우선) — 2D와 같은 규칙
+const _loadStoreName_cal = loadStoreName;
+loadStoreName = function (F, uid) {
+  _loadStoreName_cal(F, uid);
+  F.getDoc(F.doc(REAL.db, 'users', uid, 'settings', 'stickers')).then(s => {
+    if (REAL.uid !== uid) return; const cloud = s.exists() && s.data() && typeof s.data().map === 'object' ? s.data().map : null;
+    if (cloud) { const key = 'soloGagebuStickers:' + uid; let loc = {}; try { loc = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) {} try { localStorage.setItem(key, JSON.stringify(Object.assign({}, loc, cloud))); } catch (e) {} }
+    drawWallCal(); if (smOpen === 'cal' || smOpen === 'day') renderSm();
+  }).catch(() => {});
+};
+// 모든 내역을 2D와 같은 모양(type·date·category·amount·memo·scope)으로
+function allEntries() {
+  if (isLive()) return REAL.docs.map(d => ({ id: String(d.id), type: d.type, date: String(d.date || ''), category: d.category || '', amount: Number(d.amount) || 0, memo: d.memo || '', scope: d.scope || null, live: true }));
+  const k = kst(), E = [], home = MODE === 'home';
+  DATA.sales.forEach(x => E.push({ id: x.id, type: 'sales', date: x.date, category: x.channel, amount: x.amount, memo: x.time || '', src: 'sales' }));
+  DATA.ingredients.forEach(x => E.push({ id: x.id, type: 'variable', date: x.date, category: MC().varW, amount: x.amount, memo: x.name, src: 'ingredients' }));
+  (DATA.supplies || []).forEach(x => E.push({ id: x.id, type: 'variable', date: x.date, category: x.category, amount: x.amount, memo: x.name, src: 'supplies' }));
+  (DATA.others || []).forEach(x => E.push({ id: x.id, type: 'variable', date: x.date, category: x.category, amount: x.amount, memo: x.name || '', src: 'others' }));
+  (DATA.personal || []).forEach(x => E.push({ id: x.id, type: 'variable', date: x.date, category: home ? '생활비' : '개인', amount: x.amount, memo: x.name, scope: 'personal', src: 'personal' }));
+  DATA.fixed.forEach((x, i) => E.push({ id: 'fx' + i, type: 'fixed', date: k.ym + '-01', category: x.name, amount: Number(x.amount) || 0, memo: '매달 고정', src: 'fixed' }));
+  return E.filter(e => e.amount > 0);
+}
+const CAL = { y: kst().y, m: kst().m, day: null, delArm: null };
+// 3D 벽걸이 달력
+const CAL_AT = [1.88, 1.55, ROOM.z0 + 0.04];
+const wallCal = new THREE.Group(); wallCal.position.set(CAL_AT[0], CAL_AT[1], CAL_AT[2]); scene.add(wallCal);
+const calTex = decoTex(384, 480), calFaceM = new THREE.MeshStandardMaterial({ color: 0xffffff, map: calTex, emissive: 0xffffff, emissiveMap: calTex, emissiveIntensity: 0.08, roughness: 0.8 });
+add(wallCal, RB(0.5, 0.64, 0.02, 0.01), S(0xd8b48a, 0.6), 0, 0, 0, false);
+add(wallCal, new THREE.PlaneGeometry(0.46, 0.575), calFaceM, 0, -0.01, 0.0115, false);
+add(wallCal, CYL(0.012, 0.012, 0.02, 10), S(0xe23b2e, 0.4), 0, 0.33, 0.015, false).rotation.x = Math.PI / 2; // 못
+function drawWallCal() {
+  const g = calTex.image.getContext('2d'), w = 384, h = 480, k = kst(), st = loadStickers();
+  g.fillStyle = '#fffaf2'; g.fillRect(0, 0, w, h); g.fillStyle = '#ef8a74'; g.fillRect(0, 0, w, 86);
+  g.fillStyle = '#fff'; g.font = `800 40px ${SIGNF}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(`📅 ${k.m}월`, w / 2, 46);
+  const first = new Date(k.y, k.m - 1, 1).getDay(), last = new Date(k.y, k.m, 0).getDate(), cw = w / 7;
+  g.font = `700 18px ${SIGNF}`; ['일', '월', '화', '수', '목', '금', '토'].forEach((d, i) => { g.fillStyle = i === 0 ? '#e0503a' : i === 6 ? '#3b6ad6' : '#8f7a69'; g.fillText(d, cw * i + cw / 2, 106); });
+  for (let d = 1; d <= last; d++) {
+    const idx = first + d - 1, cx = (idx % 7) * cw + cw / 2, cy = 140 + Math.floor(idx / 7) * 62, ds = `${k.ym}-${String(d).padStart(2, '0')}`;
+    if (d === k.d) { g.fillStyle = '#ffe6a3'; g.beginPath(); g.arc(cx, cy, 24, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = idx % 7 === 0 ? '#e0503a' : idx % 7 === 6 ? '#3b6ad6' : '#4a3b30'; g.font = `700 20px ${SIGNF}`; g.fillText(String(d), cx, cy);
+    if (st[ds]) { g.font = `20px ${SIGNF}`; g.fillText(st[ds], cx + 14, cy + 22); }
+  }
+  calTex.needsUpdate = true;
+}
+register('calendar', wallCal, { emoji: '📅', name: '달력', short: '달력', chip: '탭해서 달력 보기', anchor: V3(CAL_AT[0], CAL_AT[1] + 0.42, CAL_AT[2]), focus: null });
+{ const o = OBJ.calendar, el = document.createElement('button'); el.type = 'button'; el.className = 'tg';
+  el.innerHTML = `<span class="b">📅</span><span class="e"><span class="ee"></span>📅 달력</span>`; el.setAttribute('aria-label', '달력 보기');
+  el.addEventListener('click', e => { e.stopPropagation(); firstUse(); if (el.classList.contains('edge')) { lookAt(o.anchor); setTimeout(() => interact('calendar'), RM ? 320 : 650); } else interact('calendar'); });
+  tagsEl.appendChild(el); o.el = el; o.arrow = el.querySelector('.ee'); }
+const 만 = n => (n / 10000).toFixed(n % 10000 && n < 100000 ? 1 : 0).replace(/\.0$/, '') + '만';
+function renderCal() {
+  const E = allEntries(), st = loadStickers(), ym = `${CAL.y}-${String(CAL.m).padStart(2, '0')}`, dm = {};
+  E.forEach(x => { if (!x.date.startsWith(ym)) return; const d = +x.date.slice(8, 10); dm[d] = dm[d] || { s: 0, e: 0 }; if (x.type === 'sales') dm[d].s += x.amount; else dm[d].e += x.amount; });
+  const first = new Date(CAL.y, CAL.m - 1, 1).getDay(), last = new Date(CAL.y, CAL.m, 0).getDate(), today = kst().date;
+  let ts = 0, te = 0; Object.values(dm).forEach(v => { ts += v.s; te += v.e; });
+  smTitle.textContent = `📅 ${CAL.y}년 ${CAL.m}월`;
+  let h = `<div class="calbar"><button type="button" data-cal="-1" aria-label="이전 달">◀</button><b>${CAL.y}년 ${CAL.m}월</b><button type="button" data-cal="1" aria-label="다음 달">▶</button></div>
+    <div class="calsum num"><span>수입 <b style="color:var(--pos)">+${won(ts)}</b></span><span>지출 <b style="color:var(--neg)">-${won(te)}</b></span></div>
+    <div class="calgrid calhead">${['일', '월', '화', '수', '목', '금', '토'].map((d, i) => `<span class="${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${d}</span>`).join('')}</div><div class="calgrid">`;
+  for (let i = 0; i < first; i++) h += '<i></i>';
+  for (let d = 1; d <= last; d++) {
+    const ds = `${ym}-${String(d).padStart(2, '0')}`, v = dm[d], dw = (first + d - 1) % 7;
+    h += `<button type="button" class="calday${v ? ' has' : ''}${ds === today ? ' today' : ''}" data-day="${ds}"><span class="cd ${dw === 0 ? 'sun' : dw === 6 ? 'sat' : ''}">${d}${st[ds] ? `<em>${st[ds]}</em>` : ''}</span>${v && v.s ? `<span class="cs">+${만(v.s)}</span>` : ''}${v && v.e ? `<span class="ce">-${만(v.e)}</span>` : ''}</button>`;
+  }
+  h += `</div><p class="hintp">날짜를 누르면 그날 내역 보기·삭제와 스티커 붙이기를 할 수 있어요. ${isLive() ? '☁ 2D 가계부와 같은 장부예요.' : '🧪 체험 데이터예요.'}</p>`;
+  smBody.innerHTML = h;
+}
+function renderDay() {
+  const ds = CAL.day, E = allEntries().filter(x => x.date === ds), st = loadStickers(), cur = st[ds] || '';
+  smTitle.textContent = `📅 ${ds} 내역 (${E.length}건)`;
+  let h = `<div class="sec"><span>🏷️ 그날 기분 스티커</span></div><div class="stk">${V18_STICKERS.map(s => `<button type="button" data-stk="${s}" class="${s === cur ? 'on' : ''}" aria-pressed="${s === cur}" aria-label="스티커 ${s}">${s}</button>`).join('')}<button type="button" data-stk="" class="x">✖ 지우기</button></div>`;
+  h += `<div class="sec" style="margin-top:12px"><span>수입·지출 내역</span></div><div class="rows">`;
+  h += E.map(x => { const s = x.type === 'sales', canDel = isLive() || (x.src && x.src !== 'fixed');
+    return `<div class="row"><div class="l"><span class="chip" style="background:${s ? '#e5f6ef;color:#2c8a6e' : '#ffe9e1;color:#c85a43'}">${s ? '수입' : x.type === 'fixed' ? '고정비' : '지출'}</span><span><b>${esc(x.category)}</b>${x.memo ? ` <span class="d">${esc(x.memo)}</span>` : ''}${x.scope === 'personal' ? ' <span class="d">👛개인</span>' : ''}</span></div>
+      <div style="display:flex;align-items:center;gap:6px"><b class="num" style="color:${s ? 'var(--pos)' : 'var(--neg)'}">${s ? '+' : '-'}${won(x.amount)}</b>${canDel ? `<button type="button" class="del${CAL.delArm === x.id ? ' arm' : ''}" data-del="${esc(x.id)}" aria-label="삭제">${CAL.delArm === x.id ? '삭제?' : '🗑'}</button>` : ''}</div></div>`; }).join('') || '<div class="empty">등록된 수입/지출 내역이 없어요.</div>';
+  h += `</div><div class="factions" style="margin-top:12px"><button type="button" class="cancel" data-act="day-back">← 달력</button><button type="button" class="save" data-act="day-add">✍️ 이 날짜에 입력</button></div>`;
+  smBody.innerHTML = h;
+}
+const _renderSm_cal = renderSm;
+renderSm = function () { if (smOpen === 'cal') renderCal(); else if (smOpen === 'day') renderDay(); else _renderSm_cal(); };
+async function deleteEntryAny(id) {
+  const x = allEntries().find(e => e.id === id); if (!x) return;
+  if (x.live) {
+    if (!isLive() || !REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 삭제하지 않았어요', true); return; }
+    try { await FSm.deleteDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id)); } catch (e) { toast('삭제하지 못했어요 — 다시 시도해 주세요', true); return; }
+    toast('🗑 삭제했어요 (2D 가계부에서도 지워져요)');
+  } else {
+    const arr = DATA[x.src]; const i = arr ? arr.findIndex(e => e.id === id) : -1; if (i < 0) return;
+    arr.splice(i, 1); saveData(DATA); syncFridgeItems(); refreshPos(); renderHud(true); if (activeKey) renderPanel(); toast('🗑 삭제했어요 (체험 · 이 기기에만)');
+  }
+  CAL.delArm = null; renderSm();
+}
+smEl.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !(smOpen === 'cal' || smOpen === 'day')) return;
+  if (b.dataset.cal) { CAL.m += +b.dataset.cal; if (CAL.m < 1) { CAL.m = 12; CAL.y--; } if (CAL.m > 12) { CAL.m = 1; CAL.y++; } renderSm(); return; }
+  if (b.dataset.day) { CAL.day = b.dataset.day; CAL.delArm = null; smOpen = 'day'; renderSm(); smEl.querySelector('.aisheet').scrollTop = 0; return; }
+  if (b.dataset.stk !== undefined) { const map = loadStickers(), s = b.dataset.stk; if (!s || map[CAL.day] === s) delete map[CAL.day]; else map[CAL.day] = s; saveStickers(map); drawWallCal(); renderSm(); return; }
+  if (b.dataset.del) { if (CAL.delArm === b.dataset.del) deleteEntryAny(b.dataset.del); else { CAL.delArm = b.dataset.del; renderSm(); } return; } // 두 번 눌러야 삭제
+  if (b.dataset.act === 'day-back') { smOpen = 'cal'; renderSm(); return; }
+  if (b.dataset.act === 'day-add') { const d = CAL.day; smOpen = 'entry'; renderSm(); const i = smBody.querySelector('#enDate'); if (i) i.value = d; }
+});
+const _interact_cal = interact;
+interact = function (k) { if (k === 'calendar') { firstUse(); if (activeKey) closePanel(); const t = kst(); CAL.y = t.y; CAL.m = t.m; openSm('cal'); return; } return _interact_cal(k); };
+const _applyMode3D_cal = applyMode3D; applyMode3D = function () { _applyMode3D_cal(); drawWallCal(); };
+const _liveRefresh_cal = liveRefresh; liveRefresh = function (first) { _liveRefresh_cal(first); if (smOpen === 'cal' || smOpen === 'day') renderSm(); };
+snapMat(wallCal.children[0].material); snapMat(wallCal.children[2].material);
 
 setCameraFov();
 const seat0 = seatPose();
