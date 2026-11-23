@@ -710,9 +710,14 @@ const stage = document.getElementById('stage');
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }); }
 catch (e) { window.__solo3dFail && window.__solo3dFail(); throw e; }
+// 🩺 그래픽 진단: 주소 끝에 ?diag 를 붙이면 그래픽카드 이름·초당 프레임 표시. 그래픽 가속이 꺼져 있으면(소프트웨어 렌더링) 자동 저화질 + 안내
+const GPU_NAME = (() => { try { const g = renderer.getContext(), x = g.getExtension('WEBGL_debug_renderer_info'); return x ? String(g.getParameter(x.UNMASKED_RENDERER_WEBGL)) : String(g.getParameter(g.RENDERER)); } catch (e) { return '?'; } })();
+const SOFT_GPU = /swiftshader|basic render|llvmpipe|software|microsoft basic/i.test(GPU_NAME);
+const DIAG = /[?&]diag/.test(location.search);
 // 화질 예산: PC는 창이 커서(예: 2560×1440×2배 = 1,470만 화소) 폰(360×720×1.5배 ≈ 58만)보다 수십 배 많이 그림 → 화소 수 상한을 둠
 const PX_BUDGET = COARSE ? 1.1e6 : 2.4e6; let prScale = 1;
 function targetPR() { const d = window.devicePixelRatio || 1, cap = Math.min(d, COARSE ? 1.5 : 2), fit = Math.sqrt(PX_BUDGET / Math.max(1, innerWidth * innerHeight)); return Math.max(0.5, Math.min(cap, fit) * prScale); }
+if (SOFT_GPU) { prScale = 0.6; renderer.shadowMap.enabled = false; }
 renderer.setPixelRatio(targetPR());
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -3542,6 +3547,8 @@ if (!RM) { cam.pos.add(V3(0, 0.25, 0.5)); cam.yaw = 0.5; cam.pitch = 0.05; } // 
 applyCam();
 applyMode3D(); relabel(); applyModeUI(); syncFridgeItems(); refreshPos(); renderHud(RM); renderAuth();
 const HL = new THREE.Color(0xffb08a);
+let diagN = 0, diagT = performance.now(); const diagEl = DIAG ? Object.assign(document.body.appendChild(document.createElement('pre')), { style: 'position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.72);color:#9f9;font:11px/1.4 monospace;white-space:pre-wrap;max-width:92vw;pointer-events:none' }) : null;
+if (SOFT_GPU) setTimeout(() => toast('⚠ 이 브라우저는 그래픽 가속이 꺼져 있어 느릴 수 있어요 — 크롬 설정 › 시스템 › "그래픽 가속 사용"을 켜 주세요', true), 2500);
 const clock0 = { last: performance.now(), t: 0 }, perf = { n: 0, sum: 0, lv: 0, last: performance.now() };
 let started = false;
 function frame(now) {
@@ -3601,6 +3608,7 @@ function frame(now) {
         if (perf.lv === 1 || perf.lv === 3) { prScale *= 0.78; renderer.setPixelRatio(targetPR()); renderer.setSize(innerWidth, innerHeight); }
         if (perf.lv === 2) { renderer.shadowMap.type = THREE.PCFShadowMap; sun.shadow.map && sun.shadow.map.dispose(); sun.shadow.map = null; sun.shadow.mapSize.set(1024, 1024); renderer.shadowMap.needsUpdate = true; }
         if (perf.lv === 4) { prScale *= 0.85; renderer.setPixelRatio(targetPR()); renderer.setSize(innerWidth, innerHeight); } } } }
+  if (DIAG) { diagN++; if (now - diagT > 1000) { diagEl.textContent = `GPU: ${GPU_NAME}\n${Math.round(diagN * 1000 / (now - diagT))} fps · 화면 ${innerWidth}×${innerHeight} · 배율 ${renderer.getPixelRatio().toFixed(2)} · 화질단계 ${perf.lv}${SOFT_GPU ? '\n⚠ 그래픽 가속 꺼짐(소프트웨어)' : ''}`; diagN = 0; diagT = now; } }
   perf.last = now;
   stepCat(now, T, dt); stepAnims(now); updateParts(dt); stepHud(now);
   renderer.render(scene, camera);
