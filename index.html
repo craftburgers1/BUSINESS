@@ -2172,7 +2172,7 @@
         // 이미지는 사용자 본인 드라이브(앱이 만든 폴더만, drive.file 스코프), Firestore에는 메타데이터+작은 썸네일만.
         // 토큰: Google Identity Services(GIS) 토큰 클라이언트. 스크립트는 영수증을 쓰려는 순간에만 동적으로 불러옴(HTML에 새 script 태그를 넣지 않음).
         // 클라이언트 ID가 비어 있거나, 동의를 안 했거나, 체험판이면 영수증 기능만 꺼지고 나머지는 그대로.
-        const DRIVE_OAUTH_CLIENT_ID = ''; // ← Google Cloud 콘솔 > API 및 서비스 > 사용자 인증 정보 > 'OAuth 2.0 클라이언트 ID(웹)'의 클라이언트 ID
+        const DRIVE_OAUTH_CLIENT_ID = '327718577440-7unk22te5b409hj5ikoa0uo1dhgf4a9q.apps.googleusercontent.com'; // ← Google Cloud 콘솔 > API 및 서비스 > 사용자 인증 정보 > 'OAuth 2.0 클라이언트 ID(웹)'의 클라이언트 ID
         const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
         const GIS_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
         const DRIVE_API = 'https://www.googleapis.com/drive/v3';
