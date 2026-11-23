@@ -410,6 +410,8 @@ body.sm-open #xh,body.sm-open #tags{opacity:0}
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 if (!window.__solo3dNoGL) {
 window.__solo3dStarted = true;
@@ -2629,6 +2631,93 @@ interact = function (k) {
   if (k === 'sign' || k === 'board' || k === 'menu') { firstUse(); if (activeKey) closePanel(); openSm(k); return; }
   return _interact_deco(k);
 };
+
+/* =========================================================
+   🧸 Magnific 3D 모델 교체 (models/*.glb, 고급 피규어 느낌)
+   - 불러오기 성공한 것만 기존 도형을 숨기고 바꿔 끼움 → 실패·오프라인이면 기존 도형 그대로
+   - 물건의 뿌리 그룹(위치·배지·탭·하이라이트·테마)은 그대로, 겉모습만 교체
+   ========================================================= */
+const MODEL_DIR = 'models/';
+const gltfL = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const MA = {}, HIDDEN = new Set();
+function fitInto(src, { h, w, d, ry = 0, x = 0, z = 0, back = null }) {
+  const pivot = new THREE.Group(); src.rotation.y = ry; pivot.add(src); pivot.updateMatrixWorld(true);
+  const s = new THREE.Box3().setFromObject(src).getSize(new THREE.Vector3());
+  let k = Infinity; if (h) k = Math.min(k, h / s.y); if (w) k = Math.min(k, w / s.x); if (d) k = Math.min(k, d / s.z);
+  src.scale.setScalar(k); pivot.updateMatrixWorld(true);
+  const b = new THREE.Box3().setFromObject(src), c = b.getCenter(new THREE.Vector3());
+  src.position.set(x - c.x, -b.min.y, back != null ? back - b.min.z : z - c.z);
+  return pivot;
+}
+function hideOld(list) { list.forEach(o => { if (o) { o.visible = false; HIDDEN.add(o); } }); }
+function prepModel(obj, roots) {
+  obj.traverse(m => {
+    if (!m.isMesh) return; m.castShadow = true; m.receiveShadow = true;
+    const mat = m.material; snapMat(mat); themeMat(mat, TMATS.get(mat));
+    roots.forEach(r => { const arr = r.userData.mats; if (arr && !arr.includes(mat)) { mat.userData.baseEm = mat.emissive.clone(); mat.userData.baseEI = mat.emissiveIntensity; arr.push(mat); } });
+  });
+}
+function putModel(gl, parent, opt, roots = []) { const p = fitInto(gl.scene.clone(true), opt); prepModel(p, roots); parent.add(p); return p; }
+const MSPEC = {
+  staff: g => { hideOld([stBody]); MA.staff = putModel(g, staff, { h: 1.15, ry: -Math.PI / 2 }, [staff]); },
+  owner: g => { hideOld([doll]); MA.owner = putModel(g, owner, { h: 0.24, ry: -Math.PI / 2 }, [owner]); },
+  cat: g => { hideOld(cat.children.slice()); MA.cat = putModel(g, cat, { h: 0.24, ry: -Math.PI / 2 }, [cat]); },
+  robot: g => { hideOld(robot.children.slice()); MA.robot = putModel(g, robot, { h: 0.86, ry: -Math.PI / 2 }, [robot]); },
+  pos: g => { hideOld(pos.children.filter(c => c !== screenPivot)); hideOld(screenPivot.children.filter(c => c.material !== screenMat));
+    MA.pos = putModel(g, pos, { w: 0.42, h: 0.4, ry: -Math.PI / 2 }, [pos]); fitScreen(MA.pos, screenPivot, 'pos'); },
+  printer: g => { hideOld(printer.children.slice()); putModel(g, printer, { w: 0.2, h: 0.16 }); },
+  laptop: g => { const hinge = laptop.children.find(c => c.isGroup && c.children.some(m => m.material === lapScreenMat));
+    hideOld(laptop.children.filter(c => c !== hinge)); hideOld(hinge.children.filter(c => c.material !== lapScreenMat));
+    MA.laptop = putModel(g, laptop, { w: 0.66, h: 0.3, x: 0.14 }, [laptop]); fitScreen(MA.laptop, hinge, 'laptop'); },
+  safe: g => { hideOld(safe.children.filter(c => c !== drawer)); MA.safe = putModel(g, safe, { w: 0.42, d: 0.36, ry: -Math.PI / 2 }, [safe]); },
+  fridge: g => { MA.fridgeOpenG = g; fridgeSwap(); },
+  fridge2: g => { MA.fridgeShutG = g; fridgeSwap(); },
+  shelf: g => { hideOld(shelf.children.slice()); putModel(g, shelf, { h: 1.18, ry: -Math.PI / 2 }, [shelf]); },
+  table: g => { grpRest.children.filter(c => c.isGroup).forEach(t => { hideOld(t.children.slice()); putModel(g, t, { w: 1.6, ry: Math.PI / 2 }); }); },
+  salon: g => { grpSalon.children.filter(c => c.isGroup).forEach(t => { hideOld(t.children.filter(m => !(m.geometry && m.geometry.type === 'CircleGeometry'))); putModel(g, t, { h: 1.85, z: 0.05 }); }); },
+  sofa: g => { const sofaG = grpHome.children.find(c => c.isGroup && Math.abs(c.position.x + 1) < 0.01 && Math.abs(c.position.z + 3.15) < 0.01); if (!sofaG) return;
+    hideOld(sofaG.children.slice()); putModel(g, sofaG, { w: 1.85, ry: -Math.PI / 2 }); }
+};
+// 냉장고: 닫힌 모델 ↔ 연 모델을 문 애니메이션에 맞춰 바꿔 보여 줌(칸 안 물건은 그대로)
+function fridgeSwap() {
+  if (!MA.fridgeOpenG || !MA.fridgeShutG || MA.fridgeShut) return;
+  hideOld(fridge.children.filter(c => !c.isLight && !fridgeItems.includes(c)));
+  MA.fridgeShut = putModel(MA.fridgeShutG, fridge, { w: FW, h: FH, d: FD + 0.04, ry: -Math.PI / 2 }, [fridge]);
+  const op = putModel(MA.fridgeOpenG, fridge, { h: FH, ry: -Math.PI / 2, back: -FD / 2 }, [fridge]);
+  MA.fridgeOpen = new THREE.Group(); MA.fridgeOpen.scale.x = -1; fridge.remove(op); MA.fridgeOpen.add(op); fridge.add(MA.fridgeOpen); MA.fridgeOpenP = op; // 문이 벽 쪽으로 열리게 좌우 반전
+  MA.fridgeOpen.visible = false;
+  SHELF_Y.splice(0, 3, 0.512, 0.914, 1.283); syncFridgeItems(); // 모델 선반 높이(레이로 잰 값)에 물건을 다시 올림
+}
+const _makeItem_models = makeItem;
+makeItem = function (...a) { const g = _makeItem_models(...a); if (MA.fridgeShut) { g.position.z += 0.05; g.position.x += 0.02; } return g; };
+// 포스·노트북 화면(실시간 숫자)은 모델 화면 자리에 맞춰 그대로 띄움
+// [화면 중심 x, y, z(모델 화면 표면), 뒤로 기운 각, 크기] — 모델 화면을 레이로 재서 맞춘 값
+const SCREEN_FIT = { pos: [0, 0.285, -0.081, -0.39, 0.68, screenMat], laptop: [0.06, 0.17, -0.11, -0.37, 0.68, lapScreenMat] };
+function fitScreen(model, pivot, k) {
+  const f = SCREEN_FIT[k], plane = pivot.children.find(c => c.material === f[5]); if (!plane) return;
+  pivot.rotation.set(f[3], 0, 0); pivot.scale.setScalar(f[4]);
+  const off = plane.position.clone().multiplyScalar(f[4]).applyEuler(pivot.rotation), nrm = new THREE.Vector3(0, 0, 1).applyEuler(pivot.rotation).multiplyScalar(0.004);
+  pivot.position.set(f[0], f[1], f[2]).sub(off).add(nrm);
+}
+const _applyMode3D_models = applyMode3D;
+applyMode3D = function () { _applyMode3D_models(); HIDDEN.forEach(o => { o.visible = false; }); };
+// 매 프레임: 기존 애니메이션 값을 모델에 옮겨 담기(숨쉬기·흔들기·통통·둥실)
+const _stepCat_models = stepCat;
+stepCat = function (now, T, dt) {
+  _stepCat_models(now, T, dt);
+  if (MA.staff) { MA.staff.rotation.z = stBody.rotation.z; MA.staff.rotation.y = stHead.rotation.y * 0.35; let hop = 0; if (stWaveT > 0) { const t = (now - stWaveT) / 1400; if (t < 1) hop = Math.abs(Math.sin(t * Math.PI * 3)) * 0.06 * (1 - t); } MA.staff.position.y = hop; }
+  if (MA.owner) { MA.owner.scale.y = doll.scale.y; MA.owner.position.y = doll.position.y; MA.owner.rotation.z = dhead.rotation.z * 0.6 + (waveT > 0 ? Math.sin((now - waveT) / 1600 * 30) * 0.14 : 0); }
+  if (MA.cat) { MA.cat.scale.y = catBody.scale.y; MA.cat.rotation.z = catHead.rotation.z * 0.45; }
+  if (MA.robot) { MA.robot.position.y = (rbFloat.position.y - 0.27) * 0.6; MA.robot.rotation.y = rbFloat.rotation.y * 0.4; }
+  if (MA.fridgeShut) { const op = an.door > 0.06; MA.fridgeOpen.visible = op; MA.fridgeShut.visible = !op; if (op && an.dt > an.df) { const s = 1 + Math.sin(Math.min(1, an.door) * Math.PI) * 0.03; MA.fridgeOpenP.scale.set(s, 1, s); } }
+  if (MA.safe) drawer.visible = an.drw > 0.02;
+};
+function loadModels() {
+  ['staff', 'owner', 'cat', 'robot', 'pos', 'printer', 'laptop', 'safe', 'fridge', 'fridge2', 'shelf', 'table', 'salon', 'sofa'].forEach(n => {
+    gltfL.loadAsync(MODEL_DIR + n + '.glb').then(g => { try { MSPEC[n](g); window.__solo3dModels = (window.__solo3dModels || 0) + 1; } catch (e) { console.warn('model', n, e); } }).catch(() => {});
+  });
+}
+loadModels();
 
 setCameraFov();
 const seat0 = seatPose();
