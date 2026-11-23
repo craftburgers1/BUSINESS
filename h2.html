@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2D 헤더 360 측정(임시)</title>
+<style>body{margin:0;background:#0f172a;color:#e2e8f0;font:13px/1.5 system-ui,sans-serif;padding:10px}
+iframe{width:360px;height:200px;border:1px solid #475569;background:#fff;border-radius:8px}pre{white-space:pre-wrap;color:#a7f3d0}</style></head>
+<body>
+<iframe id="f" src="2d.html?m=1"></iframe>
+<pre id="out">측정 중…</pre>
+<script>
+function w(el){ return el ? Math.round(el.getBoundingClientRect().width) : -1; }
+function report(tag){
+  const d = document.getElementById('f').contentDocument;
+  const hdr = d.querySelector('header');
+  const right = hdr.children[1];
+  const name = d.getElementById('displayStoreName'), ind = d.getElementById('displayIndustry');
+  const link = d.getElementById('solo3dLink');
+  return tag + '\n header=' + Math.round(hdr.getBoundingClientRect().width) + ' scrollW=' + hdr.scrollWidth +
+    '\n 왼쪽블록=' + w(hdr.children[0]) + ' 아이콘포함, 상호명=' + w(name) + ' (글자폭 ' + (name ? name.scrollWidth : -1) + ') 업종=' + w(ind) +
+    '\n 오른쪽블록=' + w(right) + ' → 근태=' + w(d.getElementById('staffAppExternalLink')) + ' 3D=' + w(link) + ' 게시판=' + w(right.children[2]) + ' 내정보=' + w(right.children[3]) +
+    '\n 상호명 보임=' + (name && name.getBoundingClientRect().width > 8);
+}
+setTimeout(() => {
+  const d = document.getElementById('f').contentDocument;
+  const out = [];
+  out.push(report('① 지금(새 배지)'));
+  const link = d.getElementById('solo3dLink');
+  const old = link.outerHTML;
+  link.style.display = 'none';
+  out.push(report('② 3D 배지 숨김(예전 아이콘 폭 가정은 아님)'));
+  link.style.display = '';
+  out.push('③ 배지 실제 폭: ' + Math.round(link.getBoundingClientRect().width) + 'px, 높이 ' + Math.round(link.getBoundingClientRect().height) + 'px');
+  document.getElementById('out').textContent = out.join('\n\n');
+}, 7000);
+</script>
+</body></html>
