@@ -604,6 +604,74 @@
         </div>
     </div>
 
+    <!-- v19: 📒 복식장부 모달 (읽기 전용) -->
+    <div id="ledgerModal" onclick="if (event.target === this) closeLedgerModal()" role="dialog" aria-modal="true" aria-labelledby="ledgerTitle" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-4 space-y-3 shadow-2xl">
+            <div class="flex justify-between items-start gap-2 border-b border-slate-100 pb-2.5">
+                <div class="min-w-0">
+                    <h3 id="ledgerTitle" class="text-sm font-bold text-slate-900">📒 복식장부</h3>
+                    <p class="text-[11px] text-slate-500 break-keep">일반 장부 입력을 차변/대변 분개로 자동 변환한 화면이에요 (읽기 전용)</p>
+                </div>
+                <button type="button" onclick="closeLedgerModal()" aria-label="닫기" class="text-slate-400 hover:text-slate-600 flex-shrink-0"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                    <p id="ledgerPeriod" class="text-xs font-bold text-slate-800">기간:</p>
+                    <p class="text-[10px] text-slate-400 break-keep">위쪽 연/월을 바꾸면 이 화면의 기간도 바뀝니다</p>
+                </div>
+                <div id="ledgerScopeToggle" class="inline-flex bg-slate-100 p-0.5 rounded-lg" role="group" aria-label="장부 범위">
+                    <button type="button" data-ledger-scope="store" onclick="setLedgerScope('store')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition whitespace-nowrap">🏪 사업 전용 (세무용)</button>
+                    <button type="button" data-ledger-scope="all" onclick="setLedgerScope('all')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition whitespace-nowrap">🏪+👤 사업+개인 전체</button>
+                </div>
+            </div>
+            <div id="ledgerSummary" class="grid grid-cols-3 gap-2"></div>
+            <div class="space-y-1">
+                <p class="text-[11px] font-bold text-slate-500">시산표 (계정별 합계)</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-[11px]">
+                        <thead><tr class="text-slate-400 border-b border-slate-200"><th class="py-1 pr-2 text-left font-semibold">계정과목</th><th class="py-1 pl-2 text-right font-semibold">차변</th><th class="py-1 pl-2 text-right font-semibold">대변</th><th class="py-1 pl-2 text-right font-semibold">잔액</th></tr></thead>
+                        <tbody id="ledgerTrialBody"></tbody>
+                    </table>
+                </div>
+                <p id="ledgerBalance" class="text-[11px] font-bold text-emerald-600"></p>
+                <p class="text-[11px] text-slate-400 break-keep">잔액이 (-)인 수익 계정은 대변 잔액</p>
+            </div>
+            <div id="ledgerPL" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2"></div>
+            <div class="space-y-1">
+                <div class="flex items-center justify-between gap-2"><p class="text-[11px] font-bold text-slate-500">분개장</p><p id="ledgerJournalNote" class="text-[10px] text-slate-400"></p></div>
+                <div id="ledgerJournal" class="max-h-64 overflow-y-auto border border-slate-100 rounded-xl px-2"></div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <button type="button" id="ledgerSheetBtn" onclick="exportLedgerToSheets()" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-bold rounded-xl text-xs shadow-sm transition">📊 구글 시트로 내보내기</button>
+                <button type="button" id="ledgerCsvJournalBtn" onclick="v19DownloadJournal()" class="py-2.5 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs transition whitespace-nowrap">⬇️ 분개장</button>
+                <button type="button" id="ledgerCsvMonthlyBtn" onclick="v19DownloadMonthly()" class="py-2.5 px-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs transition whitespace-nowrap">⬇️ 월별 요약</button>
+            </div>
+            <p id="ledgerExportMsg" class="text-[11px] text-slate-500 break-keep" role="status" aria-live="polite"></p>
+            <button type="button" onclick="closeLedgerModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+        </div>
+    </div>
+
+    <!-- v19: 📥 홈택스/카드 엑셀 업로드 모달 -->
+    <div id="hometaxModal" onclick="if (event.target === this) closeHometaxModal()" role="dialog" aria-modal="true" aria-labelledby="hometaxTitle" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-4 space-y-3 shadow-2xl">
+            <div class="flex justify-between items-start gap-2 border-b border-slate-100 pb-2.5">
+                <div class="min-w-0">
+                    <h3 id="hometaxTitle" class="text-sm font-bold text-slate-900">📥 홈택스/카드 엑셀 업로드</h3>
+                    <p class="text-[11px] text-slate-500 break-keep">국세청 홈택스 사업용 신용카드·현금영수증·세금계산서 엑셀(.xlsx/.xls/.csv)을 올리면 장부에 한 번에 들어갑니다</p>
+                </div>
+                <button type="button" onclick="closeHometaxModal()" aria-label="닫기" class="text-slate-400 hover:text-slate-600 flex-shrink-0"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-1">
+                <label for="htFile" class="text-[11px] font-bold text-slate-500">엑셀/CSV 파일</label>
+                <input type="file" id="htFile" accept=".xlsx,.xls,.csv" onchange="v19OnHometaxFile(this)" class="block w-full text-xs rounded-xl p-2">
+                <p id="htStatus" class="text-[11px] text-slate-500 break-keep" role="status" aria-live="polite"></p>
+            </div>
+            <div id="htPreview"></div>
+            <button type="button" id="htSaveBtn" onclick="saveHometaxRows()" disabled class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-xl text-xs shadow-sm transition">선택한 0건 장부에 추가</button>
+            <button type="button" onclick="closeHometaxModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">닫기</button>
+        </div>
+    </div>
+
     <!-- Header Navigation -->
     <header class="sticky top-0 z-30 ios-header px-4 py-3.5 flex justify-between items-center">
         <div class="flex items-center gap-2.5 cursor-pointer max-sm:min-w-0" onclick="openWizardModal()">
@@ -653,6 +721,12 @@
         <div id="decoRow" class="grid grid-cols-2 gap-2">
             <button type="button" id="decoBtn" onclick="openDecoModal()" class="py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">🎨 꾸미기</button>
             <button type="button" id="installBtn" onclick="installApp()" class="py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">📲 홈 화면 추가</button>
+        </div>
+
+        <!-- v19: 📒 복식장부 · 📥 홈택스 업로드 -->
+        <div id="ledgerRow" class="grid grid-cols-2 gap-2">
+            <button type="button" id="ledgerBtn" onclick="openLedgerModal()" class="py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">📒 복식장부</button>
+            <button type="button" id="hometaxBtn" onclick="openHometaxModal()" class="py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition">📥 홈택스 업로드</button>
         </div>
 
         <!-- v16: 🧾 영수증함(모아보기) -->
@@ -3163,6 +3237,490 @@
             if (d && !d.classList.contains('hidden')) closeDecoModal();
             const g = document.getElementById('installGuideModal');
             if (g && !g.classList.contains('hidden')) closeInstallGuide();
+        });
+
+        /* ===================== v19: 📒 복식장부 · 📥 홈택스/카드 엑셀 업로드 · 📊 구글 시트 내보내기 ===================== */
+        // 복식장부는 dbData를 읽기만 하는 계산(원래 거래·KPI 계산은 그대로). 장부에 새로 추가하는 길은 엑셀 업로드 하나뿐.
+        const V19_LEDGER_SCOPE_KEY = 'soloGagebuLedgerScope';
+        const V19_EXPENSE_ACCOUNTS = ['식자재비', '인건비', '임차료', '지급수수료', '소모품비', '광고선전비', '통신비', '수도광열비', '보험료', '세금과공과', '차량유지비', '접대비', '기타비용'];
+        const V19_ACCOUNT_RULES = [
+            ['식자재비', ['식자재', '재료', '도매', '마트', '정육', '야채', '채소', '과일', '번', '패티', '치즈', '소스', '베스트코', '코스트코', '이마트']],
+            ['임차료', ['월세', '임대', '임차', '렌트']],
+            ['인건비', ['인건비', '급여', '알바', '직원', '시급', '4대보험', '퇴직', '아르바이트']],
+            ['지급수수료', ['수수료', '배달', '배민', '쿠팡이츠', '요기요', '땡겨요', '정산', 'pg', '카드']],
+            ['소모품비', ['포장', '용기', '소모품', '비닐', '봉투', '위생', '장갑', '세제', '키친타올', '화장지']],
+            ['광고선전비', ['광고', '홍보', '마케팅', '전단', '현수막', '배너', 'sns']],
+            ['통신비', ['통신', '인터넷', '핸드폰', '휴대폰', '전화', 'kt', 'skt', 'lgu', '알뜰폰']],
+            ['수도광열비', ['관리비', '수도', '가스', '전기', '냉난방', '상하수도']],
+            ['보험료', ['보험']],
+            ['세금과공과', ['세금', '공과금', '재산세', '면허세', '인지세']],
+            ['차량유지비', ['차량', '주유', '기름', '주차', '톨게이트', '택시', '버스', '운반']],
+            ['접대비', ['접대', '기프티콘', '선물']]
+        ];
+        const V19_ACCOUNT_TO_ITEM = { '식자재비': '식자재', '소모품비': '소모품', '지급수수료': '배달앱 수수료', '임차료': '월세', '통신비': '통신비', '수도광열비': '관리비', '인건비': '인건비', '광고선전비': '광고비' };
+        const V19_DEFAULT_ITEMS = ['식자재', '포장재', '소모품', '광고비', '배달앱 수수료', '월세', '관리비', '통신비', '보험료', '인건비', '기타 지출'];
+        const V19_SHEETJS_URLS = ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', 'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'];
+
+        function v19Get(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+        function v19Set(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* 못 쓰는 환경은 무시 */ } }
+        let v19LedgerScope = v19Get(V19_LEDGER_SCOPE_KEY) === 'all' ? 'all' : 'store';
+        const v19Won = n => Number(n || 0).toLocaleString() + '원';
+        const v19Norm = s => String(s == null ? '' : s).toLowerCase().replace(/\s+/g, '');
+
+        // ---- 자동 분개 (표시용: 원래 category는 절대 바꾸지 않음) ----
+        function v19ExpenseAccount(item) {
+            const cat = v19Norm(item.category), memo = v19Norm(item.memo);
+            for (const [acc, kws] of V19_ACCOUNT_RULES) if (kws.some(k => cat.includes(k))) return acc;
+            for (const [acc, kws] of V19_ACCOUNT_RULES) if (kws.some(k => memo.includes(k))) return acc;
+            return '기타비용';
+        }
+        function v19AccountFor(item) {
+            if (item.type === 'sales') return { debit: '보통예금', credit: '매출액', kind: '사업' };
+            if (v17IsPersonal(item)) return { debit: '개인출금', credit: '보통예금', kind: '개인' };
+            return { debit: v19ExpenseAccount(item), credit: '보통예금', kind: '사업' };
+        }
+
+        // 한 함수에서 분개장·시산표·월별 요약을 모두 만듦(화면과 CSV가 같은 숫자를 씀)
+        function v19BuildLedger(scope) {
+            const year = document.getElementById('yearSelect').value;
+            const month = document.getElementById('monthSelect').value;
+            const rows = getFilteredData().filter(x => scope === 'all' || !v17IsPersonal(x));
+            const journal = rows.map(x => {
+                const a = v19AccountFor(x);
+                return { date: String(x.date || ''), debit: a.debit, credit: a.credit, amount: Number(x.amount) || 0, memo: [x.category, x.memo].filter(Boolean).join(' · '), kind: a.kind };
+            }).sort((p, q) => q.date.localeCompare(p.date));
+            const tb = {};
+            const months = {};
+            journal.forEach(j => {
+                (tb[j.debit] = tb[j.debit] || { d: 0, c: 0 }).d += j.amount;
+                (tb[j.credit] = tb[j.credit] || { d: 0, c: 0 }).c += j.amount;
+                const m = j.date.slice(0, 7);
+                const row = months[m] = months[m] || { 매출액: 0, 개인출금: 0 };
+                if (j.credit === '매출액') row.매출액 += j.amount;
+                else row[j.debit] = (row[j.debit] || 0) + j.amount;
+            });
+            const sales = tb['매출액'] ? tb['매출액'].c : 0;
+            const expense = V19_EXPENSE_ACCOUNTS.reduce((s, a) => s + (tb[a] ? tb[a].d : 0), 0);
+            const drawing = tb['개인출금'] ? tb['개인출금'].d : 0;
+            const order = ['보통예금', '매출액'].concat(V19_EXPENSE_ACCOUNTS, scope === 'all' ? ['개인출금'] : []);
+            const trial = order.filter(a => tb[a] && (tb[a].d || tb[a].c)).map(a => ({ account: a, d: tb[a].d, c: tb[a].c, bal: tb[a].d - tb[a].c }));
+            const debitSum = trial.reduce((s, r) => s + r.d, 0), creditSum = trial.reduce((s, r) => s + r.c, 0);
+            const monthly = Object.keys(months).sort().map(m => {
+                const r = months[m];
+                const exp = V19_EXPENSE_ACCOUNTS.reduce((s, a) => s + (r[a] || 0), 0);
+                return Object.assign({ 월: m }, r, { 순이익: r.매출액 - exp });
+            });
+            const label = month === 'ALL' ? `${year}년 전체` : `${year}년 ${parseInt(month, 10)}월`;
+            const tag = month === 'ALL' ? `${year}년` : `${year}-${month}`;
+            return { scope, journal, trial, debitSum, creditSum, sales, expense, net: sales - expense, drawing, monthly, label, tag, isYear: month === 'ALL' };
+        }
+
+        // ---- CSV (분개장·월별 요약) ----
+        function v19CsvCell(v) { const s = String(v == null ? '' : v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+        function v19Csv(rows) { return rows.map(r => r.map(v19CsvCell).join(',')).join('\r\n') + '\r\n'; }
+        function v19JournalCsv(L) {
+            return v19Csv([['일자', '차변계정', '대변계정', '금액', '적요', '구분']].concat(L.journal.map(j => [j.date, j.debit, j.credit, j.amount, j.memo, j.kind])));
+        }
+        function v19MonthlyCsv(L) {
+            const head = ['월', '매출액'].concat(V19_EXPENSE_ACCOUNTS, ['개인출금', '순이익']);
+            const keys = head.slice(1);
+            const total = { 월: '합계' };
+            keys.forEach(k => { total[k] = L.monthly.reduce((s, r) => s + (r[k] || 0), 0); });
+            return v19Csv([head].concat(L.monthly.concat([total]).map(r => [r.월].concat(keys.map(k => r[k] || 0)))));
+        }
+        function v19Download(name, csv) {
+            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = name + '.csv';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        }
+        function v19DownloadJournal() { const L = v19BuildLedger(v19LedgerScope); v19Download(`솔로운영_분개장_${L.tag}`, v19JournalCsv(L)); }
+        function v19DownloadMonthly() { const L = v19BuildLedger(v19LedgerScope); v19Download(`솔로운영_월별요약_${L.tag}`, v19MonthlyCsv(L)); }
+
+        // ---- 📒 복식장부 모달 ----
+        function openLedgerModal() { renderLedgerModal(); document.getElementById('ledgerModal').classList.remove('hidden'); }
+        function closeLedgerModal() { document.getElementById('ledgerModal').classList.add('hidden'); }
+        function setLedgerScope(s) { v19LedgerScope = s === 'all' ? 'all' : 'store'; v19Set(V19_LEDGER_SCOPE_KEY, v19LedgerScope); renderLedgerModal(); }
+
+        function v19El(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+        function renderLedgerModal() {
+            const L = v19BuildLedger(v19LedgerScope);
+            document.getElementById('ledgerPeriod').textContent = `기간: ${L.label}`;
+            document.querySelectorAll('#ledgerScopeToggle button[data-ledger-scope]').forEach(b => {
+                const on = b.dataset.ledgerScope === L.scope;
+                b.classList.toggle('bg-white', on); b.classList.toggle('shadow-sm', on);
+                b.classList.toggle('text-slate-800', on); b.classList.toggle('text-slate-500', !on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+            // 요약 칸
+            const sum = document.getElementById('ledgerSummary');
+            sum.className = 'grid gap-2 ' + (L.scope === 'all' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3');
+            sum.innerHTML = '';
+            [['매출액', L.sales, 'text-emerald-600'], ['비용 합계', L.expense, 'text-rose-600'], ['순이익', L.net, 'text-emerald-600']]
+                .concat(L.scope === 'all' ? [['개인출금', L.drawing, 'text-rose-600']] : []).forEach(([k, v, c]) => {
+                    const box = v19El('div', 'bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-2.5 py-2 min-w-0');
+                    box.appendChild(v19El('p', 'text-[11px] font-semibold text-slate-500', k));
+                    box.appendChild(v19El('p', 'ledger-sum-amt text-[12px] sm:text-sm font-bold tracking-tight whitespace-nowrap ' + c, v19Won(v)));
+                    sum.appendChild(box);
+                });
+            // 시산표
+            const tbody = document.getElementById('ledgerTrialBody');
+            tbody.innerHTML = '';
+            L.trial.forEach(r => {
+                const tr = v19El('tr', 'border-b border-slate-100');
+                tr.appendChild(v19El('td', 'py-1.5 pr-2 text-slate-800 font-medium whitespace-nowrap', r.account));
+                [r.d, r.c, r.bal].forEach(v => tr.appendChild(v19El('td', 'py-1.5 pl-2 text-right whitespace-nowrap text-slate-700', v ? Number(v).toLocaleString() : '-')));
+                tbody.appendChild(tr);
+            });
+            const tf = v19El('tr', 'font-bold text-slate-900');
+            tf.appendChild(v19El('td', 'pt-2 pr-2', '합계'));
+            [L.debitSum, L.creditSum, L.debitSum - L.creditSum].forEach(v => tf.appendChild(v19El('td', 'pt-2 pl-2 text-right whitespace-nowrap', Number(v).toLocaleString())));
+            tbody.appendChild(tf);
+            const bal = document.getElementById('ledgerBalance');
+            const ok = L.debitSum === L.creditSum;
+            bal.textContent = ok ? '✔ 차변 합계 = 대변 합계 (균형)' : '⚠ 차변·대변이 맞지 않습니다';
+            bal.className = 'text-[11px] font-bold ' + (ok ? 'text-emerald-600' : 'text-red-600');
+            // 손익 요약
+            const pl = document.getElementById('ledgerPL');
+            pl.innerHTML = '';
+            const line1 = v19El('p', 'text-xs font-bold text-slate-800 break-keep');
+            line1.append('매출액 ', v19El('span', 'text-emerald-600 whitespace-nowrap', v19Won(L.sales)), ' − 비용 합계 ', v19El('span', 'text-rose-600 whitespace-nowrap', v19Won(L.expense)), ' = 순이익 ', v19El('span', 'text-emerald-600 whitespace-nowrap', v19Won(L.net)));
+            pl.appendChild(line1);
+            if (L.scope === 'all') {
+                const line2 = v19El('p', 'text-[11px] font-semibold text-slate-600 mt-1 break-keep');
+                line2.append('실잔여 = 순이익 − 개인출금 ', v19El('span', 'text-rose-600 whitespace-nowrap', v19Won(L.drawing)), ' = ', v19El('span', 'text-emerald-600 font-bold whitespace-nowrap', v19Won(L.net - L.drawing)));
+                pl.appendChild(line2);
+            }
+            // 분개장
+            const list = document.getElementById('ledgerJournal');
+            list.innerHTML = '';
+            const shown = L.journal.slice(0, 300);
+            document.getElementById('ledgerJournalNote').textContent = L.journal.length > 300 ? `최근 300건만 표시 (전체 ${L.journal.length}건)` : `분개 ${L.journal.length}건`;
+            if (!shown.length) list.appendChild(v19El('p', 'text-center text-xs text-slate-400 py-6', '이 기간에 기록된 거래가 없어요.'));
+            shown.forEach(j => {
+                const row = v19El('div', 'ledger-journal-row flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-1.5 border-b border-slate-100 text-[11px]');
+                row.appendChild(v19El('span', 'text-slate-500 font-medium whitespace-nowrap', L.isYear ? j.date : j.date.slice(5)));
+                row.appendChild(v19El('span', 'font-bold text-slate-800 whitespace-nowrap', `${j.debit} → ${j.credit}`));
+                row.appendChild(v19El('span', 'font-bold whitespace-nowrap ' + (j.credit === '매출액' ? 'text-emerald-600' : 'text-rose-600'), v19Won(j.amount)));
+                row.appendChild(v19El('span', 'text-slate-500 min-w-0 break-all', j.memo));
+                list.appendChild(row);
+            });
+        }
+
+        // ---- 📊 구글 시트로 내보내기 (기존 drive.file 토큰·폴더 함수 재사용, 새 스코프 없음) ----
+        function v19ExportMsg(text, link) {
+            const el = document.getElementById('ledgerExportMsg');
+            el.textContent = text;
+            if (link) { el.append(' · '); const a = v19El('a', 'underline font-bold text-blue-600', '열리지 않으면 여기를 누르세요'); a.href = link; a.target = '_blank'; a.rel = 'noopener noreferrer'; el.appendChild(a); }
+        }
+        async function v19UniqueSheetName(token, folderId, base) {
+            const q = `'${driveQ(folderId)}' in parents and name contains '${driveQ(base)}' and trashed=false`;
+            const r = await driveFetch(`${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(name)&pageSize=100&spaces=drive`, {}, token);
+            const names = new Set(((await r.json()).files || []).map(f => f.name));
+            if (!names.has(base)) return base;
+            for (let i = 2; i < 1000; i++) if (!names.has(`${base}_${i}`)) return `${base}_${i}`;
+            return `${base}_${Date.now()}`;
+        }
+        async function v19UploadSheet(token, folderId, name, csv) {
+            const b = 'soloSheet' + Math.random().toString(36).slice(2);
+            const meta = { name, mimeType: 'application/vnd.google-apps.spreadsheet', parents: [folderId] };
+            const body = new Blob([
+                `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${b}\r\nContent-Type: text/csv; charset=UTF-8\r\n\r\n`,
+                '﻿' + csv, `\r\n--${b}--`
+            ]);
+            const r = await driveFetch(`${DRIVE_UPLOAD_API}?uploadType=multipart&fields=id,name,mimeType,webViewLink`, {
+                method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body
+            }, token);
+            return r.json();
+        }
+        async function exportLedgerToSheets() {
+            if (isDemoMode) { v19ExportMsg('체험판에서는 내보낼 수 없어요 (로그인 후 구글 드라이브로 내보낼 수 있어요)'); return; }
+            if (!currentUser) { v19ExportMsg('로그인 후 내보낼 수 있어요'); return; }
+            const L = v19BuildLedger(v19LedgerScope);
+            const tokenP = driveGetToken(true); // 누른 그 클릭 안에서 요청(팝업 차단 방지)
+            const btn = document.getElementById('ledgerSheetBtn');
+            if (btn) btn.disabled = true;
+            v19ExportMsg('📊 구글 시트를 만드는 중…');
+            const run = async (token) => {
+                const folderId = await driveFindOrCreateFolder(token, '솔로운영_장부', '');
+                const n1 = await v19UniqueSheetName(token, folderId, `솔로운영_분개장_${L.tag}`);
+                const f1 = await v19UploadSheet(token, folderId, n1, v19JournalCsv(L));
+                const n2 = await v19UniqueSheetName(token, folderId, `솔로운영_월별요약_${L.tag}`);
+                await v19UploadSheet(token, folderId, n2, v19MonthlyCsv(L));
+                return f1;
+            };
+            try {
+                let f1;
+                try { f1 = await run(await tokenP); }
+                catch (err) {
+                    if (!(err && err.message === 'drive-401')) throw err;
+                    v19ExportMsg('구글 연결이 만료돼 다시 연결하는 중…');
+                    f1 = await run(await driveGetToken(true)); // 1회 재시도
+                }
+                const link = f1.webViewLink || (f1.id ? `https://docs.google.com/spreadsheets/d/${encodeURIComponent(f1.id)}/edit` : '');
+                if (link) { try { window.open(link, '_blank', 'noopener'); } catch (e) { /* 팝업 차단 */ } }
+                v19ExportMsg('✅ 시트를 만들었어요 (새 탭에서 열림)', link);
+            } catch (err) {
+                const m = err && err.message;
+                console.warn('[장부 내보내기] 실패', err);
+                v19ExportMsg(m === 'denied' || m === 'access_denied' || m === 'popup_closed' ? '드라이브 권한이 필요해요' : (m === 'unavailable' ? '지금은 구글 드라이브를 쓸 수 없어요' : '시트를 만들지 못했어요 (잠시 후 다시)'));
+            } finally { if (btn) btn.disabled = false; }
+        }
+
+        // ---- 📥 홈택스/카드 엑셀 업로드 ----
+        const v19Ht = { rows: [], fileName: '' };
+        function openHometaxModal() { document.getElementById('hometaxModal').classList.remove('hidden'); v19RenderHometax(); }
+        function closeHometaxModal() { document.getElementById('hometaxModal').classList.add('hidden'); }
+        function v19HtStatus(t) { document.getElementById('htStatus').textContent = t; }
+
+        let v19SheetPromise = null;
+        function v19LoadSheetJS() {
+            if (window.XLSX) return Promise.resolve(window.XLSX);
+            if (v19SheetPromise) return v19SheetPromise;
+            const load = url => new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = url; s.async = true;
+                s.onload = () => window.XLSX ? resolve(window.XLSX) : reject(new Error('xlsx-missing'));
+                s.onerror = () => reject(new Error('xlsx-load'));
+                document.head.appendChild(s);
+            });
+            v19SheetPromise = load(V19_SHEETJS_URLS[0]).catch(() => load(V19_SHEETJS_URLS[1])).catch(err => { v19SheetPromise = null; throw err; });
+            return v19SheetPromise;
+        }
+
+        // 따옴표·콤마·줄바꿈을 처리하는 최소 CSV 파서
+        function v19ParseCsv(text) {
+            const rows = []; let row = [], cell = '', q = false;
+            for (let i = 0; i < text.length; i++) {
+                const ch = text[i];
+                if (q) {
+                    if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+                    else cell += ch;
+                } else if (ch === '"') q = true;
+                else if (ch === ',') { row.push(cell); cell = ''; }
+                else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+                else cell += ch;
+            }
+            if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+            return rows;
+        }
+        function v19DecodeText(buf) {
+            try { return new TextDecoder('utf-8', { fatal: true }).decode(buf).replace(/^﻿/, ''); }
+            catch (e) { try { return new TextDecoder('euc-kr').decode(buf); } catch (e2) { return new TextDecoder('utf-8').decode(buf).replace(/^﻿/, ''); } }
+        }
+
+        function v19ParseDate(v) {
+            if (v == null || v === '') return '';
+            const pad = n => String(n).padStart(2, '0');
+            if (v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad(v.getMonth() + 1)}-${pad(v.getDate())}`;
+            if (typeof v === 'number' && v > 20000 && v < 80000) { // 엑셀 날짜 일련번호
+                const d = new Date(Math.round((Math.floor(v) - 25569) * 86400000));
+                return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+            }
+            const s = String(v).trim();
+            let m = /^(\d{4})[.\-\/]\s*(\d{1,2})[.\-\/]\s*(\d{1,2})/.exec(s);
+            if (!m) m = /^(\d{4})(\d{2})(\d{2})(?!\d)/.exec(s);
+            if (!m) return '';
+            const y = +m[1], mo = +m[2], d = +m[3];
+            if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+            return `${y}-${pad(mo)}-${pad(d)}`;
+        }
+        function v19ParseAmount(v) {
+            if (typeof v === 'number') return Math.floor(Math.abs(v));
+            const s = String(v == null ? '' : v).replace(/[,\s원₩]/g, '').replace(/[()\-]/g, '');
+            const n = parseFloat(s);
+            return isFinite(n) ? Math.floor(Math.abs(n)) : 0;
+        }
+        function v19NormMerchant(s) { return String(s == null ? '' : s).toLowerCase().replace(/\s+/g, '').replace(/㈜|\(주\)|주식회사|유한회사/g, '').replace(/[.,\-()\[\]·\/]/g, ''); }
+        function v19DupKey(date, amount, merchant) { return `${date}|${Number(amount) || 0}|${v19NormMerchant(merchant)}`; }
+        function v19ExistingKeys() {
+            const set = new Set();
+            (dbData || []).forEach(x => { if (!x) return; set.add(v19DupKey(x.date, x.amount, x.memo)); set.add(v19DupKey(x.date, x.amount, x.category)); });
+            return set;
+        }
+
+        function v19FindHeader(table) {
+            const H = c => String(c == null ? '' : c).replace(/\s+/g, '');
+            const pick = (cells, names) => { for (const n of names) { const i = cells.findIndex(c => c === n); if (i >= 0) return i; } for (const n of names) { const i = cells.findIndex(c => c.includes(n)); if (i >= 0) return i; } return -1; };
+            for (let r = 0; r < Math.min(15, table.length); r++) {
+                const cells = (table[r] || []).map(H);
+                const di = pick(cells, ['승인일자', '사용일자', '거래일자', '일자', '날짜', '사용일']);
+                const mi = pick(cells, ['가맹점명', '가맹점', '사용처', '상호', '거래처']);
+                const ai = pick(cells, ['합계금액', '금액', '사용금액', '승인금액', '공급대가']);
+                if (di >= 0 && mi >= 0 && ai >= 0) return { row: r, di, mi, ai };
+            }
+            return null;
+        }
+
+        function v19ItemOptions() {
+            const list = storeConfig ? [].concat(storeConfig.fixed || [], storeConfig.variable || [], ['기타 지출']) : V19_DEFAULT_ITEMS.slice();
+            return [...new Set(list.filter(Boolean))];
+        }
+        function v19GuessItem(merchant, options) {
+            const acc = v19ExpenseAccount({ category: '', memo: merchant });
+            const want = V19_ACCOUNT_TO_ITEM[acc];
+            if (want && options.includes(want)) return want;
+            if (want) { const near = options.find(o => o.includes(want) || want.includes(o)); if (near) return near; }
+            return options.includes('기타 지출') ? '기타 지출' : options[options.length - 1];
+        }
+
+        async function v19OnHometaxFile(input) {
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+            v19Ht.rows = []; v19Ht.fileName = file.name;
+            v19RenderHometax();
+            v19HtStatus(`📄 ${file.name} · 읽는 중…`);
+            try {
+                const buf = await file.arrayBuffer();
+                let table;
+                if (/\.csv$/i.test(file.name)) table = v19ParseCsv(v19DecodeText(new Uint8Array(buf)));
+                else {
+                    let X;
+                    try { X = await v19LoadSheetJS(); }
+                    catch (e) { v19HtStatus('⚠ 엑셀 라이브러리를 못 불러왔어요. CSV로 올려 주세요 (인터넷 연결 확인)'); return; }
+                    const wb = X.read(buf, { type: 'array', cellDates: true });
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    table = X.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+                }
+                const head = v19FindHeader(table);
+                if (!head) { v19HtStatus('⚠ 승인일자·가맹점명·금액 열을 찾지 못했어요. 홈택스에서 받은 원본 그대로 올려 주세요'); return; }
+                const existing = v19ExistingKeys(), seen = new Set(), options = v19ItemOptions();
+                let total = 0;
+                for (let r = head.row + 1; r < table.length; r++) {
+                    const line = table[r] || [];
+                    if (!line.some(c => String(c).trim() !== '')) continue;
+                    total++;
+                    try {
+                        const date = v19ParseDate(line[head.di]);
+                        const merchant = String(line[head.mi] == null ? '' : line[head.mi]).trim();
+                        const amount = v19ParseAmount(line[head.ai]);
+                        if (!date || !merchant || !amount) continue;
+                        const key = v19DupKey(date, amount, merchant);
+                        const status = existing.has(key) ? 'dup' : (seen.has(key) ? 'filedup' : 'new');
+                        seen.add(key);
+                        v19Ht.rows.push({ date, merchant, amount, key, status, checked: status === 'new', scope: 'store', category: v19GuessItem(merchant, options) });
+                    } catch (e) { /* 이 행만 건너뜀 */ }
+                }
+                const n = v19Ht.rows.length;
+                v19HtStatus(n === total ? `📄 ${file.name} · ${n}건 읽음` : `📄 ${file.name} · ${total}건 중 ${n}건만 읽음`);
+            } catch (err) {
+                console.warn('[홈택스 업로드] 읽기 실패', err);
+                v19HtStatus('⚠ 파일을 읽지 못했어요. 홈택스에서 받은 원본(.xlsx/.xls/.csv)인지 확인해 주세요');
+            }
+            v19RenderHometax();
+        }
+
+        function v19HtSetAll(field, value) { v19Ht.rows.forEach(r => { if (r.status !== 'saved') r[field] = value; }); v19RenderHometax(); }
+
+        function v19RenderHometax() {
+            const box = document.getElementById('htPreview');
+            const rows = v19Ht.rows;
+            const sel = rows.filter(r => r.checked && r.status !== 'saved').length;
+            const dup = rows.filter(r => r.status === 'dup').length;
+            const saveBtn = document.getElementById('htSaveBtn');
+            saveBtn.textContent = `선택한 ${sel}건 장부에 추가`;
+            saveBtn.disabled = sel === 0;
+            box.innerHTML = '';
+            if (!rows.length) { box.appendChild(v19El('p', 'text-center text-xs text-slate-400 py-6', '파일을 고르면 여기에 미리보기가 나와요.')); return; }
+            const bar = v19El('div', 'flex flex-wrap items-center gap-1.5 mb-2');
+            const allLab = v19El('label', 'flex items-center gap-1 text-[11px] font-bold text-slate-600 cursor-pointer');
+            const all = v19El('input'); all.type = 'checkbox'; all.id = 'htCheckAll'; all.className = 'w-3.5 h-3.5';
+            const live = rows.filter(r => r.status !== 'saved');
+            all.checked = live.length > 0 && live.every(r => r.checked);
+            all.onchange = () => v19HtSetAll('checked', all.checked);
+            allLab.append(all, '전체 선택');
+            const bStore = v19El('button', 'px-2 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700', '🏪 전체 가게'); bStore.type = 'button'; bStore.onclick = () => v19HtSetAll('scope', 'store');
+            const bPer = v19El('button', 'px-2 py-1 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-700', '👤 전체 개인'); bPer.type = 'button'; bPer.onclick = () => v19HtSetAll('scope', 'personal');
+            const summary = v19El('span', 'text-[11px] font-semibold text-slate-500', `선택 ${sel}건 · 중복 건너뜀 ${dup}건`); summary.id = 'htSummary';
+            bar.append(allLab, bStore, bPer, summary);
+            box.appendChild(bar);
+            const wrap = v19El('div', 'overflow-x-auto border border-slate-200 rounded-xl');
+            const table = v19El('table', 'w-full min-w-[560px] text-left text-[11px]');
+            const thead = v19El('thead', 'bg-slate-50 text-slate-500');
+            const htr = v19El('tr');
+            ['', '날짜', '가맹점', '금액', '구분', '지출 항목', '상태'].forEach(t => htr.appendChild(v19El('th', 'px-2 py-1.5 font-semibold whitespace-nowrap', t)));
+            thead.appendChild(htr); table.appendChild(thead);
+            const tbody = v19El('tbody', 'divide-y divide-slate-100');
+            const options = v19ItemOptions();
+            const badge = { new: ['새 항목', 'bg-slate-100 text-slate-600 border-slate-200'], dup: ['중복 건너뜀', 'bg-red-50 text-red-600 border-red-200'], filedup: ['파일 내 중복', 'bg-orange-50 text-orange-600 border-orange-200'], saved: ['저장됨', 'bg-emerald-50 text-emerald-700 border-emerald-200'] };
+            rows.forEach((r, i) => {
+                const tr = v19El('tr', 'ht-row');
+                tr.dataset.status = r.status;
+                const td0 = v19El('td', 'px-2 py-1.5');
+                const cb = v19El('input'); cb.type = 'checkbox'; cb.className = 'ht-check w-3.5 h-3.5'; cb.checked = r.checked; cb.disabled = r.status === 'saved';
+                cb.onchange = () => { r.checked = cb.checked; v19RenderHometax(); };
+                td0.appendChild(cb); tr.appendChild(td0);
+                tr.appendChild(v19El('td', 'px-2 py-1.5 whitespace-nowrap text-slate-700', r.date));
+                const tdm = v19El('td', 'px-2 py-1.5 max-w-[9rem] truncate text-slate-800 font-medium', r.merchant); tdm.title = r.merchant; tr.appendChild(tdm);
+                tr.appendChild(v19El('td', 'px-2 py-1.5 whitespace-nowrap text-right font-bold text-rose-600', Number(r.amount).toLocaleString()));
+                const tds = v19El('td', 'px-2 py-1.5');
+                const ss = v19El('select', 'ht-scope text-[11px] rounded-lg px-1.5 py-1'); ss.disabled = r.status === 'saved';
+                [['store', '🏪 가게'], ['personal', '👤 개인']].forEach(([v, t]) => { const o = v19El('option', null, t); o.value = v; ss.appendChild(o); });
+                ss.value = r.scope; ss.onchange = () => { r.scope = ss.value; };
+                tds.appendChild(ss); tr.appendChild(tds);
+                const tdc = v19El('td', 'px-2 py-1.5');
+                const cs = v19El('select', 'ht-category text-[11px] rounded-lg px-1.5 py-1 max-w-[8rem]'); cs.disabled = r.status === 'saved';
+                options.forEach(t => { const o = v19El('option', null, t); o.value = t; cs.appendChild(o); });
+                cs.value = options.includes(r.category) ? r.category : options[options.length - 1];
+                r.category = cs.value; cs.onchange = () => { r.category = cs.value; };
+                tdc.appendChild(cs); tr.appendChild(tdc);
+                const tdb = v19El('td', 'px-2 py-1.5 whitespace-nowrap');
+                tdb.appendChild(v19El('span', 'ht-badge px-1.5 py-0.5 rounded border text-[10px] font-bold ' + badge[r.status][1], badge[r.status][0]));
+                tr.appendChild(tdb);
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody); wrap.appendChild(table); box.appendChild(wrap);
+        }
+
+        let v19HtSaving = false;
+        async function saveHometaxRows() {
+            if (v19HtSaving) return;
+            if (!isDemoMode && !currentUser) { v19HtStatus('로그인 후 장부에 추가할 수 있어요'); return; }
+            const targets = v19Ht.rows.filter(r => r.checked && r.status !== 'saved');
+            if (!targets.length) return;
+            v19HtSaving = true;
+            const btn = document.getElementById('htSaveBtn'); btn.disabled = true; btn.textContent = '저장 중…';
+            const keys = v19ExistingKeys();
+            let saved = 0, skipped = 0, failed = 0;
+            const base = String(Date.now());
+            for (let i = 0; i < targets.length; i++) {
+                const r = targets[i];
+                if (keys.has(r.key)) { skipped++; r.status = 'dup'; r.checked = false; continue; } // 저장 직전에 한 번 더 확인
+                const entry = { id: base + '-' + i, type: 'variable', date: r.date, category: r.category, amount: r.amount, memo: r.merchant, scope: r.scope === 'personal' ? 'personal' : 'store' };
+                try {
+                    if (!isDemoMode) await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "ledger", entry.id), entry);
+                    dbData.push(entry);
+                    keys.add(r.key);
+                    r.status = 'saved'; r.checked = false; saved++;
+                } catch (err) { console.warn('[홈택스 업로드] 저장 실패', err); failed++; }
+            }
+            const dupTotal = v19Ht.rows.filter(r => r.status === 'dup').length;
+            v19HtSaving = false;
+            renderDashboard();
+            v19RenderHometax();
+            const msg = `${saved}건 저장했어요 (중복 건너뜀 ${dupTotal}건)` + (failed ? ` · ${failed}건은 저장하지 못했어요` : '') + (isDemoMode ? ' · 체험판: 서버에 저장되지 않음' : '');
+            v19HtStatus(msg);
+            showDemoToast(msg);
+        }
+
+        // 위쪽 연/월이 바뀌면 열린 복식장부도 같이 갱신
+        const v19OrigRenderDashboard = renderDashboard;
+        renderDashboard = function () {
+            const r = v19OrigRenderDashboard();
+            const m = document.getElementById('ledgerModal');
+            if (m && !m.classList.contains('hidden')) renderLedgerModal();
+            return r;
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const a = document.getElementById('ledgerModal');
+            if (a && !a.classList.contains('hidden')) closeLedgerModal();
+            const b = document.getElementById('hometaxModal');
+            if (b && !b.classList.contains('hidden')) closeHometaxModal();
         });
     </script>
 </body>
