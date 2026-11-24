@@ -3895,7 +3895,8 @@ const _ownerTalk_brief = ownerTalk; ownerTalk = function () { delete bubble.data
 const LV_NAMES = ['이제 막 연 가게', '단골이 생긴 가게', '입소문 난 가게', '줄 서는 가게', '동네 대표 가게', '전설의 가게'], LV_XP = 150;
 const G = { key: '', known: new Set(), hold: 0, s: null, cust: 0 };
 const gKey = () => 'solo3d_game:' + (isLive() ? REAL.uid : 'demo');
-function gLoad() { let s = null; try { s = JSON.parse(localStorage.getItem(gKey()) || 'null'); } catch (e) {} G.s = Object.assign({ coins: 0, xp: 0, goal: 0, goalHit: '', day: { date: '', n: 0 }, q: { date: '', brief: false, cal: false, paid: {}, chest: false } }, s || {}); }
+function gLoad() { let s = null; try { s = JSON.parse(localStorage.getItem(gKey()) || 'null'); } catch (e) {} G.s = Object.assign({ coins: 0, xp: 0, goal: 0, goalHit: '', day: { date: '', n: 0 }, q: { date: '', brief: false, cal: false, paid: {}, chest: false } }, s || {});
+  if (!isLive() && !G.s.gift) { G.s.coins = Math.max(G.s.coins, 3000); G.s.gift = 1; } } // 체험 모드: 꾸미기를 마음껏 해 보도록 코인을 넉넉히
 function gSave() { try { localStorage.setItem(gKey(), JSON.stringify(G.s)); } catch (e) {} }
 const gLevel = () => Math.min(LV_NAMES.length, 1 + Math.floor(G.s.xp / LV_XP));
 function gStreak() { const t = kst().date, D = new Set(allEntries().filter(e => e.src !== 'fixed' && e.date <= t).map(e => e.date)); let d = D.has(t) ? t : dayAdd(t, -1), n = 0; while (D.has(d)) { n++; d = dayAdd(d, -1); } return n; }
@@ -3997,7 +3998,7 @@ function decHit(cx_, cy_) { decRayAt(cx_, cy_); const h = decRay.intersectObject
 const decUI = document.createElement('div'); decUI.id = 'decorUI'; decUI.hidden = true; document.body.appendChild(decUI);
 function decPaint() { if (!DEC.on) return; const s = G.s, sel = (s.decor || [])[DEC.sel], inv = s.inv || {};
   decUI.innerHTML = `<div class="dhead"><b>🛋️ 가게 꾸미기</b><span>🪙 ${s.coins}</span><button type="button" data-dec="done" class="ddone">완료</button></div>
-    <p class="dhint">${sel ? `<b>${decItem(sel.id).name}</b> 선택됨 — 끌어서 옮겨요` : '아래에서 골라 놓고, 놓인 물건은 눌러서 끌어 옮겨요'}</p>
+    <p class="dhint">${sel ? `<b>${decItem(sel.id).name}</b> 선택됨 — 끌어서 옮겨요` : '아래에서 골라 놓고, 놓인 물건은 눌러서 끌어 옮겨요'}${isLive() ? '' : ' · 🧪 체험이라 코인을 넉넉히 드렸어요'}</p>
     ${sel ? `<div class="dact"><button type="button" data-dec="rot">↻ 돌리기</button><button type="button" data-dec="store">📦 보관하기</button><button type="button" data-dec="unsel">선택 해제</button></div>` : ''}
     <div class="dtray">${DEC_ITEMS.map(it => { const n = inv[it.id] || 0, can = it.price >= 0 && s.coins >= it.price; return `<button type="button" data-item="${it.id}" class="${n ? 'own' : can ? '' : 'no'}" ${n || can ? '' : 'disabled'}><i>${it.ic}</i><b>${it.name}</b><em>${n ? `보관 ${n}개 · 놓기` : it.price < 0 ? '목표 달성 보상' : `🪙 ${it.price}`}</em></button>`; }).join('')}</div>`; }
 function decOpen() { if (activeKey) closePanel(); if (smOpen) closeSm(); if (view !== 'seat') setView('seat'); DEC.on = true; DEC.sel = -1; document.body.classList.add('decor'); decUI.hidden = false; decPaint(); decRingAt();
