@@ -184,6 +184,8 @@ body.decor #tags,body.decor #xh,body.decor #bar,body.decor #face,body.decor #bub
 #smAd .adnote{margin:0;padding:6px 10px;background:#f8f4ee;font-size:9.5px;line-height:1.4;color:#a39488;text-align:center;word-break:keep-all}
 .shopk button{white-space:nowrap}
 .quick .zb{padding:0 10px;min-width:40px}
+#decBtn{white-space:nowrap}
+@media (max-width:420px){.quick .zb{padding:0 6px;min-width:32px}.quick button{padding-left:9px;padding-right:9px;font-size:12.5px}}
 .tourdots{display:flex;gap:6px;justify-content:center;margin:12px 0 4px}.tourdots i{width:7px;height:7px;border-radius:50%;background:var(--line2)}.tourdots i.on{background:var(--coral);width:18px;border-radius:4px}
 .tourbig{font-size:54px;text-align:center;line-height:1.2;margin:4px 0 6px}.tourt{font-size:17px;font-weight:800;text-align:center;margin:0 0 6px;color:var(--ink)}.tourp{font-size:13.5px;line-height:1.6;text-align:center;color:var(--muted);margin:0;word-break:keep-all}
 button.twod{border:0;cursor:pointer;margin-left:6px}
@@ -4053,7 +4055,7 @@ const _gSave_dec = gSave; gSave = function () { _gSave_dec(); if (!gCloudOk()) r
 // 목표 달성 → 트로피 지급
 const _gGoalCheck_dec = gGoalCheck; gGoalCheck = function () { const before = G.s.goalHit; _gGoalCheck_dec(); if (G.s.goalHit && G.s.goalHit !== before) { G.s.inv = G.s.inv || {}; G.s.inv.trophy = (G.s.inv.trophy || 0) + 1; gSave(); setTimeout(() => toast('🏆 트로피를 받았어요! 꾸미기에서 놓아 보세요'), 2600); } };
 // 들어가는 길: 아래 바 🛋️ 버튼 + 성장 창 버튼
-{ const b = document.createElement('button'); b.type = 'button'; b.className = 'zb'; b.id = 'decBtn'; b.textContent = '🛋️'; b.setAttribute('aria-label', '가게 꾸미기'); b.addEventListener('click', () => { firstUse(); decOpen(); }); document.querySelector('#bar .quick').appendChild(b); }
+{ const b = document.createElement('button'); b.type = 'button'; b.id = 'decBtn'; b.textContent = '🛋️ 꾸미기'; b.title = '코인으로 가게 꾸미기'; b.setAttribute('aria-label', '가게 꾸미기'); b.addEventListener('click', () => { firstUse(); decOpen(); }); document.querySelector('#bar .quick').appendChild(b); }
 const _renderGame_dec = renderGame; renderGame = function () { _renderGame_dec(); const h = smBody.querySelector('.hintp:last-of-type'); smBody.querySelector('.instcard').insertAdjacentHTML('afterend', '<button type="button" class="primary" data-act="g-decor" style="margin:0 0 10px">🛋️ 가게 꾸미기 열기</button>'); if (h) h.innerHTML = h.innerHTML.replace('곧 열리는 <b>가게 꾸미기</b>에서 써요', '<b>가게 꾸미기</b>에서 써요').replace('코인·레벨은 이 기기에 저장되고', isLive() ? '코인·레벨·꾸미기는 내 계정에 저장되고' : '🧪 체험판은 나갔다 들어오면 처음으로 돌아가요. 코인·레벨·꾸미기는 Google 로그인 후에 저장되고'); };
 smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (b && smOpen === 'game' && b.dataset.act === 'g-decor') { closeSm(); setTimeout(decOpen, 250); } });
 decSync();
