@@ -1012,7 +1012,7 @@
                 const snaps = await Promise.all(queries.map(q => window.getDocs(q)));
                 const map = {};
                 snaps.forEach(s => s.forEach(d => { const x = d.data(); map[x.id || d.id] = x; }));
-                boardPosts = Object.values(map);
+                boardPosts = Object.values(map).filter(p => !(p && typeof p.content === 'string' && p.content.startsWith('ARCADE|'))); // 3D 오락실 랭킹 글은 게시판에서 숨김
                 renderBoardList();
             } catch(e) {
                 console.error("Board load error:", e);
