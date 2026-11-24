@@ -4116,6 +4116,21 @@ register('arcade', arcDoor, { emoji: '🕹️', name: '오락실', short: '오�
 refreshPickable();
 const _interact_arc = interact; interact = function (k) { if (k === 'arcade') { if (DEC.on) return; firstUse(); if (activeKey) closePanel(); ARC.rank = null; ARC.msg = ''; openSm('arcade'); return; } return _interact_arc(k); };
 const _stepCat_arc = stepCat; stepCat = function (now, T, dt) { _stepCat_arc(now, T, dt); arcGlowM.opacity = 0.3 + Math.sin(now / 420) * 0.12; };
+/* ---- 🐈 캣타워를 놓으면 가게 고양이가 올라가서 놀아요 (보관하면 원래 자리로) ---- */
+const CATT = { on: false, base: V3(0, 0, 0), ry: 0 };
+function catTowerSync() { const d = (G.s && G.s.decor || []).find(x => x.id === 'cattower'), home = MODE === 'home';
+  if (d) { const r = d.r || 0, ox = -0.12, oz = -0.1; CATT.on = true; CATT.ry = r + 0.5;
+    CATT.base.set(d.x + ox * Math.cos(r) + oz * Math.sin(r), 1.185, d.z - ox * Math.sin(r) + oz * Math.cos(r)); cat.position.copy(CATT.base); cat.rotation.y = CATT.ry; cat.scale.setScalar(1.15);
+    OBJ.cat.anchor = V3(CATT.base.x, 1.5, CATT.base.z); OBJ.cat.baseY = CATT.base.y; }
+  else if (CATT.on) { CATT.on = false; const ca = CAT_AT[home ? 'sofa' : 'counter']; cat.position.copy(ca[0]); cat.rotation.y = ca[1]; cat.scale.setScalar(ca[2]); OBJ.cat.anchor = ca[3].clone(); OBJ.cat.baseY = cat.position.y; } }
+const _decSync_cat = decSync; decSync = function () { _decSync_cat(); catTowerSync(); };
+const _applyMode3D_cat = applyMode3D; applyMode3D = function (...a) { const r = _applyMode3D_cat(...a); CATT.on = false; catTowerSync(); return r; };
+const _stepCat_tower = stepCat; stepCat = function (now, T, dt) { _stepCat_tower(now, T, dt); if (!CATT.on || RM) return;
+  const c = (now / 1000) % 9, hop = c < 0.9 ? Math.abs(Math.sin(c / 0.9 * Math.PI * 2)) * 0.07 : 0; // 9초에 한 번 폴짝폴짝 두 번
+  cat.position.y = CATT.base.y + hop; cat.rotation.y = CATT.ry + Math.sin(now / 1700) * 0.7; cat.rotation.z = Math.sin(now / 600) * 0.04; };
+// 끌어 옮기는 동안에도 고양이가 타워를 따라옴
+cv.addEventListener('pointermove', () => { if (DEC.on && DEC.drag && CATT.on) catTowerSync(); });
+catTowerSync();
 // 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
 const _applyCam_far = applyCam;
 applyCam = function () { _applyCam_far(); const out = cam.pos.z > ROOM.z1 - 0.45; if (back.visible === out) back.visible = !out; };
