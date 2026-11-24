@@ -3893,8 +3893,8 @@ const HL = new THREE.Color(0xffb08a);
 let diagN = 0, diagT = performance.now(); const diagMs = { pick: 0, anim: 0, render: 0, over: 0, all: 0 }; const diagEl = DIAG ? Object.assign(document.body.appendChild(document.createElement('pre')), { style: 'position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.72);color:#9f9;font:11px/1.4 monospace;white-space:pre-wrap;max-width:92vw;pointer-events:none' }) : null;
 if (SOFT_GPU) setTimeout(() => toast('⚠ 이 브라우저는 그래픽 가속이 꺼져 있어 느릴 수 있어요 — 크롬 설정 › 시스템 › "그래픽 가속 사용"을 켜 주세요', true), 2500);
 const lazy = { sig: '', still: 0, pickT: 0, overT: 0, aim: null };
-const clock0 = { last: performance.now(), t: 0 }, perf = { n: 0, sum: 0, lv: 0, last: performance.now() };
-{ let q = 0; try { q = Math.min(3, +localStorage.getItem('solo3d_q') || 0); } catch (e) {} if (q && !QS.has('pr')) { perf.lv = q; applyQ(q); } }
+const clock0 = { last: performance.now(), t: 0 }, perf = { n: 0, sum: 0, lv: 0, last: performance.now(), gT: 0, t0: 0, g: [], cost: 0, px: new Uint8Array(4) };
+{ let q = 0; try { const v = String(localStorage.getItem('solo3d_q') || '').split('|'); if (v[1] === GPU_NAME) q = Math.min(3, +v[0] || 0); } catch (e) {} if (q && !QS.has('pr')) { perf.lv = q; applyQ(q); } } // 그래픽카드가 바뀌면(예: 내장→외장) 처음부터 다시 판단
 let started = false;
 function frame(now) {
   const dt = Math.min(0.05, (now - clock0.last) / 1000); clock0.last = now; clock0.t += dt; const T = clock0.t;
@@ -3949,16 +3949,17 @@ function frame(now) {
   const k0 = kst(); hourH.rotation.z = -((+k0.time.slice(0, 2) % 12) + (+k0.time.slice(3)) / 60) / 12 * Math.PI * 2; minH.rotation.z = -(+k0.time.slice(3)) / 60 * Math.PI * 2;
   hourH.position.set(Math.sin(-hourH.rotation.z) * 0.045, Math.cos(hourH.rotation.z) * 0.045, 0.03); minH.position.set(Math.sin(-minH.rotation.z) * 0.07, Math.cos(minH.rotation.z) * 0.07, 0.035);
 
-  // 끊기면 자동으로 화질을 단계적으로 낮춤 (2초마다 확인, 창이 뒤에 있던 시간은 제외)
-  if (started && !document.hidden) { const fd = now - perf.last; if (fd < 250) { perf.sum += fd; perf.n++; }
-    if (perf.n >= 120) { const avg = perf.sum / perf.n; perf.n = 0; perf.sum = 0;
-      if (avg > 21 && perf.lv < 3 && !QS.has('pr')) { perf.lv++; try { localStorage.setItem('solo3d_q', String(perf.lv)); } catch (e) {}
-        applyQ(perf.lv); }
-      else if (avg < 11 && perf.lv > 0 && !QS.has('pr')) { perf.lv--; try { localStorage.setItem('solo3d_q', String(perf.lv)); } catch (e) {} applyQ(perf.lv); } } }
-  if (DIAG) { diagN++; if (now - diagT > 1000) { const f = Math.max(1, diagN), m = k => (diagMs[k] / f).toFixed(1); diagEl.textContent = `GPU: ${GPU_NAME}\nCPU ms/프레임: 조준 ${m('pick')} · 애니 ${m('anim')} · 그리기명령 ${m('render')} · 배지 ${m('over')} · 합계 ${m('all')}\n${Math.round(diagN * 1000 / (now - diagT))} fps · 화면 ${innerWidth}×${innerHeight} · 배율 ${renderer.getPixelRatio().toFixed(2)} · 화질단계 ${perf.lv}${SOFT_GPU ? '\n⚠ 그래픽 가속 꺼짐(소프트웨어)' : ''}`; diagN = 0; diagT = now; for (const k in diagMs) diagMs[k] = 0; } }
+  if (DIAG) { diagN++; if (now - diagT > 1000) { const f = Math.max(1, diagN), m = k => (diagMs[k] / f).toFixed(1); diagEl.textContent = `GPU: ${GPU_NAME}\nCPU ms/프레임: 조준 ${m('pick')} · 애니 ${m('anim')} · 그리기명령 ${m('render')} · 배지 ${m('over')} · 합계 ${m('all')}\n${Math.round(diagN * 1000 / (now - diagT))} fps · 화면 ${innerWidth}×${innerHeight} · 배율 ${renderer.getPixelRatio().toFixed(2)} · 화질단계 ${perf.lv} · 프레임 ${perf.cost.toFixed(1)}ms${SOFT_GPU ? '\n⚠ 그래픽 가속 꺼짐(소프트웨어)' : ''}`; diagN = 0; diagT = now; for (const k in diagMs) diagMs[k] = 0; } }
   perf.last = now;
   const _t2 = performance.now(); stepCat(now, T, dt); stepAnims(now); updateParts(dt); stepHud(now);
   const _t3 = performance.now(); if (renderer.shadowMap.enabled) { lazy.sh = (lazy.sh || 0) + 1; renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = lazy.sh % 3 === 0 || !started; } renderer.render(scene, camera);
+  // 화질 자동 조절: 0.7초마다 이 프레임을 그리는 데 실제로 걸린 시간(CPU+GPU)을 재서 판단 — 모니터 주사율과 무관.
+  // 13.5ms 넘으면(60fps를 놓침 → 뚝뚝 끊김) 한 단계 낮추고, 6.5ms 밑이면(여유 충분) 한 단계 올림
+  if (started && !document.hidden && !QS.has('pr') && !camTween && now > perf.gT) { perf.gT = now + 700; if (!perf.t0) perf.t0 = now;
+    if (now - perf.t0 > 4000) { const g = renderer.getContext(); g.readPixels(0, 0, 1, 1, g.RGBA, g.UNSIGNED_BYTE, perf.px); perf.g.push(performance.now() - _t0);
+      if (perf.g.length >= 3) { const med = perf.g.sort((a, b) => a - b)[1]; perf.g = []; perf.cost = med; const lv0 = perf.lv;
+        if (med > (COARSE ? 19 : 13.5) && perf.lv < 3) perf.lv++; else if (med < 6.5 && perf.lv > 0) perf.lv--;
+        if (perf.lv !== lv0) { try { localStorage.setItem('solo3d_q', perf.lv + '|' + GPU_NAME); } catch (e) {} applyQ(perf.lv); perf.gT = now + 2500; } } } }
   const _t4 = performance.now(); if (camMoved || camTween || lazy.still < 3 || now - lazy.overT > 200 || nk !== lazy.aim) { updateOverlays(now); lazy.overT = now; lazy.aim = nk; } const _t5 = performance.now();
   if (DIAG) { diagMs.pick += _t1 - _t0; diagMs.anim += _t3 - _t2; diagMs.render += _t4 - _t3; diagMs.over += _t5 - _t4; diagMs.all += _t5 - now; }
 
