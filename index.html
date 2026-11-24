@@ -161,6 +161,9 @@ body{-webkit-touch-callout:none}
 .twod{display:flex;align-items:center;gap:2px;height:30px;padding:0 11px;border-radius:999px;background:#fff;font-size:12px;font-weight:800;color:var(--ink);text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(110,70,40,.13)}
 .twod em{font-style:normal}
 #gameChip{margin-left:0;white-space:nowrap;font-weight:800}
+.solo-legal h3{font-size:15px;font-weight:800;margin:2px 0 8px}.solo-legal h4{font-size:13px;font-weight:800;margin:14px 0 4px}.solo-legal p,.solo-legal li{font-size:12.5px;line-height:1.7;color:#6f5c4f;word-break:keep-all}.solo-legal ul{margin:0;padding-left:17px}.solo-legal li{margin:3px 0}
+.primary[disabled]{opacity:.45;box-shadow:none;cursor:default}
+.lnk{color:#2563eb;font-weight:800;text-decoration:underline;text-underline-offset:2px;font-size:inherit}
 .arcgrid{display:grid;grid-template-columns:1fr;gap:14px}.arcl img{display:block;width:100%;max-width:210px;height:auto;margin:0 auto;border-radius:14px;box-shadow:0 6px 18px rgba(60,30,90,.25);background:#231a33}
 .arcgo{display:block;text-align:center;text-decoration:none;line-height:50px;margin-top:0}.arcr .sec{display:flex;justify-content:space-between;align-items:center}.arcre{height:30px;padding:0 10px;border-radius:9px;background:#fff;border:1px solid var(--line2);font-size:12px;font-weight:800}
 .arcr .row.mine{background:#fff3ee;box-shadow:inset 0 0 0 1.5px #f3b4a2}.rkn{display:inline-block;min-width:26px;text-align:center;font-weight:800}
@@ -4134,6 +4137,39 @@ const _stepCat_tower = stepCat; stepCat = function (now, T, dt) { _stepCat_tower
   cat.position.y = CATT.base.y + hop; cat.rotation.y = CATT.ry + Math.sin(now / 1700) * 0.7; cat.rotation.z = Math.sin(now / 600) * 0.04; };
 // 끌어 옮기는 동안에도 고양이가 타워를 따라옴
 catTowerSync();
+/* ---- 📄 이용약관 · 개인정보 처리방침 (2D와 같은 공용 파일 soloLegal.js) + 로그인 전 동의 ---- */
+let legalP = null; const LEGAL = { kind: 'terms', agree: false };
+function loadLegal() { if (window.SoloLegal) return Promise.resolve(); if (!legalP) legalP = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'soloLegal.js'; s.onload = () => res(); s.onerror = () => { legalP = null; rej(new Error('legal')); }; document.head.appendChild(s); }); return legalP; }
+loadLegal().catch(() => {});
+const legalAgreed = () => { try { return !!window.SoloLegal && localStorage.getItem('solo_terms_agreed') === window.SoloLegal.version; } catch (e) { return false; } };
+function legalTabs() { return `<div class="mode" role="tablist" style="margin-bottom:10px"><button type="button" data-legal="terms" class="${LEGAL.kind === 'terms' ? 'on' : ''}">이용약관</button><button type="button" data-legal="privacy" class="${LEGAL.kind === 'privacy' ? 'on' : ''}">개인정보 처리방침</button></div>`; }
+function legalDoc() { return window.SoloLegal ? window.SoloLegal.html(LEGAL.kind) : '<p class="empty">문서를 불러오는 중이에요…</p>'; }
+function renderLegal() { smTitle.textContent = '📄 약관 · 개인정보 처리방침'; smBody.innerHTML = legalTabs() + legalDoc() + (smOpen === 'legal-agree' ? '<div class="factions" style="margin-top:12px"><button type="button" class="cancel" data-act="legal-back">← 동의 화면으로</button></div>' : ''); if (!window.SoloLegal) loadLegal().then(() => { if (smOpen === 'legal' || smOpen === 'legal-agree') renderSm(); }).catch(() => {}); }
+function renderAgree() { smTitle.textContent = '시작하기 전에 확인해 주세요';
+  smBody.innerHTML = `<p class="ailead">Google 로그인으로 내 장부를 저장하려면 아래 내용에 동의가 필요해요.</p>
+    <div class="instcard"><p class="ib" style="margin:0">꼭 알아 두실 내용</p>
+      <p>· 장부 데이터는 Google 클라우드(국외 서버)에 저장되고, 제3자에게 제공하지 않아요.</p><p>· 영수증 사진은 내 Google Drive에만 저장돼요.</p><p>· 게시판 공개 글과 오락실 랭킹의 가게 이름은 다른 이용자에게 보여요.</p>
+      <p>· 장부·손익·진단 숫자는 참고용이에요. 세금 신고 전에는 세무사 확인을 받으세요.</p><p>· 무료 서비스라 데이터 영구 보존을 보장하지 않아요. 엑셀·구글 시트로 백업해 주세요.</p></div>
+    <button type="button" class="ghost" data-act="legal-view" data-k="terms" style="margin:0 0 6px">📄 이용약관 전체 보기</button><button type="button" class="ghost" data-act="legal-view" data-k="privacy" style="margin:0 0 10px">🔒 개인정보 처리방침 전체 보기</button>
+    <label class="aitog" style="margin:0 0 4px"><input type="checkbox" id="legalChk" ${LEGAL.agree ? 'checked' : ''}><span><b>[필수]</b> 이용약관과 개인정보 처리방침(국외 저장 포함)에 동의하며, 만 14세 이상입니다.</span></label>
+    <button type="button" class="primary" data-act="legal-go" ${LEGAL.agree ? '' : 'disabled'}>동의하고 Google 로그인</button>`; }
+const _renderSm_legal = renderSm; renderSm = function () { if (smOpen === 'agree') return renderAgree(); if (smOpen === 'legal' || smOpen === 'legal-agree') return renderLegal(); _renderSm_legal(); };
+const _login_legal = login;
+login = function () { if (legalAgreed()) return _login_legal(); LEGAL.agree = false; if (activeKey) closePanel(); loadLegal().catch(() => {}); setTimeout(() => openSm('agree'), smOpen ? 320 : 0); };
+smEl.addEventListener('change', e => { if (e.target.id === 'legalChk') { LEGAL.agree = e.target.checked; const b = smBody.querySelector('[data-act="legal-go"]'); if (b) b.disabled = !LEGAL.agree; } });
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.legal && (smOpen === 'legal' || smOpen === 'legal-agree')) { LEGAL.kind = b.dataset.legal; renderSm(); smEl.querySelector('.aisheet').scrollTop = 0; return; }
+  if (smOpen === 'agree' && b.dataset.act === 'legal-view') { LEGAL.kind = b.dataset.k; smOpen = 'legal-agree'; renderSm(); smEl.querySelector('.aisheet').scrollTop = 0; return; }
+  if (smOpen === 'legal-agree' && b.dataset.act === 'legal-back') { smOpen = 'agree'; renderSm(); return; }
+  if (smOpen === 'agree' && b.dataset.act === 'legal-go') { if (!LEGAL.agree || !window.SoloLegal) { toast('약관 문서를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요', true); loadLegal().catch(() => {}); return; }
+    try { localStorage.setItem('solo_terms_agreed', window.SoloLegal.version); } catch (er) {} closeSm(); _login_legal(); return; } // 같은 클릭 안에서 로그인 창(팝업 차단 방지)
+  if (smOpen === 'me' && b.dataset.act === 'legal-open') { LEGAL.kind = b.dataset.k || 'terms'; smOpen = 'legal'; renderSm(); smEl.querySelector('.aisheet').scrollTop = 0; } });
+const _renderMe_legal = renderMe; renderMe = function () { _renderMe_legal(); smBody.insertAdjacentHTML('beforeend', `<p class="hintp" style="margin-top:12px"><button type="button" class="lnk" data-act="legal-open" data-k="terms">이용약관</button> · <button type="button" class="lnk" data-act="legal-open" data-k="privacy">개인정보 처리방침</button><br>계정·데이터 삭제 요청: solojayoungup@gmail.com</p>`); };
+// 이미 쓰고 있던 사람에게 개정 안내(한 번)
+function legalNotice(n) { setTimeout(() => { if (!window.SoloLegal) { if (n < 20) legalNotice(n + 1); return; } if (!isLive()) { if (n < 60) legalNotice(n + 1); return; } if (legalAgreed()) return; let seen = ''; try { seen = localStorage.getItem('solo_terms_notice') || ''; } catch (e) { return; } if (seen === window.SoloLegal.version) return;
+    if (smOpen || activeKey || camTween) { if (n < 60) legalNotice(n + 1); return; } try { localStorage.setItem('solo_terms_notice', window.SoloLegal.version); } catch (e) {}
+    toast(`📄 이용약관·개인정보 처리방침이 바뀌어요 (${window.SoloLegal.effective} 시행). 가게 이름을 눌러 내정보에서 확인해 주세요`); }, n ? 1500 : 7000); }
+legalNotice(0);
 // 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
 const _applyCam_far = applyCam;
 applyCam = function () { _applyCam_far(); const out = cam.pos.z > ROOM.z1 - 0.45; if (back.visible === out) back.visible = !out; };
