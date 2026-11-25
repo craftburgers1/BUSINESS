@@ -2254,7 +2254,7 @@ async function liveSave(act, btn) {
   btn.disabled = true; btn.textContent = '저장 중…';
   try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), rec); }
   catch (e) { btn.disabled = false; btn.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 숫자는 바꾸지 않았어요. 다시 시도해 주세요', true); return; }
-  formOpen = false; lastNewId = id;
+  walEarn(id); formOpen = false; lastNewId = id;
   toast('☁ 내 장부에 저장됐어요 (가계부 앱에도 바로 반영)');
   if (act === 'save-sale') { burstMoney(amount); floatText('+' + won(amount), V3(0.2, COUNTER_TOP + 0.45, -0.3)); screenGlow = 1; }
   else if (act === 'save-ing') { popItemId = id; floatText('−' + won(amount), V3(1.5, 1.5, -0.9), true); }
@@ -2863,7 +2863,7 @@ pBody.addEventListener('click', async e => {
     const id = newLedgerId(), rec = { id, type: 'variable', category: supCat, amount, date, memo, scope: 'store' };
     b.disabled = true; b.textContent = '저장 중…';
     try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), rec); }
-    catch (er) { b.disabled = false; b.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 숫자는 바꾸지 않았어요. 다시 시도해 주세요', true); return; }
+    catch (er) { b.disabled = false; b.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 숫자는 바꾸지 않았어요. 다시 시도해 주세요', true); return; } walEarn(id);
     formOpen = false; lastNewId = id; toast('☁ 내 장부에 저장됐어요 (가계부 앱에도 바로 반영)'); liveRefresh();
   } else {
     if (!memo) { n.classList.add('err'); n.focus(); return; }
@@ -3083,7 +3083,7 @@ async function saveEntry(btn) {
     const id = newLedgerId(), rec = Object.assign({ id, type, date, category, amount, memo }, scope ? { scope } : {}, BY.v === 'pickle' ? { by: 'pickle' } : {});
     btn.disabled = true; btn.textContent = '저장 중…';
     try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), rec); }
-    catch (e) { btn.disabled = false; btn.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 숫자는 바꾸지 않았어요. 다시 시도해 주세요', true); return; }
+    catch (e) { btn.disabled = false; btn.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 숫자는 바꾸지 않았어요. 다시 시도해 주세요', true); return; } walEarn(id);
     lastNewId = id; toast('☁ 내 장부에 저장됐어요 (가계부 앱에도 바로 반영)'); liveRefresh();
   } else {
     const id = uid(), name = memo || category;
@@ -3217,7 +3217,7 @@ async function deleteEntryAny(id) {
   if (x.live) {
     if (!isLive() || !REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 삭제하지 않았어요', true); return; }
     try { await FSm.deleteDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id)); } catch (e) { toast('삭제하지 못했어요 — 다시 시도해 주세요', true); return; }
-    toast('🗑 삭제했어요 (2D 가계부에서도 지워져요)');
+    toast('🗑 삭제했어요 (2D 가계부에서도 지워져요)'); walUnearn(id);
   } else {
     const arr = DATA[x.src]; const i = arr ? arr.findIndex(e => e.id === id) : -1; if (i < 0) return;
     arr.splice(i, 1); saveData(DATA); syncFridgeItems(); refreshPos(); renderHud(true); if (activeKey) renderPanel(); toast('🗑 삭제했어요 (체험 · 이 기기에만)');
@@ -3315,7 +3315,7 @@ async function copyPrevFixed(btn) {
   copyArm = 0;
   if (!REAL.db || !fbAuth || !fbAuth.currentUser || fbAuth.currentUser.uid !== REAL.uid) { toast('로그인 상태를 확인할 수 없어 저장하지 않았어요', true); return; }
   btn.disabled = true; btn.textContent = '복사 중…'; let n = 0;
-  try { for (const it of prev) { const id = newLedgerId(); await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), Object.assign({ id, type: 'fixed', date: k.ym + '-01', category: it.category, amount: Number(it.amount) || 0, memo: it.memo ? `(지난달 복사) ${it.memo}` : '(지난달 복사)' }, it.scope ? { scope: it.scope } : {})); n++; } }
+  try { for (const it of prev) { const id = newLedgerId(); await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), Object.assign({ id, type: 'fixed', date: k.ym + '-01', category: it.category, amount: Number(it.amount) || 0, memo: it.memo ? `(지난달 복사) ${it.memo}` : '(지난달 복사)' }, it.scope ? { scope: it.scope } : {})); n++; walEarn(id); } }
   catch (e) { toast(`복사 중 오류 — ${n}건만 복사됐어요`, true); renderSm(); return; }
   toast(`지난달(${pm}월) 고정지출 ${n}건이 이번 달(${k.m}월)로 들어갔어요`); liveRefresh(); renderSm();
 }
@@ -3495,7 +3495,7 @@ saveEntry = async function (btn) {
         try { up = await driveUpload(token, folder, name, p.blob); } catch (e) { if (e.status !== 404) throw e; folder = await driveMonthFolder(token, ym, true); name = await driveUniqueName(token, folder, base, used); up = await driveUpload(token, folder, name, p.blob); }
         used.push(up.name || name); metas.push({ fileId: up.id, name: up.name || name, folderId: folder, mime: 'image/jpeg', size: Number(up.size) || p.blob.size, w: p.w, h: p.h, thumb: p.thumb || '' }); } catch (e) { failed++; } } }
   if (metas.length) { let list = (entry.receipts || []).concat(metas); if (new Blob([JSON.stringify(Object.assign({}, entry, { receipts: list }))]).size > RECEIPT_DOC_MAX_BYTES) list = list.map(m => Object.assign({}, m, { thumb: '' }));
-    try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), { receipts: list }, { merge: true }); } catch (e) { toast(`영수증 ${metas.length}장은 드라이브에 올라갔지만 장부에 연결하지 못했어요`, true); return; } }
+    try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', id), { receipts: list }, { merge: true }); walEarn(id, 'receipt'); } catch (e) { toast(`영수증 ${metas.length}장은 드라이브에 올라갔지만 장부에 연결하지 못했어요`, true); return; } }
   toast(failed ? (metas.length ? `✅ 저장했어요 · 영수증 ${failed}장은 저장하지 못했어요` : `✅ 거래는 저장했어요 · 영수증 ${failed}장은 저장하지 못했어요`) : `✅ 저장했어요 · 영수증 ${metas.length}장`, failed > 0);
 };
 smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || smOpen !== 'entry') return;
@@ -3589,7 +3589,7 @@ async function htSave() {
   HT.saving = true; renderSm(); const keys = htExisting(), base = String(Date.now()); let saved = 0, failed = 0;
   for (let i = 0; i < targets.length; i++) { const r = targets[i]; if (keys.has(r.key)) { r.status = 'dup'; r.checked = false; continue; }
     const en = { id: base + '-' + i, type: 'variable', date: r.date, category: r.category, amount: r.amount, memo: r.merchant, scope: r.scope === 'personal' ? 'personal' : 'store' };
-    try { if (isLive()) await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', en.id), en);
+    try { if (isLive()) { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'ledger', en.id), en); walEarn(en.id); }
       else { const id = uid(); if (en.scope === 'personal') (DATA.personal = DATA.personal || []).push({ id, date: en.date, name: en.category + ' · ' + en.memo, amount: en.amount }); else { const acc = accountOf(en.category, en.memo);
         if (acc === '식자재비') DATA.ingredients.push({ id, date: en.date, name: en.memo, amount: en.amount }); else if (acc === SUP_ACC && MODE !== 'home') (DATA.supplies = DATA.supplies || []).push({ id, date: en.date, category: en.category, name: en.memo, amount: en.amount }); else if (MODE !== 'home') (DATA.others = DATA.others || []).push({ id, date: en.date, category: en.category, name: en.memo, amount: en.amount, acc }); else (DATA.personal = DATA.personal || []).push({ id, date: en.date, name: en.category + ' · ' + en.memo, amount: en.amount }); } }
       keys.add(r.key); r.status = 'saved'; r.checked = false; saved++; } catch (e) { failed++; } }
@@ -3998,9 +3998,9 @@ stepCat = function (now, T, dt) { _stepCat_game(now, T, dt);
 /* ---- 🛋️ 가게 꾸미기 (미니룸 방식): 코인으로 아이템을 사서 원하는 자리에 놓고·끌어 옮기고·돌리고·보관 ----
    저장: G.s.decor [{id,x,y,z,r}] · G.s.inv {id:보관 개수}. 로그인 시 users/{uid}/settings/game 에도 저장(코인·레벨·목표 포함) → 폰·PC 같은 가게 */
 const DEC_ITEMS = [
-  { id: 'plant', ic: '🪴', name: '화분', price: 40 }, { id: 'rug', ic: '🟠', name: '러그', price: 60 }, { id: 'frame', ic: '🖼️', name: '벽 액자', price: 80, wall: 1 },
-  { id: 'lamp', ic: '💡', name: '스탠드 조명', price: 100 }, { id: 'balloon', ic: '🎈', name: '풍선', price: 120 }, { id: 'table', ic: '🪑', name: '테이블 세트', price: 150 },
-  { id: 'tree', ic: '🌳', name: '큰 나무', price: 180 }, { id: 'neon', ic: '✨', name: '네온 간판', price: 250, wall: 1 }, { id: 'cattower', ic: '🐈', name: '캣타워', price: 300 },
+  { id: 'plant', ic: '🪴', name: '화분', price: 20 }, { id: 'rug', ic: '🟠', name: '러그', price: 30 }, { id: 'frame', ic: '🖼️', name: '벽 액자', price: 40, wall: 1 },
+  { id: 'lamp', ic: '💡', name: '스탠드 조명', price: 50 }, { id: 'balloon', ic: '🎈', name: '풍선', price: 60 }, { id: 'table', ic: '🪑', name: '테이블 세트', price: 80 },
+  { id: 'tree', ic: '🌳', name: '큰 나무', price: 100 }, { id: 'neon', ic: '✨', name: '네온 간판', price: 150, wall: 1 }, { id: 'cattower', ic: '🐈', name: '캣타워', price: 200 }, // v28: 값은 ✦ 크레딧
   { id: 'trophy', ic: '🏆', name: '목표 달성 트로피', price: -1 }];
 const decItem = id => DEC_ITEMS.find(i => i.id === id);
 const decGrp = new THREE.Group(); scene.add(decGrp);
@@ -4036,10 +4036,10 @@ function decHit(cx_, cy_) { decRayAt(cx_, cy_); const h = decRay.intersectObject
 // 꾸미기 화면(아래 패널)
 const decUI = document.createElement('div'); decUI.id = 'decorUI'; decUI.hidden = true; document.body.appendChild(decUI);
 function decPaint() { if (!DEC.on) return; const s = G.s, sel = (s.decor || [])[DEC.sel], inv = s.inv || {};
-  decUI.innerHTML = `<div class="dhead"><b>🛋️ 가게 꾸미기</b><span>🪙 ${s.coins}</span><button type="button" data-dec="done" class="ddone">완료</button></div>
-    <p class="dhint">${sel ? `<b>${decItem(sel.id).name}</b> 선택됨 — 끌어서 옮겨요` : '아래에서 골라 놓고, 놓인 물건은 눌러서 끌어 옮겨요'}${isLive() ? '' : ' · 🧪 체험: 코인을 넉넉히 드렸어요. 나가면 처음으로 돌아가고, 저장은 Google 로그인 후에 돼요'}</p>
+  decUI.innerHTML = `<div class="dhead"><b>🛋️ 가게 꾸미기</b><span>${decBal()}</span><button type="button" data-dec="done" class="ddone">완료</button></div>
+    <p class="dhint">${sel ? `<b>${decItem(sel.id).name}</b> 선택됨 — 끌어서 옮겨요` : '아래에서 골라 놓고, 놓인 물건은 눌러서 끌어 옮겨요'}${decHint()}</p>
     ${sel ? `<div class="dact"><button type="button" data-dec="rot">↻ 돌리기</button><button type="button" data-dec="store">📦 보관</button><button type="button" data-dec="del" class="${DEC.arm === DEC.sel ? 'arm' : ''}">${DEC.arm === DEC.sel ? '정말 삭제?' : '🗑 삭제'}</button><button type="button" data-dec="unsel" aria-label="선택 해제" style="flex:0 0 40px">✕</button></div>` : ''}
-    <div class="dtray">${DEC_ITEMS.map(it => { const n = inv[it.id] || 0, can = it.price >= 0 && s.coins >= it.price; return `<button type="button" data-item="${it.id}" class="${n ? 'own' : can ? '' : 'no'}" ${n || can ? '' : 'disabled'}><i>${it.ic}</i><b>${it.name}</b><em>${n ? `보관 ${n}개 · 놓기` : it.price < 0 ? '목표 달성 보상' : `🪙 ${it.price}`}</em></button>`; }).join('')}</div>`; }
+    <div class="dtray">${DEC_ITEMS.map(it => { const n = inv[it.id] || 0, can = decCan(it); return `<button type="button" data-item="${it.id}" class="${n ? 'own' : can ? '' : 'no'}" ${n || it.price >= 0 ? '' : 'disabled'}><i>${it.ic}</i><b>${it.name}</b><em>${n ? `보관 ${n}개 · 놓기` : it.price < 0 ? '목표 달성 보상' : `✦ ${it.price}`}</em></button>`; }).join('')}</div>`; }
 function decOpen() { if (activeKey) closePanel(); if (smOpen) closeSm(); if (view !== 'seat') setView('seat'); DEC.on = true; DEC.sel = -1; document.body.classList.add('decor'); decUI.hidden = false; decPaint(); decRingAt();
   // 가게 전체가 내려다보이는 자리로(미니룸처럼) — 내 자리 줌 설정은 그대로 보관했다가 돌려놓음
   DEC.zm = { x: ZM.x, z: ZM.z }; try { DEC.zs = localStorage.getItem('solo3d_zoom'); } catch (e) { DEC.zs = null; }
@@ -4047,19 +4047,19 @@ function decOpen() { if (activeKey) closePanel(); if (smOpen) closeSm(); if (vie
 function decClose() { DEC.on = false; DEC.sel = -1; DEC.drag = null; document.body.classList.remove('decor'); decUI.hidden = true; decRingAt(); gSave();
   if (DEC.zm) { ZM.x = DEC.zm.x; ZM.z = DEC.zm.z; clearTimeout(zoomBy.t); setTimeout(() => { try { if (DEC.zs == null) localStorage.removeItem('solo3d_zoom'); else localStorage.setItem('solo3d_zoom', DEC.zs); } catch (e) {} }, 500); } moveTo(seatPose(), 0.8); }
 function decPlace(id) { const it = decItem(id), s = G.s; s.inv = s.inv || {}; s.decor = s.decor || [];
-  if (!(s.inv[id] > 0)) { if (it.price < 0 || s.coins < it.price) return; s.coins -= it.price; s.inv[id] = (s.inv[id] || 0) + 1; confetti(); }
+  if (!(s.inv[id] > 0)) { decBuy(id); return; } // v28: 로그인 = ✦ 크레딧 결제(성공하면 다시 여기로 와서 놓는다) · 체험 = 구매 안내
   if (s.decor.length >= 40) { toast('한 번에 40개까지 놓을 수 있어요', true); gSave(); decPaint(); return; }
   const r = cv.getBoundingClientRect(), n = s.decor.length;
   let p; if (it.wall) { p = decSpot(r.left + r.width / 2, r.top + r.height * 0.4, true) || { x: 0, y: 1.8, z: ROOM.z0 + 0.03, r: 0 }; p.y = THREE.MathUtils.clamp(p.y, 1.5, 2.2); }
   else p = { x: -1.4 + (n % 4) * 0.6, y: 0, z: 1.7 - (Math.floor(n / 4) % 3) * 0.6 }; // 카운터 앞 가운데 바닥(전체 보기에서 잘 보이는 곳)에 먼저 놓음
-  s.inv[id]--; s.decor.push({ id, x: +p.x.toFixed(2), y: +(p.y || 0).toFixed(2), z: +p.z.toFixed(2), r: p.r || 0 }); DEC.sel = s.decor.length - 1; gSave(); decSync(); decPaint(); gPaint(); toast(`${it.name}을(를) 놓았어요 — 끌어서 옮겨 보세요`); }
+  s.inv[id]--; s.decor.push(Object.assign({ id, x: +p.x.toFixed(2), y: +(p.y || 0).toFixed(2), z: +p.z.toFixed(2), r: p.r || 0 }, decPid(id))); DEC.sel = s.decor.length - 1; gSave(); decSync(); decPaint(); gPaint(); toast(`${it.name}을(를) 놓았어요 — 끌어서 옮겨 보세요`); }
 decUI.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const s = G.s, d = (s.decor || [])[DEC.sel];
   if (b.dataset.item) return decPlace(b.dataset.item);
   if (b.dataset.dec === 'done') return decClose(); if (b.dataset.dec === 'unsel') { DEC.sel = -1; DEC.arm = -1; decRingAt(); return decPaint(); }
   if (!d) return;
-  if (b.dataset.dec === 'del') { if (DEC.arm !== DEC.sel) { DEC.arm = DEC.sel; return decPaint(); } const nm = decItem(d.id).name; s.decor.splice(DEC.sel, 1); DEC.sel = -1; DEC.arm = -1; gSave(); decSync(); decPaint(); toast(`${nm}을(를) 삭제했어요`); return; }
+  if (b.dataset.dec === 'del') { if (DEC.arm !== DEC.sel) { DEC.arm = DEC.sel; return decPaint(); } const nm = decItem(d.id).name; decRefund(d); s.decor.splice(DEC.sel, 1); DEC.sel = -1; DEC.arm = -1; gSave(); decSync(); decPaint(); toast(`${nm}을(를) 삭제했어요`); return; }
   DEC.arm = -1; if (b.dataset.dec === 'rot' && !decItem(d.id).wall) { d.r = +(((d.r || 0) + Math.PI / 4) % (Math.PI * 2)).toFixed(3); gSave(); decSync(); }
-  if (b.dataset.dec === 'store') { s.inv[d.id] = (s.inv[d.id] || 0) + 1; s.decor.splice(DEC.sel, 1); DEC.sel = -1; gSave(); decSync(); decPaint(); toast('보관함에 넣었어요 (다시 놓을 때는 무료)'); } });
+  if (b.dataset.dec === 'store') { decKeepPid(d); s.inv[d.id] = (s.inv[d.id] || 0) + 1; s.decor.splice(DEC.sel, 1); DEC.sel = -1; gSave(); decSync(); decPaint(); toast('보관함에 넣었어요 (다시 놓을 때는 무료)'); } });
 cv.addEventListener('pointerdown', e => { if (!DEC.on || PTS.size > 1) return; const i = decHit(e.clientX, e.clientY);
   if (i < 0) { DEC.tap = { x: e.clientX, y: e.clientY }; return; } e.stopImmediatePropagation(); e.preventDefault(); DEC.sel = i; DEC.drag = { id: e.pointerId }; try { cv.setPointerCapture(e.pointerId); } catch (er) {} decRingAt(); decPaint(); }, true);
 cv.addEventListener('pointermove', e => { if (!DEC.on || !DEC.drag || DEC.drag.id !== e.pointerId) return; e.stopImmediatePropagation(); const d = G.s.decor[DEC.sel]; if (!d) return; const p = decSpot(e.clientX, e.clientY, decItem(d.id).wall); if (!p) return;
@@ -4075,10 +4075,10 @@ let gCloudT = 0, gCloudUid = '';
 const gCloudOk = () => isLive() && REAL.db && FSm && fbAuth && fbAuth.currentUser && fbAuth.currentUser.uid === REAL.uid;
 function gCloudLoad() { if (!gCloudOk() || gCloudUid === REAL.uid) return; const uid = gCloudUid = REAL.uid;
   FSm.getDoc(FSm.doc(REAL.db, 'users', uid, 'settings', 'game')).then(sn => { if (!sn.exists() || REAL.uid !== uid || !isLive()) return; const r = sn.data() || {};
-    if ((Number(r.xp) || 0) >= (G.s.xp || 0)) { ['coins', 'xp', 'goal', 'goalHit'].forEach(k => { if (r[k] !== undefined) G.s[k] = r[k]; }); if (Array.isArray(r.decor)) G.s.decor = r.decor.filter(d => d && decItem(d.id) && isFinite(d.x) && isFinite(d.z)).slice(0, 40); if (r.inv && typeof r.inv === 'object') G.s.inv = r.inv;
+    if ((Number(r.xp) || 0) >= (G.s.xp || 0)) { ['coins', 'xp', 'goal', 'goalHit'].forEach(k => { if (r[k] !== undefined) G.s[k] = r[k]; }); /* v28: 꾸미기 보유·배치는 users/{uid}/decor/items 에서 읽는다 */
       try { localStorage.setItem(gKey(), JSON.stringify(G.s)); } catch (e) {} decSync(); gPaint(); if (DEC.on) decPaint(); } }).catch(() => { gCloudUid = ''; }); }
 const _gSave_dec = gSave; gSave = function () { _gSave_dec(); if (!gCloudOk()) return; clearTimeout(gCloudT); const uid = REAL.uid;
-  gCloudT = setTimeout(() => { if (!gCloudOk() || REAL.uid !== uid) return; const s = G.s; FSm.setDoc(FSm.doc(REAL.db, 'users', uid, 'settings', 'game'), { coins: s.coins, xp: s.xp, goal: s.goal, goalHit: s.goalHit || '', decor: s.decor || [], inv: s.inv || {}, updatedAt: Date.now() }, { merge: true }).catch(() => {}); }, 1500); };
+  gCloudT = setTimeout(() => { if (!gCloudOk() || REAL.uid !== uid) return; const s = G.s; FSm.setDoc(FSm.doc(REAL.db, 'users', uid, 'settings', 'game'), { coins: s.coins, xp: s.xp, goal: s.goal, goalHit: s.goalHit || '', updatedAt: Date.now() }, { merge: true }).catch(() => {}); }, 1500); };
 // 목표 달성 → 트로피 지급
 const _gGoalCheck_dec = gGoalCheck; gGoalCheck = function () { const before = G.s.goalHit; _gGoalCheck_dec(); if (G.s.goalHit && G.s.goalHit !== before) { G.s.inv = G.s.inv || {}; G.s.inv.trophy = (G.s.inv.trophy || 0) + 1; gSave(); setTimeout(() => toast('🏆 트로피를 받았어요! 꾸미기에서 놓아 보세요'), 2600); } };
 // 들어가는 길: 아래 바 🛋️ 버튼 + 성장 창 버튼
@@ -4418,7 +4418,7 @@ async function pocketSave(act, btn) { if (!POCKET || !PKC.on || !pkLive()) retur
   const id = newLedgerId(), rec = { id, type: act === 'save-sale' ? 'sales' : 'variable', date: kst().date, category, amount, memo: '', createdAt: Date.now() };
   const lab = btn.textContent; btn.disabled = true; btn.textContent = '저장 중…';
   try { await FSm.setDoc(pkDoc('pocket_ledger', id), rec); } catch (e) { btn.disabled = false; btn.textContent = lab; toast('저장하지 못했어요 — 다시 눌러 주세요', true); return; }
-  PKC.docs.push(rec); DATA = pkCloudData(); lastNewId = id; formOpen = false; toast('☁ 내 용돈기입장에 저장됐어요');
+  PKC.docs.push(rec); DATA = pkCloudData(); lastNewId = id; formOpen = false; toast('☁ 내 용돈기입장에 저장됐어요'); walEarn(id);
   if (act === 'save-sale') { burstMoney(amount); floatText('+' + won(amount), V3(0.2, COUNTER_TOP + 0.45, -0.3)); screenGlow = 1; } else floatText('−' + won(amount), V3(0.2, COUNTER_TOP + 0.45, -0.3), true);
   pkRefresh(); pkGoalCheck(); }
 pBody.addEventListener('click', e => { if (!POCKET || !PKC.on) return; const b = e.target.closest('button'); if (!b || (b.dataset.act !== 'save-sale' && b.dataset.act !== 'save-spend')) return; e.stopImmediatePropagation(); e.preventDefault(); pocketSave(b.dataset.act, b); }, true);
@@ -4426,7 +4426,7 @@ const _deleteEntryAny_pk = deleteEntryAny;
 deleteEntryAny = async function (id) { if (!(POCKET && PKC.on)) return _deleteEntryAny_pk(id);
   const i = PKC.docs.findIndex(d => String(d.id) === String(id)); if (i < 0) return;
   try { await FSm.deleteDoc(pkDoc('pocket_ledger', String(id))); } catch (e) { toast('삭제하지 못했어요 — 다시 시도해 주세요', true); return; }
-  PKC.docs.splice(i, 1); DATA = pkCloudData(); toast('🗑 삭제했어요'); CAL.delArm = null; pkRefresh(); renderSm(); };
+  PKC.docs.splice(i, 1); DATA = pkCloudData(); toast('🗑 삭제했어요'); walUnearn(id); CAL.delArm = null; pkRefresh(); renderSm(); };
 
 // 모으기 목표: 로그인 → settings/pocket, 아니면 이 기기 체험
 pkGoal = function () { if (PKC.on) return { g: Math.max(0, +PKC.set.goal || 0), name: String(PKC.set.goalName || '').slice(0, 20) };
@@ -4452,7 +4452,7 @@ function pkJobRead() { const f = pkJobForm(), v = id => { const el = document.ge
 function pkJobPreview() { const r = pkJobRead(), el = document.getElementById('ajPrev'); if (!el) return;
   el.innerHTML = r.min > 0 && r.f.rate > 0 ? `${r.f.rate.toLocaleString('ko-KR')}원 × ${pkHm(r.min)} = <b class="num">${r.pay.toLocaleString('ko-KR')}원</b>` : '시급과 근무 시간을 넣으면 알바비가 바로 보여요'; }
 async function pkJobWrite(rec, del) { // 계정(pocketJobs) 또는 이 기기 체험 메모리
-  if (PKC.on) { try { if (del) await FSm.deleteDoc(pkDoc('pocketJobs', rec.id)); else await FSm.setDoc(pkDoc('pocketJobs', rec.id), rec); } catch (e) { toast('저장하지 못했어요 — 다시 눌러 주세요', true); return false; } }
+  if (PKC.on) { try { if (del) await FSm.deleteDoc(pkDoc('pocketJobs', rec.id)); else await FSm.setDoc(pkDoc('pocketJobs', rec.id), rec); } catch (e) { toast('저장하지 못했어요 — 다시 눌러 주세요', true); return false; } if (del) walUnearn(rec.id); else walEarn(rec.id); }
   const L = pkJobs(), i = L.findIndex(j => j.id === rec.id); if (del) { if (i >= 0) L.splice(i, 1); } else if (i >= 0) L[i] = rec; else L.push(rec); return true; }
 async function pkJobSave(btn) { const r = pkJobRead(), f = r.f, pl = document.getElementById('ajPlace');
   if (!f.place) { pl.style.borderColor = '#dd5e47'; pl.focus(); return; }
@@ -4471,7 +4471,7 @@ async function pkJobAct(act, id, btn) { const j = pkJobs().find(x => x.id === id
   if (act === 'aj-book') { if (!j.paid || j.booked) return; if (!pkArm('book' + id)) { renderSm(); return; } // 누를 때만, 한 번 더 확인하고 용돈기입장 '들어온 돈'에 남긴다
     const iid = newLedgerId(), k = kst();
     if (PKC.on) { const rec = { id: iid, type: 'sales', date: k.date, category: '아르바이트', amount: j.pay, memo: `${j.place} 알바비`.slice(0, 30), createdAt: Date.now() };
-      try { await FSm.setDoc(pkDoc('pocket_ledger', iid), rec); } catch (e) { toast('들어온 돈에 적지 못했어요 — 다시 눌러 주세요', true); return; } PKC.docs.push(rec); DATA = pkCloudData(); }
+      try { await FSm.setDoc(pkDoc('pocket_ledger', iid), rec); } catch (e) { toast('들어온 돈에 적지 못했어요 — 다시 눌러 주세요', true); return; } PKC.docs.push(rec); DATA = pkCloudData(); walEarn(iid); }
     else { DATA.sales.push({ id: iid, date: k.date, time: k.time, amount: j.pay, channel: '아르바이트' }); saveData(DATA); }
     await pkJobWrite(Object.assign({}, j, { booked: true, updatedAt: Date.now() })); toast('📝 들어온 돈에 아르바이트로 적었어요'); pkRefresh(); pkGoalCheck(); } }
 function pkStat(a, b, c) { return `<div class="cards">${[a, b, c].map(x => `<div class="card"><span>${x[0]}</span><b class="num">${x[1]}</b></div>`).join('')}</div>`; }
@@ -4604,6 +4604,115 @@ renderMe = function () { _renderMe_27(); if (!POCKET) return; const m = smBody.q
   const row = (x, y) => `<div class="row"><div class="l"><b>${x}</b></div><span class="d" style="text-align:right">${y}</span></div>`;
   const rs = m.querySelectorAll('.row'); if (rs[2]) rs[2].insertAdjacentHTML('afterend', row('💼 알바비 보드', '일한 곳·시급·시간 적기 · 이번 달 받을 알바비') + row('🤖 AI 비서 · 🧑‍💼 용돈 도우미', '이번 달 요약 · 피클 안내 · 절약 팁') + row('🕹️ 왼쪽 벽 오락실 · 🛒 TV', '스트레스 해소 게임 2종 · 장보기(쿠팡 파트너스 광고)'));
   const last = m.lastElementChild; if (last) last.outerHTML = row('📊 2D 버튼', '글자로 보는 용돈냥이 · 로그인하면 같은 장부'); };
+/* ---- ✦ 통합 크레딧 지갑 + 꾸미기 상점 크레딧 결제 (v28) ----
+   지갑: users/{uid}/wallet/main · 원장: users/{uid}/wallet_log/{logId} · 하루 한도: users/{uid}/wallet/daily
+   꾸미기 보유·배치: users/{uid}/decor/items (예전 settings/game 의 decor·inv 는 처음 한 번만 옮겨 옴)
+   로그인했을 때만 움직인다. 체험·로그아웃 상태에서는 지갑을 읽지도 쓰지도 않는다. 장부(users/{uid}/ledger)에는 손대지 않는다. */
+const WAL = { uid: null, bal: 0, has: false, daily: null, logs: null, unsubs: [], done: new Set(), pend: { ledger_entry: 0, receipt: 0, clock_in: 0 }, pendDate: '' };
+const WAL_RULE = { ledger_entry: [2, 10], receipt: [3, 5], clock_in: [5, 1] };
+const DCL = { uid: null, on: false, data: null, last: '', t: 0 };
+const walOk = () => !!(REAL.on && REAL.status === 'ok' && REAL.db && FSm && fbAuth && fbAuth.currentUser && fbAuth.currentUser.uid === REAL.uid);
+const walRef = (...p) => FSm.doc(REAL.db, 'users', REAL.uid, ...p);
+const walId = s => String(s).replace(/\//g, '_');
+// 적립·차감: 트랜잭션 1개. ① 원장이 이미 있으면 끝 ② 지갑 읽기 ③ 적립 한도 확인 ④ 차감이면 잔액 확인 ⑤ 지갑·원장(·한도) 함께 쓰기
+async function walletApply({ logId, amount, reason, refId, source, limitKey, limit }) { if (!walOk()) return { ok: false, why: 'off' };
+  const logRef = walRef('wallet_log', walId(logId)), mainRef = walRef('wallet', 'main'), dayRef = walRef('wallet', 'daily'), today = kst().date;
+  return FSm.runTransaction(REAL.db, async tx => {
+    if ((await tx.get(logRef)).exists()) return { ok: false, why: 'dup' };
+    const ws = await tx.get(mainRef), w = ws.exists() ? (ws.data() || {}) : {}, bal = Number(w.balance) || 0; let day = null;
+    if (amount > 0 && limit) { const ds = await tx.get(dayRef), d = ds.exists() ? (ds.data() || {}) : {}, counts = d.date === today ? Object.assign({}, d.counts) : {};
+      if ((Number(counts[limitKey]) || 0) >= limit) return { ok: false, why: 'limit' }; counts[limitKey] = (Number(counts[limitKey]) || 0) + 1; day = { date: today, counts }; }
+    if (amount < 0 && bal + amount < 0) throw new Error('insufficient');
+    tx.set(mainRef, { balance: bal + amount, lifetimeEarned: (Number(w.lifetimeEarned) || 0) + (amount > 0 ? amount : 0), lifetimeSpent: (Number(w.lifetimeSpent) || 0) + (amount < 0 ? -amount : 0), schemaVersion: 1, updatedAt: FSm.serverTimestamp() }, { merge: true });
+    tx.set(logRef, { amount, reason, source, refId: String(refId), date: today, createdAt: FSm.serverTimestamp() });
+    if (day) tx.set(dayRef, day);
+    return { ok: true }; }); }
+// 되돌리기: 그 원장이 있으면 잔액을 되돌리고 원장 문서를 지운다. 적립분을 되돌릴 잔액이 모자라면 그대로 둔다
+async function walletRevert(logId) { if (!walOk()) return { ok: false, why: 'off' };
+  const logRef = walRef('wallet_log', walId(logId)), mainRef = walRef('wallet', 'main');
+  return FSm.runTransaction(REAL.db, async tx => { const ls = await tx.get(logRef); if (!ls.exists()) return { ok: false, why: 'none' };
+    const amt = Number((ls.data() || {}).amount) || 0, ws = await tx.get(mainRef), w = ws.exists() ? (ws.data() || {}) : {}, bal = Number(w.balance) || 0;
+    if (amt > 0 && bal < amt) return { ok: false, why: 'short' };
+    tx.set(mainRef, { balance: bal - amt, lifetimeEarned: Math.max(0, (Number(w.lifetimeEarned) || 0) - (amt > 0 ? amt : 0)), lifetimeSpent: Math.max(0, (Number(w.lifetimeSpent) || 0) - (amt < 0 ? -amt : 0)), schemaVersion: 1, updatedAt: FSm.serverTimestamp() }, { merge: true });
+    tx.delete(logRef); return { ok: true, amount: amt }; }); }
+function walCount(kind) { const t = kst().date; if (WAL.pendDate !== t) { WAL.pendDate = t; WAL.pend = { ledger_entry: 0, receipt: 0, clock_in: 0 }; }
+  const d = WAL.daily && WAL.daily.date === t ? (Number((WAL.daily.counts || {})[kind]) || 0) : 0; return Math.max(d, WAL.pend[kind] || 0); }
+// 기록 저장이 성공한 뒤에만 부른다. 실패해도 저장 흐름은 막지 않는다(콘솔 경고만)
+function walEarn(refId, kind = 'ledger_entry', source = 'business') { if (!walOk() || refId == null) return; const [amount, limit] = WAL_RULE[kind], logId = `${source}:${kind}:${walId(refId)}`;
+  if (WAL.done.has(logId) || walCount(kind) >= limit) return; WAL.done.add(logId); WAL.pend[kind] = walCount(kind) + 1;
+  walletApply({ logId, amount, reason: kind, refId, source, limitKey: kind, limit }).then(r => { if (r && !r.ok) { WAL.pend[kind] = Math.max(0, (WAL.pend[kind] || 1) - 1); if (r.why !== 'dup') WAL.done.delete(logId); } })
+    .catch(e => { WAL.done.delete(logId); WAL.pend[kind] = Math.max(0, (WAL.pend[kind] || 1) - 1); console.warn('[wallet] 적립 실패', logId, e && e.message); }); }
+function walUnearn(refId) { if (!walOk() || refId == null) return; ['ledger_entry', 'receipt'].forEach(kind => { const logId = `business:${kind}:${walId(refId)}`; WAL.done.delete(logId);
+  walletRevert(logId).catch(e => console.warn('[wallet] 되돌리기 실패', logId, e && e.message)); }); }
+function walClockIn() { if (!walOk() || !ST || !Array.isArray(ST.att)) return; const t = kst().date; if (ST.att.some(a => a && typeof a.startTime === 'string' && a.startTime.slice(0, 10) === t)) walEarn(t, 'clock_in', 'staff'); }
+function walPaint() { let c = document.getElementById('walChip');
+  if (!walOk() || WAL.uid !== REAL.uid) { if (c) c.remove(); } else { if (!c) { c = document.createElement('button'); c.type = 'button'; c.id = 'walChip'; c.className = 'obtn'; c.setAttribute('aria-label', '크레딧 지갑 열기'); c.title = '크레딧 지갑'; authEl.insertBefore(c, authEl.firstChild); } c.textContent = '✦ ' + WAL.bal.toLocaleString('ko-KR'); }
+  setHudVar(); if (smOpen === 'wallet') renderSm(); if (DEC.on) decPaint(); }
+function walStart() { const uid = REAL.uid; WAL.uid = uid; WAL.bal = 0; WAL.has = false; WAL.daily = null; WAL.logs = null; WAL.done = new Set();
+  try { WAL.unsubs.push(FSm.onSnapshot(walRef('wallet', 'main'), sn => { if (WAL.uid !== uid) return; const d = sn.exists() ? (sn.data() || {}) : null; WAL.has = !!d; WAL.bal = d ? (Number(d.balance) || 0) : 0; walPaint(); }, () => {}));
+    WAL.unsubs.push(FSm.onSnapshot(walRef('wallet', 'daily'), sn => { if (WAL.uid !== uid) return; WAL.daily = sn.exists() ? (sn.data() || null) : null; if (smOpen === 'wallet') renderSm(); }, () => {})); } catch (e) { console.warn('[wallet] 구독 실패', e && e.message); }
+  walletApply({ logId: 'welcome:v1', amount: 50, reason: 'welcome', refId: 'v1', source: 'business' }).catch(e => console.warn('[wallet] welcome 실패', e && e.message)); // 계정당 1회(코스모 팡·근태와 같은 id)
+  decCloudLoad(); walClockIn(); walPaint(); }
+function walStop() { WAL.unsubs.forEach(u => { try { u(); } catch (e) {} }); WAL.unsubs = []; WAL.uid = null; WAL.bal = 0; WAL.has = false; WAL.daily = null; WAL.logs = null; WAL.done = new Set();
+  clearTimeout(DCL.t); if (DCL.on && G.s) { G.s.decor = []; G.s.inv = {}; G.s.invP = {}; try { decSync(); } catch (e) {} } DCL.on = false; DCL.uid = null; DCL.data = null; const c = document.getElementById('walChip'); if (c) c.remove(); if (smOpen === 'wallet') closeSm(); }
+function walSync() { if (walOk()) { if (WAL.uid !== REAL.uid) { if (WAL.uid) walStop(); walStart(); } else walPaint(); } else if (WAL.uid) walStop(); }
+const _renderAuth_wal = renderAuth; renderAuth = function () { _renderAuth_wal(); walSync(); };
+const _staffRerender_wal = staffRerender; staffRerender = function () { _staffRerender_wal(); walClockIn(); };
+
+// ✦ 칩을 누르면 뜨는 지갑 창
+function walLogName(l) { return ({ welcome: '가입 선물', ledger_entry: '기록 저장', receipt: '영수증 사진', clock_in: '직원 출근', decor_item: '가게 꾸미기' })[l.reason] || l.reason || '기타'; }
+function renderWallet() { const t = kst().date, c = WAL.daily && WAL.daily.date === t ? (WAL.daily.counts || {}) : {}, n = k => Math.min(WAL_RULE[k][1], Number(c[k]) || 0);
+  smTitle.textContent = '✦ 크레딧 지갑';
+  smBody.innerHTML = `<div class="instcard"><p class="ib" style="margin:0">지금 가진 크레딧</p><p style="font-size:28px;font-weight:800;margin:4px 0 0" class="num" id="walBal">✦ ${WAL.bal.toLocaleString('ko-KR')}</p></div>
+    <div class="sec"><span>오늘 적립</span></div>
+    <div class="rows"><div class="row"><div class="l"><span>📝 기록 저장 (✦2)</span></div><b class="num" id="walToday">${n('ledger_entry')}/10건</b></div><div class="row"><div class="l"><span>🧾 영수증 사진 (✦3)</span></div><b class="num">${n('receipt')}/5건</b></div><div class="row"><div class="l"><span>🧑‍🍳 직원 출근 (✦5)</span></div><b class="num">${n('clock_in')}/1건</b></div></div>
+    <p class="hintp" style="margin:8px 0">가계부에 기록을 저장하면 ✦2, 영수증 사진을 붙이면 ✦3, 직원 출근이 있으면 ✦5. 기록을 지우면 그 크레딧도 되돌아가요.</p>
+    <p class="pnote" style="margin:0 0 8px">🛋️ 가게 꾸미기에서 쓸 수 있어요.</p><button type="button" class="primary" data-act="wal-decor">🛋️ 가게 꾸미기 열기</button>
+    <div class="sec" style="margin-top:14px"><span>최근 내역</span></div>
+    ${WAL.logs === null ? '<p class="empty">불러오는 중…</p>' : WAL.logs.length ? `<div class="rows">${WAL.logs.map(l => `<div class="row"><div class="l"><span class="d num">${esc(md(l.date || ''))}</span><span>${esc(walLogName(l))}</span></div><b class="num" style="color:${l.amount < 0 ? '#dd5e47' : '#2c8a6e'}">${l.amount > 0 ? '+' : '−'}✦${Math.abs(Number(l.amount) || 0)}</b></div>`).join('')}</div>` : '<p class="empty">아직 내역이 없어요.</p>'}`; }
+function walLoadLogs() { if (!walOk()) return; const uid = REAL.uid;
+  FSm.getDocs(FSm.query(FSm.collection(REAL.db, 'users', uid, 'wallet_log'), FSm.orderBy('createdAt', 'desc'), FSm.limit(5))).then(sn => { if (WAL.uid !== uid) return; const L = []; sn.forEach(d => L.push(d.data() || {})); WAL.logs = L; if (smOpen === 'wallet') renderSm(); }).catch(() => { WAL.logs = []; if (smOpen === 'wallet') renderSm(); }); }
+document.getElementById('auth').addEventListener('click', e => { if (!e.target.closest('#walChip')) return; e.stopPropagation(); firstUse(); if (activeKey) closePanel(); WAL.logs = null; openSm('wallet'); walLoadLogs(); });
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (b && smOpen === 'wallet' && b.dataset.act === 'wal-decor') { closeSm(); setTimeout(decOpen, 300); } });
+const _renderSm_wal = renderSm; renderSm = function () { if (smOpen === 'wallet') { smEl.classList.remove('arcwide'); if (!walOk()) { closeSm(); return; } renderWallet(); smAd.hidden = true; return; } _renderSm_wal(); };
+
+// 🛋️ 꾸미기 상점: 로그인 = ✦ 크레딧 결제, 체험 = 구매 안내 + 로그인 버튼
+const decBal = () => walOk() && WAL.uid === REAL.uid ? `✦ ${WAL.bal.toLocaleString('ko-KR')}` : '✦ —';
+const decCan = it => it.price >= 0 && walOk() && WAL.bal >= it.price;
+const decHint = () => walOk() ? '' : (DEC.note === 'login' ? ' · <b>Google 로그인하면 ✦ 크레딧으로 살 수 있어요</b> <button type="button" data-dec="login" style="height:32px;padding:0 12px;border-radius:10px;background:var(--coral);color:#fff;font-weight:800;margin-left:4px">Google 로그인</button>' : ' · 🧪 체험: 물건을 사려면 Google 로그인이 필요해요');
+function decPid(id) { const s = G.s, a = s.invP && s.invP[id]; const pid = Array.isArray(a) && a.length ? a.pop() : ''; return pid ? { purchaseId: pid } : {}; }
+function decKeepPid(d) { if (!d || !d.purchaseId) return; const s = G.s; s.invP = s.invP || {}; (s.invP[d.id] = s.invP[d.id] || []).push(d.purchaseId); }
+function decRefund(d) { if (!d || !d.purchaseId || !walOk()) return; const logId = `business:decor_item:${d.id}:${d.purchaseId}`; // 그 구매의 차감 원장을 찾아 환불하고 원장을 지운다. 못 찾으면(체험·예전 코인 구매) 환불 없음
+  walletRevert(logId).then(r => { if (r && r.ok) toast(`✦ ${Math.abs(r.amount)} 돌려받았어요`); }).catch(e => console.warn('[wallet] 환불 실패', logId, e && e.message)); }
+async function decBuy(id) { const it = decItem(id); if (!it || it.price < 0 || DEC.buying) return;
+  if (!walOk()) { DEC.note = 'login'; decPaint(); toast('Google 로그인하면 ✦ 크레딧으로 살 수 있어요'); return; }
+  if (WAL.bal < it.price) { toast('크레딧이 부족해요 — 가계부에 기록하면 ✦2씩 쌓여요', true); return; }
+  DEC.buying = true; const pid = newLedgerId();
+  try { const r = await walletApply({ logId: `business:decor_item:${id}:${pid}`, amount: -it.price, reason: 'decor_item', refId: `${id}:${pid}`, source: 'business' });
+    if (!r || !r.ok) { toast('결제하지 못했어요 — 다시 눌러 주세요', true); return; }
+    const s = G.s; s.inv = s.inv || {}; s.inv[id] = (s.inv[id] || 0) + 1; s.invP = s.invP || {}; (s.invP[id] = s.invP[id] || []).push(pid); confetti(); decPlace(id); // 잔액은 지갑 구독(onSnapshot)이 갱신한다
+  } catch (e) { toast(e && e.message === 'insufficient' ? '크레딧이 부족해요 — 가계부에 기록하면 ✦2씩 쌓여요' : '결제하지 못했어요 — 다시 눌러 주세요', true); }
+  finally { DEC.buying = false; } }
+decUI.addEventListener('click', e => { const b = e.target.closest('button[data-dec="login"]'); if (!b) return; DEC.note = ''; decClose(); setTimeout(login, 350); });
+// 보유·배치 상태: users/{uid}/decor/items 한 문서. 없으면 예전 settings/game 의 decor·inv 를 한 번만 옮겨 온다
+const decClean = a => (Array.isArray(a) ? a : []).filter(d => d && decItem(d.id) && isFinite(d.x) && isFinite(d.z)).slice(0, 40);
+function decAdopt() { if (!DCL.on || !DCL.data || !G.s) return; G.s.decor = DCL.data.items; G.s.inv = DCL.data.inv; G.s.invP = DCL.data.invP; decSync(); if (DEC.on) decPaint(); }
+async function decCloudLoad() { if (!walOk() || DCL.uid === REAL.uid) return; const uid = DCL.uid = REAL.uid, ref = walRef('decor', 'items');
+  try { const sn = await FSm.getDoc(ref); let d;
+    if (sn.exists()) d = sn.data() || {};
+    else { const g = await FSm.getDoc(walRef('settings', 'game')), r = g.exists() ? (g.data() || {}) : {};
+      d = { items: decClean(r.decor), inv: r.inv && typeof r.inv === 'object' ? r.inv : {}, invP: {} };
+      await FSm.setDoc(ref, { items: d.items, inv: d.inv, invP: d.invP, schemaVersion: 1, movedFrom: 'settings/game', updatedAt: FSm.serverTimestamp() }); }
+    if (REAL.uid !== uid || !walOk()) return;
+    DCL.data = { items: decClean(d.items), inv: d.inv && typeof d.inv === 'object' ? d.inv : {}, invP: d.invP && typeof d.invP === 'object' ? d.invP : {} };
+    DCL.last = JSON.stringify(DCL.data); DCL.on = true; decAdopt();
+  } catch (e) { DCL.uid = null; console.warn('[decor] 불러오기 실패', e && e.message); } }
+function decCloudSave() { if (!DCL.on || !walOk() || DCL.uid !== REAL.uid) return; clearTimeout(DCL.t); const uid = REAL.uid;
+  DCL.t = setTimeout(() => { if (!DCL.on || !walOk() || REAL.uid !== uid) return; const s = G.s, data = { items: s.decor || [], inv: s.inv || {}, invP: s.invP || {} }, js = JSON.stringify(data); if (js === DCL.last) return;
+    FSm.setDoc(walRef('decor', 'items'), Object.assign({ schemaVersion: 1, updatedAt: FSm.serverTimestamp() }, data)).then(() => { DCL.last = js; }).catch(e => console.warn('[decor] 저장 실패', e && e.message)); }, 1200); }
+const _gSave_wal = gSave; gSave = function () { _gSave_wal(); decCloudSave(); };
+const _gLoad_wal = gLoad; gLoad = function () { _gLoad_wal(); decAdopt(); };
+const _decOpen_wal = decOpen; decOpen = function () { DEC.note = ''; return _decOpen_wal(); };
 // 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
 const _applyCam_far = applyCam;
 applyCam = function () { _applyCam_far(); const out = cam.pos.z > ROOM.z1 - 0.45; if (back.visible === out) back.visible = !out; };

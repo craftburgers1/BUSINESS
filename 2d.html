@@ -27,7 +27,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, where, getDoc, runTransaction, onSnapshot, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAemJzk3V5hKH0cb0jP_XxtVRaYOZzL848",
@@ -57,6 +57,7 @@
         window.deleteDoc = deleteDoc;
         window.query = query;
         window.where = where;
+        window.getDoc = getDoc; window.runTransaction = runTransaction; window.onSnapshot = onSnapshot; window.serverTimestamp = serverTimestamp; window.orderBy = orderBy; window.limit = limit; // v28 지갑
     </script>
 
     <style>
@@ -4165,7 +4166,7 @@
         }
         function v27PreviewText(f, min) { return min > 0 && f.rate > 0 ? f.rate.toLocaleString() + '원 × ' + v27Hm(min) + ' = <b class="text-slate-900">' + Math.round(f.rate * min / 60).toLocaleString() + '원</b>' : '시급과 근무 시간을 넣으면 알바비가 바로 보여요'; }
         async function v27Write(rec, del) {
-            if (v27PocketCloud()) { try { if (del) await window.deleteDoc(v27UserDoc('pocketJobs', rec.id)); else await v27Raw.setDoc(v27UserDoc('pocketJobs', rec.id), rec); } catch (e) { alert('저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.'); return false; } }
+            if (v27PocketCloud()) { try { if (del) await window.deleteDoc(v27UserDoc('pocketJobs', rec.id)); else await window.setDoc(v27UserDoc('pocketJobs', rec.id), rec); } catch (e) { alert('저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.'); return false; } }
             const L = v27Jobs(), i = L.findIndex(j => j.id === rec.id); if (del) { if (i >= 0) L.splice(i, 1); } else if (i >= 0) L[i] = rec; else L.push(rec);
             v27LocalSave(); return true;
         }
@@ -4187,7 +4188,7 @@
             if (act === 'book') { // 누를 때만, 한 번 더 확인하고 용돈기입장 '들어온 돈'에 남긴다. 사업자 장부에는 쓰지 않는다
                 if (!j.paid || j.booked) return; if (!v27Arm('book' + id)) return v27Render();
                 const entry = { id: String(Date.now()), type: 'sales', date: getTodayStr(), category: '아르바이트', amount: j.pay, memo: (j.place + ' 알바비').slice(0, 30), createdAt: Date.now() };
-                if (v27PocketCloud()) { try { await v27Raw.setDoc(v27UserDoc('pocket_ledger', entry.id), entry); } catch (e) { alert('들어온 돈에 적지 못했어요. 잠시 뒤 다시 눌러 주세요.'); return; } }
+                if (v27PocketCloud()) { try { await window.setDoc(v27UserDoc('pocket_ledger', entry.id), entry); } catch (e) { alert('들어온 돈에 적지 못했어요. 잠시 뒤 다시 눌러 주세요.'); return; } }
                 else if (!v24IsPocket()) return;
                 dbData.push(entry); await v27Write(Object.assign({}, j, { booked: true, updatedAt: Date.now() })); renderDashboard(); return;
             }
@@ -4250,6 +4251,92 @@
         applyStoreConfigUI = function () { const r = v27Prev.applyStoreConfigUI.apply(this, arguments); try { v27Apply(); } catch (e) {} return r; };
         renderDashboard = function () { const r = v27Prev.renderDashboard.apply(this, arguments); try { v27Apply(); } catch (e) {} return r; };
         try { v27Apply(); } catch (e) {}
+
+        /* ---- ✦ 통합 크레딧 지갑 (v28) ----
+           지갑 users/{uid}/wallet/main · 원장 users/{uid}/wallet_log/{logId} · 하루 한도 users/{uid}/wallet/daily
+           3D(index.html)와 같은 경로·같은 logId·같은 트랜잭션. 로그인했을 때만 움직이고 체험판에서는 읽지도 쓰지도 않는다.
+           장부 저장·삭제는 지금 있는 경로(window.setDoc / window.deleteDoc)가 성공한 뒤에만 적립·되돌리기를 시도하고, 실패해도 저장을 막지 않는다. */
+        const V28 = { uid: null, bal: 0, daily: null, logs: null, unsubs: [], done: new Set(), pend: { ledger_entry: 0, receipt: 0 }, pendDate: '', open: false };
+        const V28_RULE = { ledger_entry: [2, 10], receipt: [3, 5] };
+        const v28Today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        const v28Ok = () => !isDemoMode && !!currentUser && !!currentUser.uid && !!window.firebaseDb && typeof window.runTransaction === 'function';
+        const v28Ref = (...p) => v27Raw.doc(window.firebaseDb, 'users', currentUser.uid, ...p);
+        const v28Id = s => String(s).replace(/\//g, '_');
+        async function walletApply({ logId, amount, reason, refId, source, limitKey, limit }) { if (!v28Ok()) return { ok: false, why: 'off' };
+            const logRef = v28Ref('wallet_log', v28Id(logId)), mainRef = v28Ref('wallet', 'main'), dayRef = v28Ref('wallet', 'daily'), today = v28Today(), ts = window.serverTimestamp;
+            return window.runTransaction(window.firebaseDb, async tx => {
+                if ((await tx.get(logRef)).exists()) return { ok: false, why: 'dup' };
+                const ws = await tx.get(mainRef), w = ws.exists() ? (ws.data() || {}) : {}, bal = Number(w.balance) || 0; let day = null;
+                if (amount > 0 && limit) { const ds = await tx.get(dayRef), d = ds.exists() ? (ds.data() || {}) : {}, counts = d.date === today ? Object.assign({}, d.counts) : {};
+                    if ((Number(counts[limitKey]) || 0) >= limit) return { ok: false, why: 'limit' }; counts[limitKey] = (Number(counts[limitKey]) || 0) + 1; day = { date: today, counts }; }
+                if (amount < 0 && bal + amount < 0) throw new Error('insufficient');
+                tx.set(mainRef, { balance: bal + amount, lifetimeEarned: (Number(w.lifetimeEarned) || 0) + (amount > 0 ? amount : 0), lifetimeSpent: (Number(w.lifetimeSpent) || 0) + (amount < 0 ? -amount : 0), schemaVersion: 1, updatedAt: ts() }, { merge: true });
+                tx.set(logRef, { amount, reason, source, refId: String(refId), date: today, createdAt: ts() });
+                if (day) tx.set(dayRef, day);
+                return { ok: true }; }); }
+        async function walletRevert(logId) { if (!v28Ok()) return { ok: false, why: 'off' };
+            const logRef = v28Ref('wallet_log', v28Id(logId)), mainRef = v28Ref('wallet', 'main'), ts = window.serverTimestamp;
+            return window.runTransaction(window.firebaseDb, async tx => { const ls = await tx.get(logRef); if (!ls.exists()) return { ok: false, why: 'none' };
+                const amt = Number((ls.data() || {}).amount) || 0, ws = await tx.get(mainRef), w = ws.exists() ? (ws.data() || {}) : {}, bal = Number(w.balance) || 0;
+                if (amt > 0 && bal < amt) return { ok: false, why: 'short' };
+                tx.set(mainRef, { balance: bal - amt, lifetimeEarned: Math.max(0, (Number(w.lifetimeEarned) || 0) - (amt > 0 ? amt : 0)), lifetimeSpent: Math.max(0, (Number(w.lifetimeSpent) || 0) - (amt < 0 ? -amt : 0)), schemaVersion: 1, updatedAt: ts() }, { merge: true });
+                tx.delete(logRef); return { ok: true, amount: amt }; }); }
+        function v28Count(kind) { const t = v28Today(); if (V28.pendDate !== t) { V28.pendDate = t; V28.pend = { ledger_entry: 0, receipt: 0 }; }
+            const d = V28.daily && V28.daily.date === t ? (Number((V28.daily.counts || {})[kind]) || 0) : 0; return Math.max(d, V28.pend[kind] || 0); }
+        function v28Earn(refId, kind) { if (!v28Ok() || refId == null) return; const [amount, limit] = V28_RULE[kind], logId = 'business:' + kind + ':' + v28Id(refId);
+            if (V28.done.has(logId) || v28Count(kind) >= limit) return; V28.done.add(logId); V28.pend[kind] = v28Count(kind) + 1;
+            walletApply({ logId, amount, reason: kind, refId, source: 'business', limitKey: kind, limit }).then(r => { if (r && !r.ok) { V28.pend[kind] = Math.max(0, (V28.pend[kind] || 1) - 1); if (r.why !== 'dup') V28.done.delete(logId); } })
+                .catch(e => { V28.done.delete(logId); V28.pend[kind] = Math.max(0, (V28.pend[kind] || 1) - 1); console.warn('[wallet] 적립 실패', logId, e && e.message); }); }
+        function v28Unearn(refId) { if (!v28Ok() || refId == null) return; ['ledger_entry', 'receipt'].forEach(kind => { const logId = 'business:' + kind + ':' + v28Id(refId); V28.done.delete(logId);
+            walletRevert(logId).catch(e => console.warn('[wallet] 되돌리기 실패', logId, e && e.message)); }); }
+        // 저장·삭제가 지나가는 한 곳(window.setDoc / window.deleteDoc)에서, 성공한 뒤에만 지갑을 건드린다
+        function v28Rec(ref) { if (!v28Ok() || !ref || typeof ref.path !== 'string') return null; const m = /^users\/([^/]+)\/(ledger|pocket_ledger|pocketJobs)\/([^/]+)$/.exec(ref.path); return m && m[1] === currentUser.uid ? { col: m[2], id: m[3] } : null; }
+        function v28AfterSet(ref, data, opt) { const r = v28Rec(ref); if (!r || !data || typeof data !== 'object') return;
+            if (!(opt && opt.merge)) v28Earn(r.id, 'ledger_entry');
+            if (r.col === 'ledger' && Array.isArray(data.receipts) && data.receipts.length) v28Earn(r.id, 'receipt'); }
+        (function () { const d = Object.getOwnPropertyDescriptor(window, 'setDoc');
+            Object.defineProperty(window, 'setDoc', { configurable: true,
+                get() { const f = d && d.get ? d.get.call(window) : v27Raw.setDoc; if (typeof f !== 'function') return f; return function (ref, data, opt) { return Promise.resolve(f.apply(this, arguments)).then(x => { try { v28AfterSet(ref, data, opt); } catch (e) { console.warn('[wallet]', e && e.message); } return x; }); }; },
+                set(v) { if (d && d.set) d.set.call(window, v); else v27Raw.setDoc = v; } });
+            let rawDel = window.deleteDoc;
+            Object.defineProperty(window, 'deleteDoc', { configurable: true,
+                get() { if (typeof rawDel !== 'function') return rawDel; return function (ref) { const r = v28Rec(ref); return Promise.resolve(rawDel.apply(this, arguments)).then(x => { try { if (r) v28Unearn(r.id); } catch (e) { console.warn('[wallet]', e && e.message); } return x; }); }; },
+                set(v) { rawDel = v; } }); })();
+        // 헤더 칩 + 안내 창
+        function v28Chip() { let c = document.getElementById('v28Chip'); const h = document.getElementById('displayStoreName');
+            if (!v28Ok() || V28.uid !== currentUser.uid) { if (c) c.remove(); return; }
+            if (!c && h && h.parentNode) { c = document.createElement('button'); c.type = 'button'; c.id = 'v28Chip'; c.title = '크레딧 지갑'; c.setAttribute('aria-label', '크레딧 지갑 열기');
+                c.style.cssText = 'display:inline-block;vertical-align:middle;margin-left:4px;height:22px;padding:0 8px;border-radius:999px;background:#fff7e0;border:1px solid #f1d58a;color:#8a6200;font-size:12px;font-weight:800;white-space:nowrap;line-height:1';
+                c.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); v28Open(); }); const at = document.getElementById('v25Tier') || document.getElementById('displayIndustry') || h; at.parentNode.insertBefore(c, at.nextSibling); } // 가게 이름 줄은 건드리지 않고 무료/PRO 표시 옆에 둔다
+            if (c) c.textContent = '✦ ' + V28.bal.toLocaleString('ko-KR'); }
+        const v28Esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+        const v28LogName = l => ({ welcome: '가입 선물', ledger_entry: '기록 저장', receipt: '영수증 사진', clock_in: '직원 출근', decor_item: '가게 꾸미기' })[l.reason] || l.reason || '기타';
+        function v28Paint() { v28Chip(); const m = document.getElementById('v28Modal'); if (!m) return; if (!V28.open || !v28Ok()) { m.remove(); V28.open = false; return; }
+            const t = v28Today(), c = V28.daily && V28.daily.date === t ? (V28.daily.counts || {}) : {}, n = k => Math.min(V28_RULE[k][1], Number(c[k]) || 0), row = 'display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:13px';
+            m.querySelector('#v28Body').innerHTML = `<div style="background:#fff7e0;border-radius:14px;padding:12px 14px"><div style="font-size:12px;color:#8a6200">지금 가진 크레딧</div><div id="v28Bal" style="font-size:26px;font-weight:800;color:#5c4200">✦ ${V28.bal.toLocaleString('ko-KR')}</div></div>
+                <div style="font-size:12px;font-weight:800;color:#64748b;margin:14px 0 2px">오늘 적립</div>
+                <div style="${row}"><span>📝 기록 저장 (✦2)</span><b id="v28Today">${n('ledger_entry')}/10건</b></div><div style="${row}"><span>🧾 영수증 사진 (✦3)</span><b>${n('receipt')}/5건</b></div>
+                <p style="font-size:12px;color:#64748b;line-height:1.55;margin:10px 0">가계부에 기록을 저장하면 ✦2, 영수증 사진을 붙이면 ✦3, 직원 출근이 있으면 ✦5. 기록을 지우면 그 크레딧도 되돌아가요.</p>
+                <p style="font-size:12.5px;color:#334155;margin:0 0 8px">🛋️ 3D 매장의 <b>가게 꾸미기</b>에서 쓸 수 있어요.</p>
+                <a href="./" style="display:block;text-align:center;height:44px;line-height:44px;border-radius:12px;background:#f97316;color:#fff;font-weight:800;font-size:14px;text-decoration:none">🛋️ 3D 매장에서 꾸미기</a>
+                <div style="font-size:12px;font-weight:800;color:#64748b;margin:14px 0 2px">최근 내역</div>
+                ${V28.logs === null ? '<p style="font-size:12.5px;color:#94a3b8;padding:8px 0">불러오는 중…</p>' : V28.logs.length ? V28.logs.map(l => `<div style="${row}"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v28Esc(String(l.date || '').slice(5))} · ${v28Esc(v28LogName(l))}</span><b style="flex:none;color:${l.amount < 0 ? '#dc2626' : '#059669'}">${l.amount > 0 ? '+' : '−'}✦${Math.abs(Number(l.amount) || 0)}</b></div>`).join('') : '<p style="font-size:12.5px;color:#94a3b8;padding:8px 0">아직 내역이 없어요.</p>'}`; }
+        function v28Close() { V28.open = false; const m = document.getElementById('v28Modal'); if (m) m.remove(); }
+        function v28Open() { if (!v28Ok()) return; v28Close(); V28.open = true; V28.logs = null; const m = document.createElement('div'); m.id = 'v28Modal';
+            m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.45);display:flex;align-items:flex-end;justify-content:center';
+            m.innerHTML = '<div role="dialog" aria-label="크레딧 지갑" style="background:#fff;width:100%;max-width:420px;max-height:86vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px 22px;box-sizing:border-box"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><b style="font-size:16px">✦ 크레딧 지갑</b><button type="button" id="v28X" aria-label="닫기" style="width:36px;height:36px;border-radius:10px;background:#f1f5f9;font-size:15px">✕</button></div><div id="v28Body"></div></div>';
+            m.addEventListener('click', e => { if (e.target === m || e.target.closest('#v28X')) v28Close(); }); document.body.appendChild(m); v28Paint();
+            const uid = currentUser.uid; try { window.getDocs(window.query(v27Raw.collection(window.firebaseDb, 'users', uid, 'wallet_log'), window.orderBy('createdAt', 'desc'), window.limit(5))).then(sn => { if (V28.uid !== uid) return; const L = []; sn.forEach(x => L.push(x.data() || {})); V28.logs = L; v28Paint(); }).catch(() => { V28.logs = []; v28Paint(); }); } catch (e) { V28.logs = []; v28Paint(); } }
+        function v28Stop() { V28.unsubs.forEach(u => { try { u(); } catch (e) {} }); V28.unsubs = []; V28.uid = null; V28.bal = 0; V28.daily = null; V28.logs = null; V28.done = new Set(); v28Close(); v28Chip(); }
+        function v28Start() { const uid = currentUser.uid; V28.uid = uid; V28.bal = 0; V28.daily = null; V28.done = new Set();
+            try { V28.unsubs.push(window.onSnapshot(v28Ref('wallet', 'main'), sn => { if (V28.uid !== uid) return; V28.bal = sn.exists() ? (Number((sn.data() || {}).balance) || 0) : 0; v28Paint(); }, () => {}));
+                V28.unsubs.push(window.onSnapshot(v28Ref('wallet', 'daily'), sn => { if (V28.uid !== uid) return; V28.daily = sn.exists() ? (sn.data() || null) : null; v28Paint(); }, () => {})); } catch (e) { console.warn('[wallet] 구독 실패', e && e.message); }
+            walletApply({ logId: 'welcome:v1', amount: 50, reason: 'welcome', refId: 'v1', source: 'business' }).catch(e => console.warn('[wallet] welcome 실패', e && e.message)); v28Chip(); }
+        function v28Sync() { try { if (v28Ok()) { if (V28.uid !== currentUser.uid) { if (V28.uid) v28Stop(); v28Start(); } else v28Chip(); } else if (V28.uid) v28Stop(); else v28Chip(); } catch (e) { console.warn('[wallet]', e && e.message); } }
+        const v28Prev = { load: loadUserDataFromCloud, apply: applyStoreConfigUI };
+        loadUserDataFromCloud = async function () { v28Sync(); return v28Prev.load.apply(this, arguments); };
+        applyStoreConfigUI = function () { const r = v28Prev.apply.apply(this, arguments); v28Sync(); return r; };
+        (function v28Wait(n) { if (typeof window.onAuthStateChanged === 'function' && window.firebaseAuth) { try { window.onAuthStateChanged(window.firebaseAuth, () => setTimeout(v28Sync, 0)); } catch (e) {} } else if (n < 100) setTimeout(() => v28Wait(n + 1), 200); })(0);
     </script>
 </body>
 </html>
