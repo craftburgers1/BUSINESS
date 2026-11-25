@@ -559,7 +559,7 @@ const MODES = {
       owner: ['🙋', '우리집', '말 걸기', '우리집'], staff: ['🗓️', '가족 일정 보드', '일정·알림 보기', '일정']
     }
   },
-  pocket: { // 📒 용돈기입장(v24): 주부·가정 방을 재사용하는 심플 모드. 여기 없는 항목(fridge·ledger·supply)은 숨김 · v27 부터 AI 비서·용돈 도우미는 보임
+  pocket: { // 📒 용돈기입장(v24): 주부·가정 방을 재사용하는 심플 모드. 여기 없는 항목(fridge·ledger·supply)은 숨김 · v27 부터 AI 비서·용돈 도우미, v27.1 부터 오락실·장보기 TV 도 보임
     icon: '📒', label: '용돈냥이', short: '용돈', face: '🐷', boss: '내 지갑',
     hud: ['들어온 돈', '나간 돈', '남은 돈'], inc: '들어온 돈', incAcc: '들어온 돈', varW: '나간 돈', varAcc: '지출', varTotal: '나간 돈', fixW: '고정 지출', netW: '남은 돈',
     channels: ['용돈', '아르바이트', '기타'], quickVar: ['간식', '학용품', '장난감', '교통', '식비', '선물'],
@@ -4203,7 +4203,7 @@ legalNotice(0);
 /* ---- 📒 용돈기입장(pocket) 심플 모드 (v24) ----
    주부·가정 방(home)을 그대로 쓰되 들어온 돈·나간 돈·모으기 목표만 남긴다. 안에서는 MODE='home' + POCKET=true.
    장부(Firestore ledger)는 건드리지 않는다. 3D 용돈기입장의 기록은 가정 방과 같이 이 기기의 체험 데이터. */
-const PK_HIDE = ['fridge', 'supply', 'ledger', 'arcade', 'shop'];
+const PK_HIDE = ['fridge', 'supply', 'ledger']; // v27.1: 오락실 문·장보기 TV 는 다른 방처럼 왼쪽 벽에 보인다
 const PK_2D = '2d.html?mode=pocket';
 const pkLive = () => !!(REAL.on && REAL.status === 'ok' && REAL.db && FSm && fbAuth && fbAuth.currentUser && fbAuth.currentUser.uid === REAL.uid);
 function pocketSample() { const k = kst(), day = n => `${k.ym}-${String(Math.max(1, k.d - n)).padStart(2, '0')}`;
@@ -4227,7 +4227,7 @@ function pkLeft() { const k = kst(); return Math.max(1, new Date(Date.UTC(k.y, k
 function pkGoalCheck() { if (!G.s) return; const g = pkGoal(), k = kst(); if (g.g > 0 && month().net >= g.g && G.s.pGoalHit !== k.ym) { G.s.pGoalHit = k.ym; gReward(100, 50, `🐷 ${k.m}월 모으기 목표 달성! +100 🪙`, true); } }
 const _gGoalCheck_pk = gGoalCheck; gGoalCheck = function () { if (POCKET) return pkGoalCheck(); return _gGoalCheck_pk(); };
 const _gQuests_pk = gQuests; gQuests = function () { const q = _gQuests_pk(); if (POCKET) q.forEach(x => { if (x.id === 'brief') x.txt = '저금통 목표 확인하기'; }); return q; };
-const _adSync_pk = adSync; adSync = function () { if (POCKET) { smAd.hidden = true; return; } _adSync_pk(); }; // 용돈기입장에는 광고를 띄우지 않음
+const _adSync_pk = adSync; adSync = function () { if (POCKET && smOpen !== 'shop') { smAd.hidden = true; return; } _adSync_pk(); }; // 용돈냥이에서는 장보기 TV 창에서만 광고를 띄운다
 
 // 🐷 돼지 저금통(금고 자리)
 const piggy = new THREE.Group(); piggy.position.set(-0.45, COUNTER_TOP, -0.33); piggy.rotation.y = -Math.PI / 2 + 0.45; piggy.visible = false; scene.add(piggy);
@@ -4602,7 +4602,7 @@ POCKET_TOUR = function () { return [
 const _renderMe_27 = renderMe;
 renderMe = function () { _renderMe_27(); if (!POCKET) return; const m = smBody.querySelector('.rows.manual'); if (!m) return;
   const row = (x, y) => `<div class="row"><div class="l"><b>${x}</b></div><span class="d" style="text-align:right">${y}</span></div>`;
-  const rs = m.querySelectorAll('.row'); if (rs[2]) rs[2].insertAdjacentHTML('afterend', row('💼 알바비 보드', '일한 곳·시급·시간 적기 · 이번 달 받을 알바비') + row('🤖 AI 비서 · 🧑‍💼 용돈 도우미', '이번 달 요약 · 피클 안내 · 절약 팁'));
+  const rs = m.querySelectorAll('.row'); if (rs[2]) rs[2].insertAdjacentHTML('afterend', row('💼 알바비 보드', '일한 곳·시급·시간 적기 · 이번 달 받을 알바비') + row('🤖 AI 비서 · 🧑‍💼 용돈 도우미', '이번 달 요약 · 피클 안내 · 절약 팁') + row('🕹️ 왼쪽 벽 오락실 · 🛒 TV', '스트레스 해소 게임 2종 · 장보기(쿠팡 파트너스 광고)'));
   const last = m.lastElementChild; if (last) last.outerHTML = row('📊 2D 버튼', '글자로 보는 용돈냥이 · 로그인하면 같은 장부'); };
 // 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
 const _applyCam_far = applyCam;
