@@ -4434,6 +4434,76 @@
             if (a === 'paid' && b.dataset.bid) { const P = v29Paid(), id = b.dataset.bid; if (P[id]) delete P[id]; else P[id] = 1; v29Set(V29_PAID_KEY, JSON.stringify(P)); v29Rerender(); return; } });
         if (v29Get(V29_STORE_KEY)) v29Init();
         /* ==== V29_BOSS_LINK_END ==== */
+        /* ==== V30_HOME_BEGIN: 🏠 처음 화면(큰 버튼) — 누르면 그 기능만 보인다. 기존 화면·기능은 그대로 두고 '가리기'만 한다 ==== */
+        (function () {
+            const main = document.querySelector('main'); if (!main || document.getElementById('v30Menu')) return;
+            const $ = id => document.getElementById(id), secOf = id => { const e = $(id); return e ? e.closest('main > *') : null; };
+            const VIEWS = { entry: '✍️ 적기', history: '📋 내역', chart: '📊 지출 분석', goal: '🐷 모으기 목표', alba: '💼 내 알바비' };
+            const css = document.createElement('style'); css.id = 'v30Style';
+            css.textContent = 'main[data-v30-view]:not([data-v30-probe])>[data-v30-part="tool"]{display:none!important}' +
+                ['home'].concat(Object.keys(VIEWS)).map(v => 'main[data-v30-view="' + v + '"]:not([data-v30-probe])>[data-v30-part]:not([data-v30-part="' + v + '"]):not([data-v30-part="always"]){display:none!important}').join('') +
+                'main[data-v30-view="home"]>#v30Bar{display:none!important}#v30Menu button{-webkit-tap-highlight-color:transparent}#v30Menu button:active{transform:scale(.98)}';
+            document.head.appendChild(css);
+            function tag() { const set = (el, p) => { if (el && el.parentNode === main && !el.dataset.v30Part) el.dataset.v30Part = p; };
+                ['manualBtn', 'decoRow', 'ledgerRow', 'receiptBoxBtn'].forEach(i => set($(i), 'tool'));
+                const filt = secOf('syncStatusText'); set(filt, 'always'); if (filt && filt.nextElementSibling && filt.nextElementSibling.matches('section.grid')) set(filt.nextElementSibling, 'home');
+                set($('personalSpendLine'), 'home'); set($('v24GoalCard'), 'goal'); set($('v27JobCard'), 'alba');
+                set(secOf('form-container'), 'entry'); set(secOf('chartTitle'), 'chart'); set(secOf('history-container'), 'history');
+                set(main.querySelector(':scope > section.bg-gradient-to-br'), 'home'); }
+            // 위쪽 막대: ← 처음 화면
+            const bar = document.createElement('div'); bar.id = 'v30Bar'; bar.dataset.v30Part = 'always'; bar.className = 'sticky z-20 flex items-center gap-2 bg-white/95 backdrop-blur border border-slate-200 rounded-2xl shadow-sm px-2 py-1.5';
+            bar.innerHTML = '<button type="button" data-v30-go="home" class="min-h-[44px] px-3.5 rounded-xl bg-slate-900 text-white text-xs font-bold shrink-0">← 처음 화면</button><b id="v30BarTitle" class="text-sm text-slate-800 min-w-0 truncate"></b>';
+            main.insertBefore(bar, main.firstChild);
+            // 처음 화면 메뉴
+            const menu = document.createElement('section'); menu.id = 'v30Menu'; menu.dataset.v30Part = 'home'; menu.className = 'space-y-2.5';
+            const BIG = 'min-h-[84px] rounded-2xl bg-white border border-slate-200 shadow-sm px-3.5 py-3 text-left flex flex-col justify-center gap-0.5 min-w-0', SMALL = 'min-h-[52px] rounded-2xl bg-white border border-slate-200 text-slate-700 text-xs font-bold px-1 break-keep';
+            const ITEMS = [['cal', '📅', '달력 보기', '날짜별로 한눈에'], ['list', '📋', '내역 목록', ''], ['chart', '📊', '지출 분석', '어디에 많이 썼나'], ['goal', '🐷', '모으기 목표', '얼마나 모았나'], ['alba', '💼', '내 알바비', ''],
+                ['receipt', '🧾', '영수증함', ''], ['pickle', '🤖', 'AI 자동 입력', '영수증 사진으로 적기'], ['ledger', '📒', '복식장부', '세무용 장부 보기'], ['hometax', '📥', '홈택스 업로드', '홈택스 자료 넣기']];
+            menu.innerHTML = '<p class="text-xs font-bold text-slate-500 px-1">무엇을 할까요?</p><div id="v30Quick" class="grid gap-2.5"></div><div id="v30Grid" class="grid grid-cols-2 gap-2.5">' +
+                ITEMS.map(x => '<button type="button" data-v30-go="' + x[0] + '" class="' + BIG + '"><span class="text-2xl leading-none">' + x[1] + '</span><span class="text-sm font-bold text-slate-900 break-keep">' + x[2] + '</span><span data-v30-sub class="text-[11px] text-slate-500 truncate w-full">' + x[3] + '</span></button>').join('') + '</div>' +
+                '<div id="v30Small" class="grid grid-cols-3 gap-2">' + [['deco', '🎨 꾸미기'], ['install', '📲 홈 화면 추가'], ['manual', '📖 사용설명서']].map(x => '<button type="button" data-v30-go="' + x[0] + '" class="' + SMALL + '">' + x[1] + '</button>').join('') + '</div>';
+            const btn = k => menu.querySelector('[data-v30-go="' + k + '"]'), sub = (k, t) => { const b = btn(k), s = b && b.querySelector('[data-v30-sub]'); if (s && s.textContent !== t) s.textContent = t; };
+            const PROXY = { receipt: 'receiptBoxBtn', pickle: 'pickleGuideBtn', ledger: 'ledgerBtn', hometax: 'hometaxBtn', deco: 'decoBtn', install: 'installBtn', manual: 'manualBtn' };
+            function place() { if (menu.parentNode === main) return; const ref = $('personalSpendLine') || (secOf('syncStatusText') || bar).nextElementSibling; if (ref && ref.parentNode === main) main.insertBefore(menu, ref.nextSibling); else main.insertBefore(menu, bar.nextSibling); }
+            let queued = false, quickKey = '';
+            function sync() { queued = false; tag(); place();
+                main.dataset.v30Probe = '1'; // 잠깐 '가리기'를 끄고, 원래 화면에서 보이는 것만 버튼으로 낸다(모드·체험·권한에 따라 자동)
+                const V = el => !!el && el.getClientRects().length > 0, show = {}, tabs = [];
+                document.querySelectorAll('.tab-btn').forEach(b => { if (V(b) && /^tab-/.test(b.id)) tabs.push([b.id.slice(4), b.textContent.replace(/\s+/g, ' ').trim()]); });
+                const hist = V(secOf('history-container')); show.cal = hist; show.list = hist; show.chart = V(secOf('chartTitle')); show.goal = V($('v24GoalCard')); show.alba = V($('v27JobCard'));
+                Object.keys(PROXY).forEach(k => { show[k] = V($(PROXY[k])); });
+                delete main.dataset.v30Probe;
+                Object.keys(show).forEach(k => { const b = btn(k); if (b) b.classList.toggle('hidden', !show[k]); });
+                const key = JSON.stringify(tabs); if (key !== quickKey) { quickKey = key; const q = $('v30Quick'); q.style.gridTemplateColumns = 'repeat(' + Math.max(1, Math.min(tabs.length, 3)) + ',minmax(0,1fr))'; q.classList.toggle('hidden', !tabs.length);
+                    q.innerHTML = tabs.map(t => '<button type="button" data-v30-tab="' + t[0] + '" class="min-h-[72px] rounded-2xl text-white font-bold px-2 shadow-md break-keep ' + (tabs.length > 2 ? 'text-xs ' : 'text-sm ') + (t[0] === 'sales' ? 'bg-blue-600' : t[0] === 'fixed' ? 'bg-slate-700' : 'bg-rose-500') + '"><span class="block text-xl leading-none mb-1">' + (t[0] === 'sales' ? '＋' : '－') + '</span>' + v24Esc(t[1]) + '</button>').join(''); }
+                const hc = $('historyCount'); sub('list', hc ? '이번 기간 ' + hc.textContent.trim() : ''); const rb = $('receiptBoxBtn'), rt = rb ? rb.textContent.replace(/\s+/g, ' ').trim() : ''; sub('receipt', rt.indexOf('·') >= 0 ? rt.split('·').pop().trim() : '모아 보기');
+                const at = $('v27Total'); sub('alba', at ? '이번 달 ' + at.textContent.trim() : '받을 돈 계산');
+                $('v30Small').classList.toggle('hidden', !(show.deco || show.install || show.manual));
+                const cur = main.dataset.v30View; if (cur !== 'home' && VIEWS[cur]) { const p = main.querySelector(':scope > [data-v30-part="' + cur + '"]'); if (!p) setView('home'); } }
+            const queue = () => { if (queued) return; queued = true; (window.requestAnimationFrame || setTimeout)(sync); };
+            function setView(v, title) { main.dataset.v30View = v; $('v30BarTitle').textContent = title || VIEWS[v] || ''; const hd = document.querySelector('header'); bar.style.top = ((hd ? hd.offsetHeight : 0) + 6) + 'px'; window.scrollTo(0, 0); }
+            function open(v, title, fn) { const was = main.dataset.v30View; setView(v, title); try { if (fn) fn(); } catch (e) {}
+                try { if (was === 'home') history.pushState({ v30: v }, ''); else history.replaceState({ v30: v }, ''); } catch (e) {} queue(); }
+            function goHome(fromPop) { if (main.dataset.v30View === 'home') return; if (!fromPop) { try { if (history.state && history.state.v30) { history.back(); return; } } catch (e) {} } setView('home'); queue(); }
+            window.addEventListener('popstate', () => goHome(true));
+            const call = (name, a) => { try { if (typeof window[name] === 'function') window[name](a); } catch (e) {} };
+            main.addEventListener('click', e => { const b = e.target.closest ? e.target.closest('button[data-v30-go],button[data-v30-tab]') : null; if (!b) return;
+                if (b.dataset.v30Tab) { const t = b.dataset.v30Tab; return open('entry', b.textContent.replace(/[＋－]/g, '').replace(/\s+/g, ' ').trim(), () => call('switchTab', t)); }
+                const k = b.dataset.v30Go; if (k === 'home') return goHome();
+                if (PROXY[k]) { const o = $(PROXY[k]); if (o) o.click(); return; }
+                if (k === 'cal') return open('history', '📅 달력 보기', () => call('switchHistoryView', 'calendar'));
+                if (k === 'list') return open('history', '📋 내역 목록', () => call('switchHistoryView', 'list'));
+                if (k === 'chart') return open('chart', null, () => call('renderDashboard'));   // 가려진 동안 0 크기였던 그래프를 다시 그린다
+                if (k === 'alba') return open('alba', null, () => { if (typeof v27S === 'object' && !v27S.open) { v27S.open = true; v27Render(); } });
+                if (VIEWS[k]) return open(k); });
+            // 화면이 바뀔 때(모드 전환·로그인·기록 추가)마다 버튼과 숫자를 다시 맞춘다
+            try { new MutationObserver(queue).observe(main, { childList: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] }); } catch (e) {}
+            try { const v30PrevDash = renderDashboard; renderDashboard = function () { const r = v30PrevDash.apply(this, arguments); queue(); return r; }; } catch (e) {}
+            try { const v30PrevJobs = v27Render; v27Render = function () { const r = v30PrevJobs.apply(this, arguments); queue(); return r; }; } catch (e) {}
+            window.addEventListener('resize', () => { if (main.dataset.v30View !== 'home') { const hd = document.querySelector('header'); bar.style.top = ((hd ? hd.offsetHeight : 0) + 6) + 'px'; } });
+            main.dataset.v30View = 'home'; sync(); setTimeout(sync, 800); setTimeout(sync, 2500);
+        })();
+        /* ==== V30_HOME_END ==== */
     </script>
 </body>
 </html>
