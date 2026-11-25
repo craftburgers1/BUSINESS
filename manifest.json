@@ -1,6 +1,6 @@
 {
-  "name": "솔로운영 가계부",
-  "short_name": "솔로운영",
+  "name": "용돈냥이",
+  "short_name": "용돈냥이",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

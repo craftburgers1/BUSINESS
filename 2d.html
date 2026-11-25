@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>솔로운영 가계부 - 손익/수입지출 관리</title>
+    <title>용돈냥이 - 용돈기입장 · 가계부</title>
     
     <!-- iOS & PWA Settings -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <!-- v18: 📲 홈 화면에 앱 추가(PWA) -->
     <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-title" content="솔로운영">
+    <meta name="apple-mobile-web-app-title" content="용돈냥이">
     <!-- v18: 꾸미기 폰트(손글씨체 Gaegu · 둥근체 Jua). 화면을 막지 않게 늦게 적용, 실패하면 Pretendard -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap" media="print" onload="this.media='all'">
@@ -184,7 +184,7 @@
                 📈
             </div>
             <div>
-                <h2 class="text-xl font-bold text-slate-900">솔로운영 가계부 시작하기 <span class="align-middle text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">BETA</span></h2>
+                <h2 class="text-xl font-bold text-slate-900">용돈냥이 시작하기 <span class="align-middle text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full">BETA</span></h2>
                 <p class="text-[10px] text-amber-700 mt-1 break-keep">🧪 베타(시험 운영) 버전이에요. 기능이 바뀌거나 오류가 있을 수 있어요. 중요한 장부는 엑셀·구글 시트로도 내보내 두세요.</p>
                 <p class="text-xs text-slate-500 mt-1">로그인하시면 어느 기기에서나 사장님/개인 전용 데이터가 실시간 연동됩니다.</p>
             </div>
@@ -390,6 +390,10 @@
                 <div>
                     <label class="text-xs font-semibold text-slate-700 mb-1 block">업종 / 용도 템플릿 선택</label>
                     <select id="setupIndustry" class="w-full text-xs rounded-xl p-3 border border-slate-300">
+                        <optgroup label="🐱 용돈냥이 — 무료">
+                        <option value="pocket">📒 용돈기입장 (초등학생·누구나 쉽게)</option>
+                        </optgroup>
+                        <optgroup label="🏪 용돈냥이 PRO — 가게·가정용 (지금은 무료 베타)">
                         <option value="home">🏠 일반가정 / 개인 가계부</option>
                         <option value="korean">🍱 한식 / 정식 / 식당</option>
                         <option value="western">🍝 양식 / 파스타 / 버거</option>
@@ -399,6 +403,7 @@
                         <option value="hof">🍺 호프집 / 주점 / 포차</option>
                         <option value="cafe">☕ 카페 / 디저트 / 베이커리</option>
                         <option value="general">✂️ 미용 / 뷰티 / 일반 자영업</option>
+                        </optgroup>
                     </select>
                 </div>
                 <button onclick="saveStoreOnboarding()" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-md transition mt-2">
@@ -471,7 +476,7 @@
     <div id="manualModal" onclick="if (event.target === this) closeManualModal()" role="dialog" aria-modal="true" aria-labelledby="manualTitle" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
         <div class="ios-card bg-white w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2.5">
-                <h3 id="manualTitle" class="text-sm font-bold text-slate-900">📖 솔로운영 가계부 사용설명서</h3>
+                <h3 id="manualTitle" class="text-sm font-bold text-slate-900">📖 용돈냥이 사용설명서</h3>
                 <button type="button" onclick="closeManualModal()" aria-label="닫기" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
 
@@ -672,7 +677,7 @@
             </div>
             <div class="max-sm:min-w-0">
                 <div class="flex items-center gap-1.5">
-                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight max-sm:truncate">솔로운영</h1>
+                    <h1 id="displayStoreName" class="text-base font-bold text-slate-900 leading-tight max-sm:truncate">용돈냥이</h1>
                     <i class="fa-solid fa-pen text-[10px] text-slate-400"></i>
                 </div>
                 <p id="displayIndustry" class="text-xs text-slate-500 max-sm:truncate">클릭하여 명칭/용도 변경</p>
@@ -886,7 +891,7 @@
             <p class="text-[10px] text-slate-400">
                 이 포스팅/배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
             </p>
-            <p class="text-[10px] text-slate-300">© 솔로운영. All rights reserved.</p>
+            <p class="text-[10px] text-slate-300">© 용돈냥이. All rights reserved.</p>
         </footer>
 
     </main>
@@ -901,9 +906,9 @@
         const PICKLE_INVITE_URL = 'https://pickle.com'; // v6: 피클 초대 링크. 빈 문자열('')이면 1단계 버튼 대신 안내 문구가 나옵니다.
         const PICKLE_STORE_URL_ANDROID = 'https://play.google.com/store/apps/details?id=com.pickle.client'; // v9: 안드로이드(Play 스토어)
         const PICKLE_STORE_URL_IOS = 'https://apps.apple.com/kr/app/id6795790129'; // v9: 아이폰·아이패드(App Store). PC·기타는 PICKLE_INVITE_URL
-        const PICKLE_MESSAGE = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v6: 2단계 복사 문장
-        const PICKLE_MESSAGE_RESTAURANT = '내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v8: 식당·카페 토글 체크 시 문장
-        const PICKLE_FULL_ROUTINE_PROMPT = '너는 내 매장 전담 비서야. 내 솔로운영 가계부(https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle)와 근태관리(https://craftburgers1.github.io/craftburger/)를 연결해 두고 아래 자동화를 맡아 줘.\n\n[진행 순서]\n1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 \'이 앱들과 너를 연결하면 내 가게 운영이 구체적으로 어떻게 편해지는지\' 쉽고 상세하게 먼저 브리핑해 줘.\n2단계(확인 후 연결): 내가 좋다고 하면 그때부터 가계부·근태앱·배달앱·쇼핑몰을 하나씩 차근차근 연결하자.\n\n[세팅할 자동화 루틴 4가지]\n1. 매일 새벽 3시: 포스·배달앱(배민·쿠팡이츠·요기요·땡겨요) 전날 매출만 가계부에 자동 기록 (수수료·배달비는 매일 넣으면 정산이 안 맞으니 매월 1일 월말 정산내역서 기준으로 한 번에 정리)\n2. 매일 자정: 배민·쿠팡이츠·네이버 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)\n3. 지출 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력\n4. 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.'; // v12: 자영업자 풀세팅 루틴 프롬프트(선 브리핑 → 확인 후 연결)
+        const PICKLE_MESSAGE = '내 용돈냥이 PRO 가계부(https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v6: 2단계 복사 문장
+        const PICKLE_MESSAGE_RESTAURANT = '내 용돈냥이 PRO 가계부(https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle)에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.'; // v8: 식당·카페 토글 체크 시 문장
+        const PICKLE_FULL_ROUTINE_PROMPT = '너는 내 매장 전담 비서야. 내 용돈냥이 PRO 가계부(https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle)와 근태관리(https://craftburgers1.github.io/craftburger/)를 연결해 두고 아래 자동화를 맡아 줘.\n\n[진행 순서]\n1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 \'이 앱들과 너를 연결하면 내 가게 운영이 구체적으로 어떻게 편해지는지\' 쉽고 상세하게 먼저 브리핑해 줘.\n2단계(확인 후 연결): 내가 좋다고 하면 그때부터 가계부·근태앱·배달앱·쇼핑몰을 하나씩 차근차근 연결하자.\n\n[세팅할 자동화 루틴 4가지]\n1. 매일 새벽 3시: 포스·배달앱(배민·쿠팡이츠·요기요·땡겨요) 전날 매출만 가계부에 자동 기록 (수수료·배달비는 매일 넣으면 정산이 안 맞으니 매월 1일 월말 정산내역서 기준으로 한 번에 정리)\n2. 매일 자정: 배민·쿠팡이츠·네이버 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)\n3. 지출 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력\n4. 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.'; // v12: 자영업자 풀세팅 루틴 프롬프트(선 브리핑 → 확인 후 연결)
         let currentUser = null;
         let storeConfig = null;
         let dbData = [];
@@ -1289,6 +1294,12 @@
             }
 
             const industryTemplates = {
+                pocket: { // v24: 📒 용돈기입장 심플 모드
+                    icon: '📒', name: '용돈기입장',
+                    sales: ['용돈', '아르바이트', '기타 수입'],
+                    fixed: ['저축', '통신비', '구독료'],
+                    variable: ['간식', '학식·식비', '학용품', '교통', '장난감', '생활용품']
+                },
                 home: { 
                     icon: '🏠', name: '일반가정 / 개인 가계부', 
                     sales: ['월급 / 급여', '부수입 / 용돈', '금융 / 이자수익'],
@@ -1998,7 +2009,7 @@
         // 체험판은 메모리에서만 움직입니다. Firestore 읽기·쓰기·삭제를 하지 않습니다.
         const DEMO_TOAST_MSG = '체험판에서는 서버에 저장되지 않습니다';
         const DEMO_STORE_CONFIG = {
-            name: '솔로운영 체험 매장', industryKey: 'western', icon: '🍔', industryName: '양식 / 버거',
+            name: '용돈냥이 PRO 체험 매장', industryKey: 'western', icon: '🍔', industryName: '양식 / 버거',
             sales: ['홀 매출', '배민 매출', '쿠팡이츠 매출'],
             fixed: ['월세', '관리비', '통신비', '보험료', '인건비'],
             variable: ['식자재', '포장재', '소모품', '광고비', '배달앱 수수료']
@@ -2137,7 +2148,7 @@
             storeConfig = null;
             dbData = [];
             setDemoUi(false);
-            document.getElementById('displayStoreName').innerText = '솔로운영';
+            document.getElementById('displayStoreName').innerText = '용돈냥이';
             document.getElementById('displayIndustry').innerText = '클릭하여 명칭/용도 변경';
             ['dayDetailModal', 'categoryManageModal', 'boardModal', 'userInfoModal', 'manualModal', 'pickleGuideModal'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('hidden'); });
             currentActiveDetailDate = '';
@@ -3338,8 +3349,8 @@
             document.body.appendChild(a); a.click(); a.remove();
             setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         }
-        function v19DownloadJournal() { const L = v19BuildLedger(v19LedgerScope); v19Download(`솔로운영_분개장_${L.tag}`, v19JournalCsv(L)); }
-        function v19DownloadMonthly() { const L = v19BuildLedger(v19LedgerScope); v19Download(`솔로운영_월별요약_${L.tag}`, v19MonthlyCsv(L)); }
+        function v19DownloadJournal() { const L = v19BuildLedger(v19LedgerScope); v19Download(`용돈냥이PRO_분개장_${L.tag}`, v19JournalCsv(L)); }
+        function v19DownloadMonthly() { const L = v19BuildLedger(v19LedgerScope); v19Download(`용돈냥이PRO_월별요약_${L.tag}`, v19MonthlyCsv(L)); }
 
         // ---- 📒 복식장부 모달 ----
         function openLedgerModal() { renderLedgerModal(); document.getElementById('ledgerModal').classList.remove('hidden'); }
@@ -3450,7 +3461,7 @@
                 // v20: 세무사용 구성(요약·손익계산서·합계잔액시산표·분개장·계정별원장·거래처별 집계)을 시트 탭으로 나눈 구글 시트 1개
                 await window.SoloBook.load();
                 const folderId = await driveFindOrCreateFolder(token, '솔로운영_장부', '');
-                const n1 = await v19UniqueSheetName(token, folderId, `솔로운영_세무장부_${L.tag}`);
+                const n1 = await v19UniqueSheetName(token, folderId, `용돈냥이PRO_세무장부_${L.tag}`);
                 return window.SoloBook.uploadAsGoogleSheet((u, o) => driveFetch(u, o, token), folderId, n1, window.SoloBook.build(v20BookOpts(L)));
             };
             try {
@@ -3480,7 +3491,7 @@
         async function v20DownloadBook() {
             const btn = document.getElementById('ledgerXlsxBtn'); if (btn) btn.disabled = true;
             v19ExportMsg('⬇️ 엑셀 파일을 만드는 중…');
-            try { await window.SoloBook.load(); const L = v19BuildLedger(v19LedgerScope); window.SoloBook.download(window.SoloBook.build(v20BookOpts(L)), `솔로운영_세무장부_${L.tag}`); v19ExportMsg('✅ 엑셀 파일을 받았어요' + (isDemoMode ? ' (체험 데이터)' : '')); }
+            try { await window.SoloBook.load(); const L = v19BuildLedger(v19LedgerScope); window.SoloBook.download(window.SoloBook.build(v20BookOpts(L)), `용돈냥이PRO_세무장부_${L.tag}`); v19ExportMsg('✅ 엑셀 파일을 받았어요' + (isDemoMode ? ' (체험 데이터)' : '')); }
             catch (e) { v19ExportMsg('엑셀을 만들지 못했어요 (인터넷 연결을 확인하고 다시 눌러 주세요)'); }
             finally { if (btn) btn.disabled = false; }
         }
@@ -3870,6 +3881,153 @@
             }
             return v191OrigInstallApp();
         };
+
+        /* ===================== v24: 📒 용돈기입장(pocket) 심플 모드 =====================
+           업종이 '용돈기입장'이거나 주소에 ?mode=pocket 이 붙으면 사업자용 화면을 숨기고
+           들어온 돈 · 나간 돈 · 이번 달 모으기 목표만 보여 준다. ?mode=pocket 은 이번 화면만 바꾸고 저장된 설정은 그대로 둔다. */
+        let V24_URL_POCKET = /[?&]mode=pocket\b/.test(location.search);
+        const V24_GOAL_KEY = 'soloPocketGoal:demo';
+        function v24IsPocket() { return V24_URL_POCKET || !!(storeConfig && storeConfig.industryKey === 'pocket'); }
+        function v24Esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+        function v24SetText(el, txt) { if (!el) return; if (el.dataset.v24Orig === undefined) el.dataset.v24Orig = el.textContent; el.textContent = txt; }
+        function v24Reset(el) { if (el && el.dataset.v24Orig !== undefined) { el.textContent = el.dataset.v24Orig; delete el.dataset.v24Orig; } }
+        function v24Targets() {
+            const exp = document.getElementById('totalExpense');
+            return [[document.getElementById('labelSalesCard'), '들어온 돈'], [exp && exp.previousElementSibling, '나간 돈'], [document.getElementById('labelNetCard'), '남은 돈'],
+                [document.getElementById('tab-sales'), '들어온 돈 적기'], [document.getElementById('tab-fixed'), '고정 지출'], [document.getElementById('tab-variable'), '나간 돈 적기']];
+        }
+        function v24MonthNet() {
+            const k = getKstParts(), ym = k.year + '-' + String(k.month).padStart(2, '0'); let inc = 0, out = 0;
+            (dbData || []).forEach(i => { if (!String(i.date || '').startsWith(ym)) return; const a = Number(i.amount) || 0; if (i.type === 'sales') inc += a; else out += a; });
+            return { inc, out, net: inc - out, left: Math.max(1, new Date(k.year, k.month, 0).getDate() - k.day + 1), month: k.month };
+        }
+        function v24GoalGet() {
+            if (isDemoMode || !currentUser) { try { const v = JSON.parse(localStorage.getItem(V24_GOAL_KEY) || 'null'); if (v && typeof v === 'object') return { g: Math.max(0, Number(v.g) || 0), name: String(v.name || '').slice(0, 20) }; } catch (e) {} return isDemoMode ? { g: 50000, name: '자전거 사기' } : { g: 0, name: '' }; }
+            return { g: Math.max(0, Number(storeConfig && storeConfig.pocketGoal) || 0), name: String((storeConfig && storeConfig.pocketGoalName) || '').slice(0, 20) };
+        }
+        async function v24GoalSet(g, name) {
+            if (isDemoMode || !currentUser) { try { localStorage.setItem(V24_GOAL_KEY, JSON.stringify({ g, name })); } catch (e) {} if (isDemoMode) showDemoToast('체험판: 목표는 이 기기에만 잠깐 저장돼요'); }
+            else if (storeConfig) {
+                storeConfig.pocketGoal = g; storeConfig.pocketGoalName = name;
+                // 다른 설정은 그대로 두고 두 칸만 merge
+                try { await window.setDoc(window.doc(window.firebaseDb, "users", currentUser.uid, "settings", "config"), { pocketGoal: g, pocketGoalName: name }, { merge: true }); }
+                catch (e) { alert('목표를 저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.'); }
+            }
+            v24RenderGoal();
+        }
+        function v24EnsureDom() {
+            if (!document.getElementById('v24Style')) {
+                const st = document.createElement('style'); st.id = 'v24Style';
+                st.textContent = 'body.v24-pocket #ledgerRow,body.v24-pocket #staffAppExternalLink,body.v24-pocket #receiptBoxBtn,body.v24-pocket #scopeToggle,body.v24-pocket #personalSpendLine,body.v24-pocket .v24-margin{display:none!important}@media (max-width:639px){body.v24-pocket .v24-net{grid-column:span 2}}' +
+                    '#v24GoalCard .v24bar{height:12px;border-radius:999px;background:#f1f5f9;overflow:hidden}#v24GoalCard .v24bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#fbbf24,#f472b6);transition:width .4s}';
+                document.head.appendChild(st);
+            }
+            const mg = document.getElementById('labelMarginCard'); if (mg && mg.parentElement) mg.parentElement.classList.add('v24-margin');
+            const nt = document.getElementById('labelNetCard'); if (nt && nt.parentElement) nt.parentElement.classList.add('v24-net');
+            if (!document.getElementById('v24GoalCard')) {
+                const anchor = document.getElementById('personalSpendLine'); if (!anchor || !anchor.parentNode) return;
+                const note = document.createElement('div'); note.id = 'v24Banner'; note.className = 'hidden px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-[11px] font-semibold text-amber-800 break-keep';
+                note.innerHTML = '📒 용돈기입장 화면으로 보는 중 · <a href="2d.html" class="underline">원래 화면으로</a>';
+                const card = document.createElement('section'); card.id = 'v24GoalCard'; card.className = 'ios-card hidden';
+                anchor.parentNode.insertBefore(note, anchor.nextSibling); anchor.parentNode.insertBefore(card, note.nextSibling);
+                card.addEventListener('click', e => { const b = e.target.closest('button[data-v24]'); if (!b) return;
+                    if (b.dataset.v24 === 'edit') { card.dataset.edit = '1'; v24RenderGoal(); const i = document.getElementById('v24GoalAmount'); if (i) i.focus(); return; }
+                    if (b.dataset.v24 === 'cancel') { delete card.dataset.edit; v24RenderGoal(); return; }
+                    if (b.dataset.v24 === 'clear') { delete card.dataset.edit; v24GoalSet(0, ''); return; }
+                    if (b.dataset.v24 === 'save') { const g = Math.min(parseInt(String(document.getElementById('v24GoalAmount').value).replace(/[^0-9]/g, ''), 10) || 0, 1000000000), name = (document.getElementById('v24GoalName').value || '').trim().slice(0, 20);
+                        if (!g) { document.getElementById('v24GoalAmount').focus(); return; } delete card.dataset.edit; v24GoalSet(g, name); } });
+                card.addEventListener('input', e => { if (e.target.id !== 'v24GoalAmount') return; const d = String(e.target.value).replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '').slice(0, 10); e.target.value = d ? Number(d).toLocaleString() : ''; });
+            }
+        }
+        function v24RenderGoal() {
+            const card = document.getElementById('v24GoalCard'); if (!card) return;
+            const m = v24MonthNet(), gl = v24GoalGet(), p = gl.g ? Math.max(0, Math.min(100, m.net / gl.g * 100)) : 0, need = Math.max(0, gl.g - m.net), edit = card.dataset.edit === '1' || !gl.g;
+            let h = '<div class="flex items-center justify-between gap-2"><p class="text-sm font-bold text-slate-900 break-keep">🐷 ' + v24Esc(gl.name || (m.month + '월 모으기 목표')) + '</p>' + (gl.g && !edit ? '<button type="button" data-v24="edit" class="shrink-0 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-bold">목표 바꾸기</button>' : '') + '</div>';
+            if (gl.g) h += '<div class="v24bar mt-2"><i id="v24GoalBar" style="width:' + p + '%"></i></div><p class="text-xs text-slate-600 mt-2 break-keep"><b id="v24GoalNow" class="text-slate-900">' + m.net.toLocaleString() + '원</b> / ' + gl.g.toLocaleString() + '원 (<b id="v24GoalPct">' + p.toFixed(0) + '%</b>) · ' + (need <= 0 ? '목표 달성! 🎉' : '남은 ' + m.left + '일 동안 하루 <b>' + Math.ceil(need / m.left).toLocaleString() + '원</b>씩 모으면 돼요') + '</p>';
+            else h += '<p class="text-xs text-slate-500 mt-1 break-keep">이번 달에 모으고 싶은 돈을 정하면, 지금 얼마나 모았는지 보여 드려요.</p>';
+            if (edit) h += '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3"><input id="v24GoalName" type="text" maxlength="20" placeholder="무엇을 위해? 예: 자전거 사기" value="' + v24Esc(gl.name) + '" class="w-full text-xs rounded-xl p-2.5 border border-slate-300"><input id="v24GoalAmount" type="text" inputmode="numeric" maxlength="13" placeholder="얼마를 모을까요? 예: 50,000" value="' + (gl.g ? gl.g.toLocaleString() : '') + '" class="w-full text-xs rounded-xl p-2.5 border border-slate-300"></div>' +
+                '<div class="flex gap-2 mt-2"><button type="button" data-v24="save" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold">정하기</button>' + (gl.g ? '<button type="button" data-v24="clear" class="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold">지우기</button><button type="button" data-v24="cancel" class="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold">취소</button>' : '') + '</div>';
+            h += '<p class="text-[11px] text-slate-400 mt-2 break-keep">남은 돈 = 이번 달 들어온 돈 − 나간 돈</p>';
+            card.innerHTML = h;
+        }
+        function v24Apply() {
+            v24EnsureDom();
+            const on = v24IsPocket();
+            document.body.classList.toggle('v24-pocket', on);
+            v24Targets().forEach(([el, txt]) => { if (on) v24SetText(el, txt); else v24Reset(el); });
+            const link = document.getElementById('solo3dLink'); if (link) link.setAttribute('href', on ? './?mode=pocket' : './');
+            const banner = document.getElementById('v24Banner'); if (banner) banner.classList.toggle('hidden', !(on && V24_URL_POCKET && !(storeConfig && storeConfig.industryKey === 'pocket')));
+            const card = document.getElementById('v24GoalCard'); if (card) { card.classList.toggle('hidden', !on); if (on) v24RenderGoal(); }
+            if (on && typeof v17SetScope === 'function' && typeof v17CurrentScope !== 'undefined' && v17CurrentScope !== V17_SCOPE_STORE) v17SetScope(V17_SCOPE_STORE);
+        }
+        const v24Orig = { applyStoreConfigUI, renderDashboard, startDemoMode };
+        applyStoreConfigUI = function () { const r = v24Orig.applyStoreConfigUI.apply(this, arguments); try { v24Apply(); } catch (e) {} return r; };
+        renderDashboard = function () { const r = v24Orig.renderDashboard.apply(this, arguments); try { v24Apply(); } catch (e) {} return r; };
+        // 체험판을 ?mode=pocket 으로 열면 가게 샘플 대신 용돈기입장 샘플(메모리에서만, 서버에 쓰지 않음)
+        startDemoMode = function () {
+            try { localStorage.removeItem(V24_GOAL_KEY); } catch (e) {}
+            const r = v24Orig.startDemoMode.apply(this, arguments);
+            if (V24_URL_POCKET || v25DemoPocket) {
+                const k = getKstParts(), day = n => k.year + '-' + String(k.month).padStart(2, '0') + '-' + String(Math.max(1, k.day - n)).padStart(2, '0');
+                storeConfig = { name: '용돈냥이', industryKey: 'pocket', icon: '📒', industryName: '용돈기입장', sales: ['용돈', '아르바이트', '기타 수입'], fixed: ['저축', '통신비', '구독료'], variable: ['간식', '학식·식비', '학용품', '교통', '장난감', '생활용품'] };
+                dbData = [['sales', 6, '용돈', 30000, '이번 달 용돈'], ['sales', 2, '아르바이트', 12000, '심부름'], ['variable', 4, '간식', 2500, '떡볶이'], ['variable', 3, '학용품', 4800, '공책·펜'], ['variable', 1, '교통', 3000, '버스']]
+                    .map(([type, n, category, amount, memo], i) => ({ id: 'demo-pk' + i, type, date: day(n), category, amount, memo }));
+                applyStoreConfigUI(); switchTab('sales'); renderDashboard();
+            }
+            return r;
+        };
+        try { v24Apply(); } catch (e) {}
+
+        /* ===================== v25: 🐱 브랜드 — 용돈냥이(무료) / 용돈냥이 PRO =====================
+           잠금·결제 화면은 없다. 체험판은 용돈냥이(용돈기입장)와 용돈냥이 PRO(가게 장부) 둘 다 로그인 없이 열린다.
+           처음 온 사람의 체험판은 용돈냥이로 시작하고, 주소에 ?mode=pro 가 있으면 PRO 로 시작한다. 저장된 내 설정은 그대로. */
+        const V25_URL_PRO = /[?&]mode=pro\b/.test(location.search);
+        let v25DemoPocket = false;
+        function v25StartDemo(kind) {
+            const pocket = kind ? kind === 'pocket' : !V25_URL_PRO;
+            v25DemoPocket = pocket; if (!pocket) V24_URL_POCKET = false;
+            return v25Prev.startDemoMode();
+        }
+        function v25EnsureDom() {
+            const btn = document.getElementById('btnDemoMode');
+            if (btn && !document.getElementById('btnDemoPro')) {
+                btn.textContent = '🐱 용돈냥이 체험 — 용돈기입장 (로그인 없이)';
+                const pro = document.createElement('button'); pro.type = 'button'; pro.id = 'btnDemoPro';
+                pro.className = 'w-full py-3 px-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition';
+                pro.textContent = '🏪 용돈냥이 PRO 체험 — 가게 장부 (로그인 없이)';
+                pro.addEventListener('click', () => startDemoMode('pro'));
+                const note = document.createElement('p'); note.id = 'v25BetaNote'; note.className = 'text-[10px] text-slate-500 text-center break-keep';
+                note.textContent = '🧪 지금은 무료 베타예요. 용돈냥이도 용돈냥이 PRO도 로그인 없이 체험할 수 있어요.';
+                btn.parentNode.insertBefore(pro, btn.nextSibling); btn.parentNode.insertBefore(note, pro.nextSibling);
+            }
+            const ind = document.getElementById('displayIndustry');
+            if (ind && !document.getElementById('v25Tier')) {
+                const chip = document.createElement('span'); chip.id = 'v25Tier';
+                chip.className = 'hidden ml-1 align-middle text-[10px] font-extrabold px-1.5 py-0.5 rounded-full';
+                ind.parentNode.insertBefore(chip, ind.nextSibling);
+            }
+            const dl = document.getElementById('btnDemoLogin');
+            if (dl && !document.getElementById('v25DemoSwitch')) {
+                const sw = document.createElement('button'); sw.type = 'button'; sw.id = 'v25DemoSwitch';
+                sw.className = 'px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold whitespace-nowrap';
+                sw.addEventListener('click', () => startDemoMode(v24IsPocket() ? 'pro' : 'pocket'));
+                dl.parentNode.insertBefore(sw, dl);
+            }
+        }
+        function v25Apply() {
+            v25EnsureDom();
+            const on = !!storeConfig || isDemoMode, pocket = v24IsPocket();
+            const chip = document.getElementById('v25Tier');
+            if (chip) { chip.classList.toggle('hidden', !on); chip.textContent = pocket ? '무료' : 'PRO'; chip.title = pocket ? '용돈냥이 · 무료 기본 모드' : '용돈냥이 PRO · 가게·가정용 (지금은 무료 베타)';
+                chip.style.background = pocket ? '#dcfce7' : '#1e293b'; chip.style.color = pocket ? '#15803d' : '#fde68a'; }
+            const sw = document.getElementById('v25DemoSwitch'); if (sw) sw.textContent = pocket ? '🏪 PRO 체험 보기' : '🐱 용돈냥이 체험 보기';
+            const link = document.getElementById('solo3dLink'); if (link && !pocket) link.setAttribute('href', './?mode=pro');
+        }
+        const v25Prev = { applyStoreConfigUI, renderDashboard, startDemoMode };
+        applyStoreConfigUI = function () { const r = v25Prev.applyStoreConfigUI.apply(this, arguments); try { v25Apply(); } catch (e) {} return r; };
+        renderDashboard = function () { const r = v25Prev.renderDashboard.apply(this, arguments); try { v25Apply(); } catch (e) {} return r; };
+        startDemoMode = function (kind) { return v25StartDemo(kind); };
+        try { v25Apply(); } catch (e) {}
     </script>
 </body>
 </html>

@@ -1,9 +1,9 @@
-/* 솔로운영 가계부 — 이용약관 · 개인정보 처리방침 (2D·3D 공용, 한 곳에서만 고침)
+/* 용돈냥이 — 이용약관 · 개인정보 처리방침 (2D·3D 공용, 한 곳에서만 고침)
    window.SoloLegal = { version, notice, effective, html(kind) }  kind: 'terms' | 'privacy'
    ※ 운영자가 직접 작성한 문서이며 변호사 검토 전입니다. 문구를 바꾸면 version·공고일을 함께 올리세요. */
 (function () {
   'use strict';
-  var OP = '자영업자 홀로서기', MAIL = 'solojayoungup@gmail.com', SVC = '솔로운영 가계부';
+  var OP = '자영업자 홀로서기', MAIL = 'solojayoungup@gmail.com', SVC = '용돈냥이';
   var VERSION = '2026-11-24', NOTICE = '2026년 11월 24일', EFFECTIVE = '2026년 12월 24일';
 
   var TERMS = [

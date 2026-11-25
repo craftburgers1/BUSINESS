@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>솔로운영 3D (베타) · 매장 카운터</title>
+<title>용돈냥이 3D (베타) · 용돈기입장 · 가계부</title>
 <meta name="theme-color" content="#f6ead9">
 <meta name="description" content="카운터 안쪽 내 자리에서 둘러보는 1인칭 3D 가계부 시제품">
 <link rel="icon" href="icons/icon-192.png">
@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="솔로운영">
+<meta name="apple-mobile-web-app-title" content="용돈냥이">
 <style>
 :root{
   --cream:#fff8ef; --butter:#ffe6a3; --mint:#3fa58a; --mint-l:#bfe9dc; --apricot:#ffc9a3; --coral:#ef8a74; --coral-d:#d9674f;
@@ -378,6 +378,8 @@ body.ai-open #xh,body.ai-open #tags{opacity:0}
 .mcard b{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .mcard em{position:absolute;top:6px;right:6px;font-style:normal;font-size:10px;font-weight:800;color:#fff;background:var(--coral);border-radius:999px;padding:1px 6px}
 .mcard.on{border-color:var(--coral);background:#fff6ef}
+.tier{font-style:normal;flex:none;font-size:9px;font-weight:900;letter-spacing:.02em;line-height:1;padding:3px 6px;border-radius:999px;white-space:nowrap;background:#2f2a3a;color:#ffd76b}.tier.free{background:#dff5ea;color:#1f7d5f}.tier:empty{display:none}@media (max-width:420px){.mark small{display:none}}
+.tierc{position:absolute;top:6px;left:6px;font-size:10px;font-weight:900;line-height:1;padding:3px 6px;border-radius:999px;background:#2f2a3a;color:#ffd76b}.tierc.free{background:#dff5ea;color:#1f7d5f}
 #sm .aisheet{width:min(460px,calc(100vw - 32px))}
 body.sm-open #xh,body.sm-open #tags{opacity:0}
 #sm.peek .aibg{background:rgba(60,40,25,.06)}
@@ -441,7 +443,7 @@ body.sm-open #xh,body.sm-open #tags{opacity:0}
 <div id="stage" aria-label="1인칭 3D 매장 카운터"></div>
 
 <header id="hud">
-  <div class="lt"><div class="mark" title="솔로운영 3D"><i></i><b id="storeName"></b><small>솔로운영 3D</small></div><a class="twod" href="2d.html" title="2D 가계부로 가기" aria-label="2D 가계부로 가기">📊<em> 2D</em></a><button type="button" class="twod" id="instBtn" title="홈 화면에 앱 추가" aria-label="홈 화면에 앱 추가">📲</button></div>
+  <div class="lt"><div class="mark" title="용돈냥이"><i></i><b id="storeName"></b><small>용돈냥이</small><em class="tier" id="tier"></em></div><a class="twod" href="2d.html" title="2D 가계부로 가기" aria-label="2D 가계부로 가기">📊<em> 2D</em></a><button type="button" class="twod" id="instBtn" title="홈 화면에 앱 추가" aria-label="홈 화면에 앱 추가">📲</button></div>
   <div class="auth" id="auth" aria-live="polite"></div>
 </header>
 <div id="curtain" aria-hidden="true"><div class="cv"><span id="cvIcon">🍔</span><b id="cvText"></b></div></div>
@@ -476,7 +478,7 @@ body.sm-open #xh,body.sm-open #tags{opacity:0}
   <div class="pbody" id="pBody"></div>
 </aside>
 
-<div id="loader"><div class="blob"></div><p>솔로운영 3D 불러오는 중…</p></div>
+<div id="loader"><div class="blob"></div><p>용돈냥이 불러오는 중…</p></div>
 <div id="fallback" hidden><b>3D 화면을 열 수 없어요</b><p id="fallbackMsg">이 기기·브라우저는 WebGL(3D 그래픽)을 지원하지 않아요.<br>최신 크롬·사파리·삼성 인터넷에서 다시 열어 주세요.</p></div>
 
 <script>
@@ -518,9 +520,9 @@ function kst(d = new Date()) {
 }
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 // 체험판은 들어올 때마다 새로 시작(장부·항목·가게 이름·코인·꾸미기 모두). 저장은 Google 로그인 후에만
-try { ['solo3d_v1', 'solo3d_v1_restaurant', 'solo3d_v1_salon', 'solo3d_v1_home', 'solo3d_cats', 'solo3d_store', 'solo3d_game:demo', 'soloGagebuStickers:demo'].forEach(k => localStorage.removeItem(k)); } catch (e) {}
+try { ['solo3d_v1', 'solo3d_v1_restaurant', 'solo3d_v1_salon', 'solo3d_v1_home', 'solo3d_v1_pocket', 'solo3d_cats', 'solo3d_store', 'solo3d_game:demo', 'soloGagebuStickers:demo'].forEach(k => localStorage.removeItem(k)); } catch (e) {}
 const MODE_KEY = 'solo3d_mode', OLD_KEY = 'solo3d_v1';
-const dkey = m => 'solo3d_v1_' + m;
+const dkey = m => 'solo3d_v1_' + (POCKET && m === 'home' ? 'pocket' : m);
 
 // 업종별 문구·계정·라벨 (3D 라벨, 패널, 장부 이름이 모두 여기서 바뀜)
 const MODES = {
@@ -556,10 +558,30 @@ const MODES = {
       ledger: ['📚', '가계부 책장', '탭해서 정산표 열기', '정산표'], cat: ['🐱', '소파 고양이', '쓰다듬기', '고양이'],
       owner: ['🙋', '우리집', '말 걸기', '우리집'], staff: ['🗓️', '가족 일정 보드', '일정·알림 보기', '일정']
     }
+  },
+  pocket: { // 📒 용돈기입장(v24): 주부·가정 방을 재사용하는 심플 모드. 여기 없는 항목(fridge·ledger·staff·robot·supply)은 숨김
+    icon: '📒', label: '용돈냥이', short: '용돈', face: '🐷', boss: '내 지갑',
+    hud: ['들어온 돈', '나간 돈', '남은 돈'], inc: '들어온 돈', incAcc: '들어온 돈', varW: '나간 돈', varAcc: '지출', varTotal: '나간 돈', fixW: '고정 지출', netW: '남은 돈',
+    channels: ['용돈', '아르바이트', '기타'], quickVar: ['간식', '학용품', '장난감', '교통', '식비', '선물'],
+    views: ['내 방', '저금통 앞'], screen: '이번 달 남은 돈', ledger: false,
+    obj: {
+      pos: ['📝', '내 장부', '탭해서 기록하기', '장부'], safe: ['🐷', '저금통', '탭해서 목표 보기', '저금통'],
+      cat: ['🐱', '방 고양이', '쓰다듬기', '고양이'], owner: ['🙋', '나', '말 걸기', '나']
+    }
   }
 };
-let MODE = (() => { try { const m = localStorage.getItem(MODE_KEY); return MODES[m] ? m : 'restaurant'; } catch (e) { return 'restaurant'; } })();
-const MC = () => MODES[MODE];
+// 📒 용돈기입장(pocket)은 주부·가정 방을 그대로 쓴다: 안에서는 MODE='home' + POCKET=true, 저장·표시용 이름만 'pocket'
+let POCKET = false, PCFG = null;
+let MODE = (() => { let m = null; try { m = localStorage.getItem(MODE_KEY); } catch (e) {} try { if (/[?&]mode=pocket\b/.test(location.search)) { m = 'pocket'; localStorage.setItem(MODE_KEY, m); } } catch (e) {} if (m === 'pocket') { POCKET = true; return 'home'; }
+  if (/[?&]mode=pro\b/.test(location.search)) return m !== 'pocket' && MODES[m] ? m : 'restaurant'; // 2D PRO 화면에서 넘어옴
+  if (m !== null) return MODES[m] ? m : 'restaurant'; // 저장된 방은 그대로
+  // 저장된 방이 없을 때: 이 기기를 예전부터 쓰던 사람(다른 기록이 남아 있음)은 식당 방 그대로, 처음 온 사람은 용돈냥이(무료)로 시작
+  let old = true; try { old = ['solo3d_tour', 'solo3d_zoom', 'solo3d_q', 'solo3d_theme', 'solo3d_brief', 'solo_terms_agreed'].some(k => localStorage.getItem(k) !== null); } catch (e) {}
+  if (old) return 'restaurant';
+  try { localStorage.setItem(MODE_KEY, 'pocket'); } catch (e) {} POCKET = true; return 'home'; })();
+const modeId = () => POCKET ? 'pocket' : MODE;
+const pocketCfg = () => PCFG || Object.assign({}, MODES.home, MODES.pocket, { obj: Object.assign({}, MODES.home.obj, MODES.pocket.obj) });
+const MC = () => POCKET ? pocketCfg() : MODES[MODE];
 
 function makeSample(mode = MODE) {
   const k = kst(), day = n => `${k.ym}-${String(Math.max(1, k.d - n)).padStart(2, '0')}`;
@@ -1558,7 +1580,7 @@ function refreshPos() { const mo = M(); if (MODE === 'home') drawLaptop(mo); els
    ========================================================= */
 const panel = document.getElementById('panel'), pBody = document.getElementById('pBody'), pTag = document.getElementById('pTag'), pTitle = document.getElementById('pTitle');
 let ledgerAll = false, ledgerMore = false, fixedEdit = false;
-let activeKey = null, formOpen = false, saleChannel = MODES[MODE].channels[0], lastNewId = null, sampleArm = 0;
+let activeKey = null, formOpen = false, saleChannel = MC().channels[0], lastNewId = null, sampleArm = 0;
 const pct = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
 const netColor = n => `color:${n >= 0 ? 'var(--pos)' : 'var(--neg)'}`;
 function cards3(a, b, c) {
@@ -1803,7 +1825,7 @@ function renderPanel() {
     h += `<div class="sec" style="margin-top:16px"><span>이번 달 직원별 예상 급여</span><span>근무시간 × 시급</span></div><div class="rows">`;
     h += ss.map(x => `<div class="pay"><div class="l"><b>${esc(x.st.name)}</b><span class="d num">${x.days}일 · ${hm(x.mins)}${x.st.wage ? ' × ' + won(x.st.wage) : ''}</span></div><b class="num">${won(x.pay)}</b></div>`).join('');
     h += `<div class="row total"><div class="l"><span>합계</span></div><b class="num">${won(totalPay)}</b></div></div>`;
-    h += `<p class="hintp">예상 급여는 근무시간 × 시급 기준(주휴수당·4대보험·세금 제외). 실제 출퇴근·급여명세서는 <b>'솔로운영 근태관리'</b>에서 관리해요.</p>`;
+    h += `<p class="hintp">예상 급여는 근무시간 × 시급 기준(주휴수당·4대보험·세금 제외). 실제 출퇴근·급여명세서는 <b>'용돈냥이 PRO 근태관리'</b>에서 관리해요.</p>`;
     h += `<a class="primary linkbtn" href="${STAFF_APP_URL}" target="_blank" rel="noopener">🔗 근태관리 앱 열기 ↗</a>`;
   }
   pBody.innerHTML = h; lastNewId = null;
@@ -2000,15 +2022,15 @@ function applyModeUI() {
 let switching = false;
 const curtain = document.getElementById('curtain');
 function switchMode(m) {
-  if (m === MODE || switching || !MODES[m]) return;
+  if (m === modeId() || switching || !MODES[m]) return;
   switching = true; firstUse();
   if (activeKey) closePanel();
   bubble.classList.remove('show'); catBubble.classList.remove('show');
   document.getElementById('cvIcon').textContent = MODES[m].icon; document.getElementById('cvText').textContent = MODES[m].label + ' 방으로 이동 중…';
   curtain.classList.add('show');
   setTimeout(() => {
-    MODE = m; try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
-    DATA = loadData(m); saleChannel = MC().channels[0]; ledgerAll = false;
+    POCKET = m === 'pocket'; MODE = POCKET ? 'home' : m; try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
+    DATA = loadData(MODE); saleChannel = MC().channels[0]; ledgerAll = false;
     parts.forEach(p => scene.remove(p.m)); parts.length = 0;
     applyMode3D(); relabel(); applyModeUI(); syncFridgeItems(); refreshPos(); renderAuth();
     if (aiOpen) { aiFood = MODE === 'restaurant'; renderAi(); }
@@ -2334,13 +2356,13 @@ function toast(msg, bad) { toastEl.textContent = msg; toastEl.classList.toggle('
    ========================================================= */
 const PICKLE_URL = 'https://craftburgers1.github.io/BUSINESS/2d.html?by=pickle', LEDGER_URL = 'https://craftburgers1.github.io/BUSINESS/', STAFF_URL2 = 'https://craftburgers1.github.io/craftburger/';
 const AI_SHORT = {
-  restaurant: `내 솔로운영 가계부(${PICKLE_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
-  salon: `내 솔로운영 가계부(${PICKLE_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 재료·소모품 주문내역, 그리고 시술 매출 내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
-  home: `내 솔로운영 가계부(${PICKLE_URL})에 들어가서 이 장보기·생활비 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
-  food: `내 솔로운영 가계부(${PICKLE_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`
+  restaurant: `내 용돈냥이 PRO 가계부(${PICKLE_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
+  salon: `내 용돈냥이 PRO 가계부(${PICKLE_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 재료·소모품 주문내역, 그리고 시술 매출 내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
+  home: `내 용돈냥이 PRO 가계부(${PICKLE_URL})에 들어가서 이 장보기·생활비 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`,
+  food: `내 용돈냥이 PRO 가계부(${PICKLE_URL})에 들어가서 이 영수증이나 내가 연결한 쿠팡·네이버쇼핑·G마켓 주문내역, 그리고 배민·쿠팡이츠·요기요·포스 매출 내역(수수료·배달비는 월말 정산서 기준)을 보고 날짜·카테고리·금액별로 입력해 줘! 저장할 때 입력한 사람 칸은 피클로 골라 줘. 처음 로그인은 내가 피클 브라우저에서 직접 할게.`
 };
 const AI_FULL = {
-  restaurant: `너는 내 매장 전담 비서야. 내 솔로운영 가계부(${PICKLE_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
+  restaurant: `너는 내 매장 전담 비서야. 내 용돈냥이 PRO 가계부(${PICKLE_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
 
 [진행 순서]
 1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 '이 앱들과 너를 연결하면 내 가게 운영이 구체적으로 어떻게 편해지는지' 쉽고 상세하게 먼저 브리핑해 줘.
@@ -2351,7 +2373,7 @@ const AI_FULL = {
 2. 매일 자정: 배민·쿠팡이츠·네이버 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)
 3. 지출 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 주문내역은 날짜·항목별로 가계부에 입력
 4. 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.`,
-  salon: `너는 내 미용실 전담 비서야. 내 솔로운영 가계부(${PICKLE_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
+  salon: `너는 내 미용실 전담 비서야. 내 용돈냥이 PRO 가계부(${PICKLE_URL})와 근태관리(${STAFF_URL2})를 연결해 두고 아래 자동화를 맡아 줘.
 
 [진행 순서]
 1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 두 앱 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 '이 앱들과 너를 연결하면 내 미용실 운영이 구체적으로 어떻게 편해지는지' 쉽고 상세하게 먼저 브리핑해 줘.
@@ -2362,7 +2384,7 @@ const AI_FULL = {
 2. 매일 자정: 네이버·카카오 긍정 리뷰(4~5점)에 매장 톤으로 답글 달고 보고(1~3점 부정 리뷰는 답글 달지 말고 즉시 나에게 알림)
 3. 재료 주문 정리: 내가 보내는 영수증 사진이나 쿠팡·네이버쇼핑·G마켓 재료·소모품 주문내역은 날짜·항목별로 가계부에 입력
 4. 시술 예약 알림: 네이버 예약 메일이 오면 나에게 바로 알리고 캘린더에 등록해 줘.`,
-  home: `너는 우리집 살림 전담 비서야. 내 솔로운영 가계부(${PICKLE_URL})를 연결해 두고 아래 자동화를 맡아 줘.
+  home: `너는 우리집 살림 전담 비서야. 내 용돈냥이 PRO 가계부(${PICKLE_URL})를 연결해 두고 아래 자동화를 맡아 줘.
 
 [진행 순서]
 1단계(먼저 설명): 지금 바로 연결부터 하지 말고, 먼저 위 가계부 주소를 직접 열어 어떤 기능들이 있는지 살펴본 뒤 '이 앱과 너를 연결하면 우리집 살림이 구체적으로 어떻게 편해지는지' 쉽고 상세하게 먼저 브리핑해 줘.
@@ -2540,12 +2562,12 @@ document.querySelectorAll('.themes [data-t]').forEach(b => b.addEventListener('c
    - 테마 레이어(TMATS) 스냅샷 뒤에 만들어서, 판 글자면은 여기서 직접 칠함 / 틀·다리는 snapMat으로 테마 적용
    ========================================================= */
 const SIGNF = '"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
-const STORE_KEY = 'solo3d_store', STORE_DEF = { restaurant: '솔로 버거', salon: '솔로 미용실', home: '우리집' };
-const STORE_CHIPS = { restaurant: ['우리 가게 버거', '할머니손칼국수', '솔로 반점'], salon: ['솔로 미용실', '우리 동네 헤어', '할머니손칼국수'], home: ['우리집', '행복한 우리집', '할머니손칼국수'] };
+const STORE_KEY = 'solo3d_store', STORE_DEF = { restaurant: '냥이 버거', salon: '냥이 미용실', home: '우리집', pocket: '용돈냥이' };
+const STORE_CHIPS = { restaurant: ['우리 가게 버거', '할머니손칼국수', '냥이 반점'], salon: ['냥이 미용실', '우리 동네 헤어', '할머니손칼국수'], home: ['우리집', '행복한 우리집', '할머니손칼국수'], pocket: ['용돈냥이', '내 용돈기입장', '우리집 용돈기입장'] };
 const STORE_MAX = 14;
 REAL.storeName = null;
 function storeLocal() { try { const v = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } }
-function storeName() { return (isLive() && REAL.storeName) || storeLocal()[MODE] || STORE_DEF[MODE]; }
+function storeName() { return (isLive() && REAL.storeName) || storeLocal()[modeId()] || STORE_DEF[modeId()]; }
 const cleanName = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 const clipName = s => { const a = [...cleanName(s)]; return a.length > STORE_MAX ? a.slice(0, STORE_MAX - 1).join('') + '…' : a.join(''); };
 // 로그인(실데이터) 상태: 2D 가계부와 같은 users/{uid}/settings/config 의 name 읽기
@@ -2578,7 +2600,7 @@ function drawSign() {
     g.fillStyle = '#ffffff'; for (let i = 0; i < 26; i++) { g.beginPath(); g.arc(40 + i * 37.5, 14 + (i % 3) * 3, 16 + (i * 7) % 9, 0, Math.PI * 2); g.fill(); } // 위쪽 눈 쌓임
     ['#ff4a3a', '#ffd25e', '#5be08a', '#6fc3ff'].forEach((col, j) => { for (let i = j; i < 22; i += 4) { g.fillStyle = col; g.beginPath(); g.arc(50 + i * 42, h - 30, 7, 0, Math.PI * 2); g.fill(); } }); } // 아래 전구
   else { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#fffaf0'); gr.addColorStop(1, '#f6e6cc'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(150,100,55,.35)'; g.lineWidth = 4; rrect(g, 24, 24, w - 48, h - 48, 26); g.stroke(); }
-  let txt = clipName(storeName()) || STORE_DEF[MODE], size = 150;
+  let txt = clipName(storeName()) || STORE_DEF[modeId()], size = 150;
   const fit = () => { g.font = `800 ${size}px ${SIGNF}`; return g.measureText(txt).width; };
   while (fit() > w - pad * 2 && size > 54) size -= 4;
   while (fit() > w - pad * 2 && [...txt].length > 2) txt = [...txt].slice(0, -2).join('') + '…';
@@ -2604,14 +2626,15 @@ function drawCork() {
   for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(${120 + (i * 37) % 60},${70 + (i * 13) % 40},30,.18)`; g.fillRect((i * 97) % w, (i * 53) % h, 3, 3); }
   g.fillStyle = '#fffaf2'; rrect(g, 120, 14, 272, 50, 12); g.fill();
   g.fillStyle = '#5b3a22'; g.font = `800 30px ${SIGNF}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('📋 업종 바꾸기', w / 2, 40);
-  ['restaurant', 'salon', 'home'].forEach((m, i) => {
-    const x = 26 + i * 158, y = 96, on = m === MODE;
-    g.save(); g.translate(x + 70, y + 120); g.rotate((i - 1) * 0.05);
+  ['restaurant', 'salon', 'home', 'pocket'].forEach((m, i) => {
+    const x = 6 + i * 124, y = 96, on = m === modeId();
+    g.save(); g.translate(x + 64, y + 120); g.scale(0.8, 0.8); g.rotate((i - 1.5) * 0.05);
     g.fillStyle = 'rgba(60,35,15,.25)'; g.fillRect(-66, -110, 140, 232);
-    g.fillStyle = ['#fff3d6', '#fde3ef', '#e8f3df'][i]; g.fillRect(-70, -116, 140, 232);
+    g.fillStyle = ['#fff3d6', '#fde3ef', '#e8f3df', '#ffe9b0'][i]; g.fillRect(-70, -116, 140, 232);
     if (on) { g.strokeStyle = '#ef5a4a'; g.lineWidth = 7; g.strokeRect(-66, -112, 132, 224); }
     g.font = `60px ${SIGNF}`; g.fillStyle = '#000'; g.fillText(MODES[m].icon, 0, -30);
     g.fillStyle = '#4a3b30'; g.font = `800 25px ${SIGNF}`; g.fillText(MODES[m].label, 0, 46);
+    g.font = `800 19px ${SIGNF}`; g.fillStyle = m === 'pocket' ? '#1f7d5f' : '#9a6a12'; g.fillText(m === 'pocket' ? '무료' : 'PRO', 0, -88);
     if (on) { g.fillStyle = '#ef5a4a'; rrect(g, -38, 74, 76, 30, 15); g.fill(); g.fillStyle = '#fff'; g.font = `800 18px ${SIGNF}`; g.fillText('지금', 0, 90); }
     g.restore();
   });
@@ -2680,7 +2703,7 @@ let smOpen = null;
 function renderSm() {
   if (smOpen === 'board') {
     smTitle.textContent = '📋 업종 게시판';
-    smBody.innerHTML = `<p class="ailead">어떤 가게로 볼까요? 고르면 그 방으로 바로 옮겨가요.</p><div class="mcards">${Object.entries(MODES).map(([m, c]) => `<button type="button" class="mcard${m === MODE ? ' on' : ''}" data-m2="${m}" aria-pressed="${m === MODE}"><i>${c.icon}</i><b>${c.label}</b>${m === MODE ? '<em>지금</em>' : ''}</button>`).join('')}</div>`;
+    smBody.innerHTML = `<p class="ailead">어떤 가게로 볼까요? 고르면 그 방으로 바로 옮겨가요.</p><div class="mcards">${Object.entries(MODES).map(([m, c]) => `<button type="button" class="mcard${m === modeId() ? ' on' : ''}" data-m2="${m}" aria-pressed="${m === modeId()}"><i>${c.icon}</i><b>${c.label}</b>${m === modeId() ? '<em>지금</em>' : ''}</button>`).join('')}</div>`;
   } else if (smOpen === 'menu') {
     smTitle.textContent = '🎨 테마 메뉴판';
     smBody.innerHTML = `<p class="ailead">눌러 보면 뒤의 가게가 바로 바뀌어요. 마음에 들면 [이걸로 할게요]를 눌러 주세요.</p><div class="mcards">${[['pastel', '🎨', '파스텔'], ['xmas', '🎄', '크리스마스'], ['cyber', '🌆', '사이버펑크']].map(([t, i, l]) => `<button type="button" class="mcard${t === THEME ? ' on' : ''}" data-t2="${t}" aria-pressed="${t === THEME}"><i>${i}</i><b>${l}</b>${t === THEME ? '<em>지금</em>' : ''}</button>`).join('')}</div>
@@ -2689,7 +2712,7 @@ function renderSm() {
     smTitle.textContent = '🪧 내 가게 간판';
     const live = isLive();
     smBody.innerHTML = `<div class="form" style="margin-top:0"><div class="field"><label for="smName">가게 이름 (최대 ${STORE_MAX}자)</label><input id="smName" autocomplete="off" maxlength="${STORE_MAX}" value="${esc(cleanName(storeName()))}" style="font-size:17px">
-      <div class="qk">${STORE_CHIPS[MODE].map(q => `<button type="button" data-nm="${esc(q)}">${esc(q)}</button>`).join('')}</div></div>
+      <div class="qk">${STORE_CHIPS[modeId()].map(q => `<button type="button" data-nm="${esc(q)}">${esc(q)}</button>`).join('')}</div></div>
       <div class="factions"><button type="button" class="cancel" data-close>취소</button><button type="button" class="save" data-act="save-store">${live ? LIVE_SAVE : '저장'}</button></div>
       <p class="hintp">${live ? '☁ 내 장부(2D 가계부)의 가게 이름도 같이 바뀌어요.' : '🧪 체험 모드라 이 기기에만 저장돼요.'}</p></div>`;
   }
@@ -2724,14 +2747,14 @@ async function saveStore(btn) {
     catch (e) { btn.disabled = false; btn.textContent = LIVE_SAVE; toast('저장하지 못했어요 — 간판 이름은 바꾸지 않았어요. 다시 시도해 주세요', true); return; }
     REAL.storeName = name;
   }
-  const s = storeLocal(); s[MODE] = name; try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) {}
+  const s = storeLocal(); s[modeId()] = name; try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) {}
   closeSm(); refreshStore(); toast(`🪧 간판을 '${name}'(으)로 바꿨어요`);
 }
 smEl.addEventListener('click', e => {
   if (e.target.classList.contains('aibg') && !bgTap(smEl)) return; // 열자마자 따라오는 유령 클릭은 무시
   if (e.target.closest('[data-close]')) { closeSm(); return; }
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.m2) { const m = b.dataset.m2; closeSm(); if (m !== MODE) switchMode(m); return; }
+  if (b.dataset.m2) { const m = b.dataset.m2; closeSm(); if (m !== modeId()) switchMode(m); return; }
   if (b.dataset.t2) { setTheme(b.dataset.t2); renderSm(); return; } // 닫지 않음: 뒤의 가게가 바로 바뀌는 걸 보면서 비교
   if (b.dataset.act === 'theme-done') { closeSm(); return; }
   if (b.dataset.nm) { const i = smBody.querySelector('#smName'); i.value = b.dataset.nm; i.classList.remove('err'); i.focus({ preventScroll: true }); return; }
@@ -3672,7 +3695,7 @@ renderPanel = function () { _renderPanel_book(); if (activeKey === 'ledger') { p
 function bookRefresh() { if (activeKey === 'ledger') { const y = pBody.scrollTop; renderPanel(); pBody.scrollTop = y; } }
 async function bookXlsx() {
   BK.busy = 'xlsx'; BK.msg = ''; BK.link = ''; bookRefresh();
-  try { await loadBook(); const o = bookOpts(); window.SoloBook.download(window.SoloBook.build(o), `솔로운영_세무장부_${o.tag}`); BK.msg = `✅ 엑셀 파일을 받았어요 (${o.entries.length}건)` + (isLive() ? '' : ' · 체험 데이터');
+  try { await loadBook(); const o = bookOpts(); window.SoloBook.download(window.SoloBook.build(o), `용돈냥이PRO_세무장부_${o.tag}`); BK.msg = `✅ 엑셀 파일을 받았어요 (${o.entries.length}건)` + (isLive() ? '' : ' · 체험 데이터');
   } catch (e) { BK.msg = '엑셀을 만들지 못했어요 (인터넷 연결을 확인하고 다시 눌러 주세요)'; }
   BK.busy = false; bookRefresh();
 }
@@ -3683,7 +3706,7 @@ async function bookSheet() {
   BK.busy = 'gs'; BK.msg = '📊 구글 시트를 만드는 중…'; BK.link = ''; bookRefresh();
   const run = async token => { await loadBook(); const o = bookOpts(), wb = window.SoloBook.build(o), folder = await driveFolder(token, '솔로운영_장부', '');
     const hm = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).replace(':', '');
-    return window.SoloBook.uploadAsGoogleSheet((u, op) => driveFetch(u, op, token), folder, `솔로운영_세무장부_${o.tag}_${hm}`, wb); };
+    return window.SoloBook.uploadAsGoogleSheet((u, op) => driveFetch(u, op, token), folder, `용돈냥이PRO_세무장부_${o.tag}_${hm}`, wb); };
   try { let f; try { f = await run(await tokenP); } catch (e) { if (!(e && e.message === 'drive-401')) throw e; f = await run(await driveGetToken(true)); }
     BK.link = f.webViewLink || (f.id ? `https://docs.google.com/spreadsheets/d/${encodeURIComponent(f.id)}/edit` : ''); BK.msg = '✅ 내 구글 드라이브 [솔로운영_장부] 폴더에 시트를 만들었어요';
     if (BK.link) { try { window.open(BK.link, '_blank', 'noopener'); } catch (e) {} }
@@ -3723,8 +3746,8 @@ document.querySelectorAll('[data-zoom]').forEach(b => { let hold = 0, rep = 0; c
 
 /* ---- 👋 처음 온 사람용 30초 안내 (한 번만, 내정보에서 다시 보기) ---- */
 const TOUR_KEY = 'solo3d_tour'; let tourI = 0;
-const TOUR = () => { const c = MC(), home = MODE === 'home'; return [
-  ['👋', '솔로운영 3D에 오신 걸 환영해요', '가게 안을 둘러보며 쓰는 가계부예요. 30초만 보면 바로 쓸 수 있어요.<br><b>🧪 지금은 베타(시험 운영) 버전</b>이라 기능이 바뀌거나 오류가 있을 수 있어요. 중요한 장부는 엑셀·구글 시트로도 내보내 두세요.'],
+const TOUR = () => { if (POCKET) return POCKET_TOUR(); const c = MC(), home = MODE === 'home'; return [
+  ['👋', '용돈냥이 PRO에 오신 걸 환영해요', '가게 안을 둘러보며 쓰는 가계부예요. 30초만 보면 바로 쓸 수 있어요.<br><b>🧪 지금은 베타(시험 운영) 버전</b>이라 기능이 바뀌거나 오류가 있을 수 있어요. 중요한 장부는 엑셀·구글 시트로도 내보내 두세요.'],
   ['👆', '둘러보기 · 줌', '화면을 <b>드래그</b>하면 고개를 돌려요. <b>두 손가락</b>을 벌리거나 오므리면(PC는 휠) 앞뒤로 움직이고, 아래 <b>➖ ➕</b> 버튼으로도 돼요.'],
   ['🎯', '물건·사람을 탭하세요', `<b>${OBJ.pos.emoji} ${OBJ.pos.name}</b>는 이번 달 요약, <b>🧊 냉장고</b>는 ${esc(c.varW)}, <b>${OBJ.safe.emoji} ${OBJ.safe.name}</b>는 고정비, <b>📅 달력</b>은 날짜별 내역이에요.`],
   ['🧑‍💼', '입력은 세무담당 직원에게', '<b>AI 자동입력</b>(영수증 사진·주문내역), <b>직접 입력</b>, ' + (home ? '정산표' : '세무회계 장부(복식부기)') + ', 영수증함, 홈택스 엑셀을 모두 맡아요.'],
@@ -3875,12 +3898,12 @@ function reportCard() {
   L.forEach((r, i) => { const y = 710 + i * 130; x.fillStyle = '#4a3b30'; x.font = F(44, 800); x.fillText(r.label, 120, y); x.textAlign = 'right'; x.fillText(`${r.r.toFixed(1)}%`, W - 120, y); x.textAlign = 'left';
     x.fillStyle = '#f1ece4'; x.beginPath(); x.roundRect(120, y + 66, W - 240, 18, 9); x.fill(); x.fillStyle = '#ef8a74'; x.beginPath(); x.roundRect(120, y + 66, Math.max(18, (W - 240) * Math.min(100, r.r) / 100), 18, 9); x.fill(); });
   x.fillStyle = '#8a7667'; x.font = F(34, 600); x.fillText(`기록한 날 ${dp}일 · 전표 ${c.n}건` + (B.pickle ? ` · 🤖 자동입력 ${B.pickle}건` : ''), 90, H - 190);
-  x.fillStyle = '#4a3b30'; x.font = F(40, 800); x.fillText('솔로운영 3D 가계부', 90, H - 130); x.fillStyle = '#8a7667'; x.font = F(30, 600); x.fillText('craftburgers1.github.io/BUSINESS', 90, H - 78);
+  x.fillStyle = '#4a3b30'; x.font = F(40, 800); x.fillText('용돈냥이 PRO 가계부', 90, H - 130); x.fillStyle = '#8a7667'; x.font = F(30, 600); x.fillText('craftburgers1.github.io/BUSINESS', 90, H - 78);
   return cvs;
 }
 async function shareReport(btn) {
   btn.disabled = true; const old = btn.textContent; btn.textContent = '만드는 중…';
-  try { const blob = await new Promise(r => reportCard().toBlob(r, 'image/png')), k = kst(), name = `솔로운영_성적표_${k.ym}.png`, file = new File([blob], name, { type: 'image/png' });
+  try { const blob = await new Promise(r => reportCard().toBlob(r, 'image/png')), k = kst(), name = `용돈냥이PRO_성적표_${k.ym}.png`, file = new File([blob], name, { type: 'image/png' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: '우리 가게 성적표' }); } catch (e) { if (!(e && e.name === 'AbortError')) throw e; } }
     else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); toast('🏆 성적표 이미지를 받았어요'); }
   } catch (e) { toast('성적표를 만들지 못했어요. 다시 눌러 주세요', true); }
@@ -3897,7 +3920,7 @@ smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (
 bubble.addEventListener('click', () => { if (!bubble.dataset.brief) return; delete bubble.dataset.brief; bubble.classList.remove('show'); if (activeKey) closePanel(); openSm('brief'); });
 function dailyBrief(n) { setTimeout(() => { let seen = ''; try { seen = localStorage.getItem('solo3d_brief') || ''; } catch (e) { return; } const k = kst(); if (seen >= k.date) return;
     if (!started || camTween || switching || smOpen || aiOpen || activeKey || (REAL.on && REAL.status !== 'ok')) { if (n < 60) dailyBrief(n + 1); return; }
-    const B = briefData(); if (!B.cur.n && !B.ySales) return;
+    if (POCKET) return; const B = briefData(); if (!B.cur.n && !B.ySales) return;
     try { localStorage.setItem('solo3d_brief', k.date); } catch (e) {}
     bubble.innerHTML = briefShort(B); bubble.dataset.brief = '1'; bubble.classList.add('show');
     clearTimeout(bubbleTimer); bubbleTimer = setTimeout(() => { bubble.classList.remove('show'); delete bubble.dataset.brief; }, 9000);
@@ -3929,7 +3952,7 @@ function gOnNew(n) { gDay(); const first = G.s.day.n === 0, pay = Math.max(0, Ma
   if (first) { xp += 20; msg = `🔥 ${sk}일 연속 기록! +${coin} 🪙`; if (sk && sk % 7 === 0) { coin += 100; msg = `🔥 ${sk}일 연속! 보너스 +100 🪙`; } }
   gReward(coin, xp, msg, first); gQuestPay(); gGoalCheck(); }
 function gGoalCheck() { const k = kst(), s = M().s; if (G.s.goal > 0 && s >= G.s.goal && G.s.goalHit !== k.ym) { G.s.goalHit = k.ym; gReward(100, 50, `🏆 ${k.m}월 목표 달성! +100 🪙`, true); } }
-function gTick() { const key = gKey() + '|' + MODE + '|' + (REAL.on ? REAL.status : '-'), ids = allEntries().map(x => String(x.id)), now = performance.now();
+function gTick() { const key = gKey() + '|' + modeId() + '|' + (REAL.on ? REAL.status : '-'), ids = allEntries().map(x => String(x.id)), now = performance.now();
   if (key !== G.key) { G.key = key; G.known = new Set(ids); G.hold = now + 4000; gLoad(); gPaint(); return; }
   if (now < G.hold) { ids.forEach(i => G.known.add(i)); } else { const nw = ids.filter(i => !G.known.has(i)); if (nw.length) { nw.forEach(i => G.known.add(i)); gOnNew(nw.length); } }
   // 손님 수: 오늘 매출이 이번 달 하루 평균보다 많을수록 많이 (최대 4명)
@@ -4175,6 +4198,175 @@ function legalNotice(n) { setTimeout(() => { if (!window.SoloLegal) { if (n < 20
     if (smOpen || activeKey || camTween) { if (n < 60) legalNotice(n + 1); return; } try { localStorage.setItem('solo_terms_notice', window.SoloLegal.version); } catch (e) {}
     toast(`📄 이용약관·개인정보 처리방침이 바뀌어요 (${window.SoloLegal.effective} 시행). 가게 이름을 눌러 내정보에서 확인해 주세요`); }, n ? 1500 : 7000); }
 legalNotice(0);
+/* ---- 📒 용돈기입장(pocket) 심플 모드 (v24) ----
+   주부·가정 방(home)을 그대로 쓰되 들어온 돈·나간 돈·모으기 목표만 남긴다. 안에서는 MODE='home' + POCKET=true.
+   장부(Firestore ledger)는 건드리지 않는다. 3D 용돈기입장의 기록은 가정 방과 같이 이 기기의 체험 데이터. */
+const PK_HIDE = ['fridge', 'supply', 'ledger', 'staff', 'robot', 'arcade', 'shop'];
+const PK_2D = '2d.html?mode=pocket';
+const pkLive = () => !!(REAL.on && REAL.status === 'ok' && REAL.db && FSm && fbAuth && fbAuth.currentUser && fbAuth.currentUser.uid === REAL.uid);
+function pocketSample() { const k = kst(), day = n => `${k.ym}-${String(Math.max(1, k.d - n)).padStart(2, '0')}`;
+  return { v: 2, mode: 'pocket',
+    sales: [[6, '09:00', 30000, '용돈'], [2, '15:30', 12000, '아르바이트']].map(([n, time, amount, channel]) => ({ id: uid(), date: day(n), time, amount, channel })),
+    ingredients: [], fixed: [],
+    personal: [[4, '간식', 2500], [3, '학용품', 4800], [1, '교통', 3000]].map(([n, name, amount]) => ({ id: uid(), date: day(n), name, amount })),
+    opening: 0, staff: [], att: [], family: [] }; }
+const _makeSample_pk = makeSample; makeSample = function (mode = MODE) { return POCKET && mode === 'home' ? pocketSample() : _makeSample_pk(mode); };
+if (POCKET && DATA.mode !== 'pocket') { DATA = pocketSample(); saveData(DATA); saleChannel = MC().channels[0]; }
+PCFG = Object.assign({}, MODES.home, MODES.pocket, { obj: Object.assign({}, MODES.home.obj, MODES.pocket.obj) });
+
+// 이번 달 모으기 목표: 남은 돈(들어온 돈 − 나간 돈) 기준. 로그인했고 2D 설정이 있으면 2D와 같은 settings/config.pocketGoal
+function pkCfgOk() { return pkLive() && REAL.cfg && Array.isArray(REAL.cfg.sales); }
+function pkGoal() { if (pkCfgOk() && REAL.cfg.pocketGoal != null) return { g: Math.max(0, +REAL.cfg.pocketGoal || 0), name: String(REAL.cfg.pocketGoalName || '').slice(0, 20) };
+  if (G.s && G.s.pGoal === undefined && !pkLive()) { G.s.pGoal = 50000; G.s.pGoalName = '자전거 사기'; }
+  return { g: (G.s && +G.s.pGoal) || 0, name: (G.s && G.s.pGoalName) || '' }; }
+function pkSetGoal(g, name) { if (G.s) { G.s.pGoal = g; G.s.pGoalName = name; G.s.pGoalHit = ''; gSave(); }
+  if (pkCfgOk()) { const u = REAL.uid; REAL.cfg = Object.assign({}, REAL.cfg, { pocketGoal: g, pocketGoalName: name });
+    FSm.setDoc(FSm.doc(REAL.db, 'users', u, 'settings', 'config'), { pocketGoal: g, pocketGoalName: name }, { merge: true }).catch(() => toast('목표를 내 계정에 저장하지 못했어요', true)); } }
+function pkLeft() { const k = kst(); return Math.max(1, new Date(Date.UTC(k.y, k.m, 0)).getUTCDate() - (+k.date.slice(8)) + 1); }
+function pkGoalCheck() { if (!G.s) return; const g = pkGoal(), k = kst(); if (g.g > 0 && month().net >= g.g && G.s.pGoalHit !== k.ym) { G.s.pGoalHit = k.ym; gReward(100, 50, `🐷 ${k.m}월 모으기 목표 달성! +100 🪙`, true); } }
+const _gGoalCheck_pk = gGoalCheck; gGoalCheck = function () { if (POCKET) return pkGoalCheck(); return _gGoalCheck_pk(); };
+const _gQuests_pk = gQuests; gQuests = function () { const q = _gQuests_pk(); if (POCKET) q.forEach(x => { if (x.id === 'brief') x.txt = '저금통 목표 확인하기'; }); return q; };
+const _adSync_pk = adSync; adSync = function () { if (POCKET) { smAd.hidden = true; return; } _adSync_pk(); }; // 용돈기입장에는 광고를 띄우지 않음
+
+// 🐷 돼지 저금통(금고 자리)
+const piggy = new THREE.Group(); piggy.position.set(-0.45, COUNTER_TOP, -0.33); piggy.rotation.y = -Math.PI / 2 + 0.45; piggy.visible = false; scene.add(piggy);
+{ const pink = P(0xffb3c7, 0.35), deep = S(0xf08aa6, 0.5), blk = S(0x3a2a2a, 0.4);
+  add(piggy, SPH(0.15, 24, 18), pink, 0, 0.175, 0).scale.set(1.22, 1, 1);
+  [[-0.1, -0.075], [0.1, -0.075], [-0.1, 0.075], [0.1, 0.075]].forEach(([x, z]) => add(piggy, CYL(0.032, 0.027, 0.075, 12), deep, x, 0.037, z));
+  add(piggy, CYL(0.052, 0.052, 0.05, 18), deep, 0.185, 0.165, 0, false).rotation.z = Math.PI / 2;
+  [-0.02, 0.02].forEach(z => add(piggy, SPH(0.009, 8, 6), blk, 0.212, 0.168, z, false));
+  [-0.075, 0.075].forEach(z => { const e = add(piggy, new THREE.ConeGeometry(0.042, 0.07, 10), deep, 0.095, 0.315, z, false); e.rotation.x = z > 0 ? 0.35 : -0.35; add(piggy, SPH(0.015, 10, 8), blk, 0.158, 0.225, z * 0.85, false); });
+  add(piggy, RB(0.1, 0.014, 0.024, 0.004), blk, -0.01, 0.322, 0, false);
+  add(piggy, CYL(0.038, 0.038, 0.009, 20), S(0xf0c25e, 0.3, { metalness: 0.9, envMapIntensity: 1 }), -0.01, 0.352, 0, false).rotation.x = Math.PI / 2;
+  add(piggy, new THREE.TorusGeometry(0.022, 0.007, 8, 14), deep, -0.19, 0.2, 0, false).rotation.y = Math.PI / 2; }
+
+function pkRestore() { PK_HIDE.forEach(k => { const o = OBJ[k]; if (o && o._pk) { o.root.visible = o._pk.v; o.noPick = o._pk.n; o._pk = null; } }); }
+const PK_TINT = new THREE.Color(0xffe0a0);
+const _applyMode3D_pk = applyMode3D;
+applyMode3D = function (...a) { pkRestore(); const r = _applyMode3D_pk(...a);
+  piggy.visible = POCKET; safe.visible = !POCKET; bindRoot('safe', POCKET ? piggy : safe);
+  if (POCKET) { if (THEME === 'pastel') { THEMED.forEach(([mat]) => mat.color.lerp(PK_TINT, 0.2)); scene.background.setHex(0xfff0d2); scene.fog.color.setHex(0xfff0d2); coralL.color.setHex(0xffc88e); mintL.color.setHex(0xffe6a6); }
+    PK_HIDE.forEach(k => { const o = OBJ[k]; if (!o) return; o._pk = { v: o.root.visible, n: !!o.noPick }; o.root.visible = false; o.noPick = true; if (o.el) o.el.classList.add('hide'); }); }
+  refreshPickable(); return r; };
+const _applyModeUI_pk = applyModeUI;
+applyModeUI = function () { _applyModeUI_pk(); document.body.classList.toggle('pocket', POCKET);
+  const a = document.querySelector('#hud a.twod'); if (a) { a.href = POCKET ? PK_2D : '2d.html'; a.title = POCKET ? '2D 용돈기입장으로 가기' : '2D 가계부로 가기'; a.setAttribute('aria-label', a.title); }
+  if (!POCKET && /[?&]mode=pocket\b/.test(location.search)) { try { history.replaceState(null, '', location.pathname); } catch (e) {} } };
+
+const _drawLaptop_pk = drawLaptop;
+drawLaptop = function (mo) { if (!POCKET) return _drawLaptop_pk(mo);
+  const g = lapCanvas.getContext('2d'), w = 360, h = 230, gl = pkGoal();
+  const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#fff6d8'); gr.addColorStop(1, '#ffe3c2'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect ? g.roundRect(14, 14, w - 28, h - 28, 22) : g.rect(14, 14, w - 28, h - 28); g.fill();
+  g.font = `30px ${FONT}`; g.fillText('📒', w - 76, 70);
+  g.fillStyle = '#b8862a'; g.font = `700 20px ${FONT}`; g.fillText('이번 달 남은 돈', 36, 58);
+  let size = 44; const t = won(mo.net); do { g.font = `800 ${size}px ${FONT}`; size -= 2; } while (g.measureText(t).width > w - 80 && size > 20);
+  g.fillStyle = mo.net >= 0 ? '#4a3b30' : '#dd5e47'; g.fillText(t, 36, 122);
+  g.fillStyle = '#8f7a69'; g.font = `600 16px ${FONT}`; g.fillText(`들어온 돈 ${won(mo.s)} · 나간 돈 ${won(mo.exp)}`, 36, 160);
+  const r = gl.g > 0 ? Math.max(0, Math.min(1, mo.net / gl.g)) : 0;
+  g.fillStyle = '#f3ead8'; g.fillRect(36, 180, w - 72, 12); g.fillStyle = '#f5b54a'; g.fillRect(36, 180, (w - 72) * r, 12);
+  lapTex.needsUpdate = true; };
+
+// 내 장부(노트북) 패널: 들어온 돈 / 나간 돈
+function pkBar(p, mini) { return `<div class="gbar"><i style="width:${p}%;background:linear-gradient(90deg,#ffd76b,#f59ac0)"></i></div>`; }
+function renderPocketPanel() { const mo = month(), c = MC(), gl = pkGoal(), p = gl.g ? Math.max(0, Math.min(100, mo.net / gl.g * 100)) : 0; let h = '';
+  pTag.textContent = '📝 내 장부 · 들어온 돈 / 나간 돈'; pTitle.textContent = `${mo.k.m}월 용돈기입장`;
+  h += gl.g ? `<button type="button" class="goalmini" data-act="pk-goal"><span>🐷 ${esc(gl.name || mo.k.m + '월 모으기 목표')} <b class="num">${p.toFixed(0)}%</b></span>${pkBar(p)}</button>` : `<button type="button" class="goalmini" data-act="pk-goal"><span>🐷 이번 달 모으기 목표를 정해 볼까요? ▸</span></button>`;
+  h += cards3([c.hud[0], mo.s], [c.hud[1], mo.exp], [c.hud[2], mo.net]);
+  h += `<div class="psum num">오늘 들어온 돈 ${won(mo.today)} · 이번 달 ${mo.sales.length + mo.pers.length}건</div>`;
+  h += `<div class="sec"><span>최근 들어온 돈</span><span>${mo.sales.length}건</span></div><div class="rows">`;
+  const r = recent(mo.sales);
+  h += r.length ? r.map(x => `<div class="row${x.id === lastNewId ? ' new' : ''}"><div class="l"><span class="d num">${md(x.date)}</span><span class="chip">${esc(x.channel)}</span></div><b class="num">+${won(x.amount)}</b></div>`).join('') : '<div class="empty">아직 이번 달 들어온 돈이 없어요.</div>';
+  h += `</div><div class="sec" style="margin-top:14px"><span>최근 나간 돈</span><span>${mo.pers.length}건</span></div><div class="rows">`;
+  const rp = recent(mo.pers);
+  h += rp.length ? rp.map(x => `<div class="row${x.id === lastNewId ? ' new' : ''}"><div class="l"><span class="d num">${md(x.date)}</span><span>${esc(x.name)}</span></div><b class="num">−${won(x.amount)}</b></div>`).join('') : '<div class="empty">아직 이번 달 나간 돈이 없어요.</div>';
+  h += '</div>';
+  if (!formOpen) h += `<button class="primary" data-act="open-form">＋ 들어온 돈 적기</button><button class="ghost" data-act="open-spend">－ 나간 돈 적기</button>`;
+  else if (formOpen === 'spend') h += `<div class="form">
+      <div class="field"><label for="fName">어디에 썼나요?</label><input id="fName" autocomplete="off" placeholder="예: 간식" maxlength="20" style="font-size:16px">
+      <div class="qk">${c.quickVar.map(q => `<button data-name="${q}">${q}</button>`).join('')}</div></div>
+      ${amtField('예: 2,500')}</div>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-spend">나간 돈 저장</button></div></div>`;
+  else h += `<div class="form">${amtField('예: 10,000')}
+      <div class="qk"><button data-add="1000">+1천</button><button data-add="5000">+5천</button><button data-add="10000">+1만</button></div></div>
+      <div class="field"><label>어디서 생겼나요?</label><div class="seg">${c.channels.map(x => `<button data-ch="${x}" class="${x === saleChannel ? 'on' : ''}">${x}</button>`).join('')}</div></div>
+      <div class="factions"><button class="cancel" data-act="cancel">취소</button><button class="save" data-act="save-sale">들어온 돈 저장</button></div></div>`;
+  h += `<p class="hintp">📒 이 3D 방의 기록은 <b>연습용</b>이라 새로 열면 처음으로 돌아가요. 계속 남기려면 <a href="${PK_2D}" style="color:var(--coral);font-weight:800">📊 2D 용돈기입장</a>에서 Google 로그인 후 쓰세요.</p>`;
+  pBody.innerHTML = h; }
+const _renderPanel_pk = renderPanel;
+renderPanel = function () { if (POCKET && activeKey === 'pos') { renderPocketPanel(); return; } _renderPanel_pk(); };
+pBody.addEventListener('click', e => { const b = e.target.closest('[data-act="pk-goal"]'); if (!b) return; closePanel(); setTimeout(() => openSm('pgoal'), 250); });
+pBody.addEventListener('click', e => { if (!POCKET) return; const b = e.target.closest('button'); if (b && (b.dataset.act === 'save-sale' || b.dataset.act === 'save-spend')) setTimeout(() => { refreshPos(); pkGoalCheck(); }, 60); });
+
+// 🐷 저금통 창: 목표 이름·금액·진행률
+function renderPgoal() { const mo = month(), gl = pkGoal(), k = kst(), left = pkLeft(), p = gl.g ? Math.max(0, Math.min(100, mo.net / gl.g * 100)) : 0, need = Math.max(0, gl.g - mo.net);
+  smTitle.textContent = '🐷 저금통 — 이번 달 모으기 목표';
+  smBody.innerHTML = `<div class="instcard" id="pkCard"><p class="ib" style="margin:0">🎯 ${esc(gl.name || k.m + '월 모으기 목표')}</p>${gl.g ? `${pkBar(p)}<p><span class="num" id="pkNow">${won(mo.net)}</span> / <span class="num">${won(gl.g)}</span> (<b id="pkPct">${p.toFixed(0)}%</b>)<br>${need <= 0 ? '목표 달성! 🎉 참 잘했어요' : `남은 ${left}일 동안 하루 <b class="num">${won(Math.ceil(need / left))}</b>씩 모으면 돼요`}</p>` : '<p>모으고 싶은 돈을 정하면, 지금 얼마나 모았는지 보여 드려요.</p>'}</div>
+    ${cards3(['들어온 돈', mo.s], ['나간 돈', mo.exp], ['남은 돈', mo.net])}
+    <div class="sec"><span>✏️ 목표 바꾸기</span></div>
+    <div class="field" style="margin-bottom:8px"><label for="pkName" style="display:block;font-size:12.5px;font-weight:700;color:var(--muted)">무엇을 위해 모으나요? (안 적어도 돼요)</label><input id="pkName" autocomplete="off" maxlength="20" placeholder="예: 자전거 사기" value="${esc(gl.name)}" style="width:100%;box-sizing:border-box;font-size:16px;height:46px;border-radius:12px;border:1.5px solid var(--line2);padding:0 12px;background:#fff;margin-top:4px"></div>
+    <div class="field" style="margin-bottom:10px"><label for="pkGoalIn" style="display:block;font-size:12.5px;font-weight:700;color:var(--muted)">얼마를 모을까요? (원)</label><input id="pkGoalIn" class="num" inputmode="numeric" autocomplete="off" maxlength="13" placeholder="예: 50,000" value="${gl.g ? gl.g.toLocaleString('ko-KR') : ''}" style="width:100%;box-sizing:border-box;font-size:16px;height:46px;border-radius:12px;border:1.5px solid var(--line2);padding:0 12px;background:#fff;margin-top:4px"></div>
+    <div class="factions"><button type="button" class="cancel" data-act="pk-clear">목표 지우기</button><button type="button" class="save" data-act="pk-set">정하기</button></div>
+    <p class="hintp">남은 돈 = 들어온 돈 − 나간 돈이에요. 목표는 장부 숫자를 바꾸지 않아요.</p>`;
+  if (G.s && !G.s.q.brief) { gDay(); G.s.q.brief = true; gSave(); setTimeout(gQuestPay, 600); } }
+smBody.addEventListener('input', e => { if (e.target.id !== 'pkGoalIn') return; const d = digits(e.target.value).slice(0, 10); e.target.value = d ? Number(d).toLocaleString('ko-KR') : ''; });
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+  if (smOpen === 'game' && b.dataset.act === 'pk-goal2') { smOpen = 'pgoal'; renderSm(); smEl.querySelector('.aisheet').scrollTop = 0; return; }
+  if (smOpen !== 'pgoal') return;
+  if (b.dataset.act === 'pk-set') { const g = Math.min(Number(digits(document.getElementById('pkGoalIn').value)) || 0, 1000000000), name = (document.getElementById('pkName').value || '').trim().slice(0, 20);
+    if (!g) { const i = document.getElementById('pkGoalIn'); i.style.borderColor = '#dd5e47'; i.focus(); return; }
+    pkSetGoal(g, name); toast('🐷 모으기 목표를 정했어요'); pkGoalCheck(); refreshPos(); renderSm(); }
+  if (b.dataset.act === 'pk-clear') { pkSetGoal(0, ''); toast('목표를 지웠어요'); refreshPos(); renderSm(); } });
+
+const _renderSm_pk = renderSm;
+renderSm = function () { if (smOpen === 'pgoal') { smEl.classList.remove('arcwide'); renderPgoal(); smAd.hidden = true; return; }
+  _renderSm_pk();
+  if (smOpen === 'board') { const g = smBody.querySelector('.mcards'); if (g) g.style.gridTemplateColumns = 'repeat(2,minmax(0,1fr))'; const l = smBody.querySelector('.ailead'); if (l) l.textContent = '어떤 방으로 볼까요? 고르면 그 방으로 바로 옮겨가요.'; }
+  if (POCKET && smOpen === 'game') { smTitle.textContent = '🎮 내 용돈기입장 성장'; const cs = smBody.querySelectorAll('.instcard'), gl = pkGoal(), mo = month(), p = gl.g ? Math.max(0, Math.min(100, mo.net / gl.g * 100)) : 0;
+    if (cs[1]) cs[1].outerHTML = `<button type="button" class="goalmini" data-act="pk-goal2"><span>🐷 ${esc(gl.g ? (gl.name || kst().m + '월 모으기 목표') : '이번 달 모으기 목표를 정해 볼까요? ▸')}${gl.g ? ` <b class="num">${p.toFixed(0)}%</b>` : ''}</span>${gl.g ? pkBar(p) : ''}</button>`; } };
+const _interact_pk = interact;
+interact = function (k) { if (POCKET) { if (PK_HIDE.includes(k)) return; if (k === 'safe') { if (DEC.on) return; firstUse(); if (activeKey) closePanel(); openSm('pgoal'); return; } } return _interact_pk(k); };
+const _updateOverlays_pk = updateOverlays;
+updateOverlays = function (now) { _updateOverlays_pk(now); if (POCKET) PK_HIDE.forEach(k => { const o = OBJ[k]; if (o && o.el) o.el.classList.add('hide'); }); };
+
+const _ownerTalk_pk = ownerTalk;
+ownerTalk = function () { if (!POCKET) return _ownerTalk_pk(); delete bubble.dataset.brief;
+  const mo = month(), gl = pkGoal(), need = gl.g - mo.net;
+  const line = gl.g ? (need <= 0 ? '모으기 목표 달성! 🎉' : `목표까지 <b>${won(need)}</b> 남았어요 🐷`) : '저금통을 눌러 모으기 목표를 정해 보세요 🐷';
+  bubble.innerHTML = `이번 달 들어온 돈 <b>${won(mo.s)}</b> · 나간 돈 <b>${won(mo.exp)}</b><br>남은 돈 <b>${won(mo.net)}</b><br>${line}`;
+  bubble.classList.add('show'); clearTimeout(bubbleTimer); bubbleTimer = setTimeout(() => bubble.classList.remove('show'), 4500);
+  face.classList.remove('wiggle'); void face.offsetWidth; face.classList.add('wiggle'); waveT = performance.now(); };
+
+function POCKET_TOUR() { return [
+  ['👋', '용돈냥이에 오신 걸 환영해요', '내 방을 둘러보며 쓰는 용돈기입장이에요. <b>들어온 돈</b>, <b>나간 돈</b>, <b>모으기 목표</b> 이 세 가지만 하면 돼요.'],
+  ['👆', '둘러보기', '화면을 <b>드래그</b>하면 고개를 돌려요. 아래 <b>➖ ➕</b> 버튼으로 앞뒤로 움직여요.'],
+  ['📝', '노트북을 눌러서 적어요', '<b>📝 내 장부</b>를 누르고 <b>들어온 돈</b>이나 <b>나간 돈</b>을 고른 뒤 금액만 넣으면 끝이에요.'],
+  ['🐷', '저금통에 목표를 정해요', '<b>🐷 저금통</b>을 누르면 이번 달에 얼마를 모을지 정하고, 지금 얼마나 모았는지 볼 수 있어요.'],
+  ['☁️', '기록을 계속 남기려면', '이 3D 방은 <b>연습용</b>이라 새로 열면 처음으로 돌아가요. 기록을 계속 남기려면 위의 <b>📊 2D</b>에서 Google 로그인 후 쓰세요.']]; }
+const _renderMe_pk = renderMe;
+renderMe = function () { _renderMe_pk(); if (!POCKET) return;
+  const a = smBody.querySelector('a.linkghost'); if (a) { a.href = PK_2D; a.textContent = '📊 2D 용돈기입장'; }
+  const m = smBody.querySelector('.rows.manual'); if (!m) return;
+  m.innerHTML = [['📝 내 장부(노트북)', '들어온 돈 적기 — 용돈·아르바이트·기타'], ['📝 내 장부(노트북)', '나간 돈 적기 — 간식·학용품·교통 등'], ['🐷 저금통', '이번 달 모으기 목표 정하기 · 진행률 보기'], ['📅 벽걸이 달력', '날짜별로 적은 내용 보기'], ['🪧 간판 · 📋 게시판 · 🎨 메뉴판', '이름 · 방 종류 · 테마 바꾸기'], ['🔥🪙 위쪽 버튼', '레벨 · 연속 기록 · 오늘의 할 일'], ['🛋️ 아래 버튼', '방 꾸미기 — 코인으로 사서 원하는 자리에 놓기'], ['📊 2D 버튼', '글자로 보는 용돈기입장 · 계속 저장하려면 여기서']].map(([x, y]) => `<div class="row"><div class="l"><b>${x}</b></div><span class="d" style="text-align:right">${y}</span></div>`).join('');
+  m.insertAdjacentHTML('afterend', `<p class="hintp">🤖 AI 비서 피클을 쓴다면 이렇게 말해 보세요: <b>"내 용돈기입장(${LEDGER_URL}2d.html?mode=pocket&amp;by=pickle)에 들어온 돈·나간 돈을 대신 적어 줘"</b></p>`); };
+/* ---- 🐱 브랜드 (v25): 앱 = 용돈냥이 · 용돈기입장 모드 = 「용돈냥이」(무료) · 식당·미용실·가정 방 = 「용돈냥이 PRO」
+   잠금·결제 화면은 없다. PRO 방도 로그인 없이 체험판으로 바로 열린다(지금은 무료 베타). 저장 키·주소·함수 이름은 그대로. */
+const _applyModeUI_br = applyModeUI;
+applyModeUI = function () { _applyModeUI_br();
+  const t = document.getElementById('tier'); if (t) { t.textContent = POCKET ? '무료' : 'PRO'; t.classList.toggle('free', POCKET); t.title = POCKET ? '용돈냥이 · 무료 기본 모드' : '용돈냥이 PRO · 가게·가정용 (지금은 무료 베타, 로그인 없이 체험)'; }
+  const mk = document.querySelector('#hud .mark'); if (mk) mk.title = POCKET ? '용돈냥이' : '용돈냥이 PRO';
+  const a = document.querySelector('#hud a.twod'); if (a && !POCKET) a.href = '2d.html?mode=pro';
+  if (POCKET && /[?&]mode=pro\b/.test(location.search)) { try { history.replaceState(null, '', location.pathname); } catch (e) {} } };
+const _renderSm_br = renderSm;
+renderSm = function () { _renderSm_br(); if (smOpen !== 'board') return;
+  smTitle.textContent = '📋 업종 게시판 — 용돈냥이 · PRO';
+  const l = smBody.querySelector('.ailead'); if (l) l.innerHTML = '<b>🐱 용돈냥이</b>(무료 용돈기입장)와 <b>용돈냥이 PRO</b>(가게·가정용) 중에서 고르세요. 고르면 그 방으로 바로 옮겨가요.';
+  smBody.querySelectorAll('.mcard').forEach(c => { const free = c.dataset.m2 === 'pocket'; c.insertAdjacentHTML('afterbegin', `<span class="tierc${free ? ' free' : ''}">${free ? '무료' : 'PRO'}</span>`); });
+  smBody.insertAdjacentHTML('beforeend', '<p class="pnote" style="margin:10px 0 0">🧪 지금은 <b>무료 베타</b>예요. PRO 방(식당·미용실·가정)과 직원·근태도 <b>로그인 없이 바로 체험</b>할 수 있어요.</p>'); };
+const _renderMe_br = renderMe;
+renderMe = function () { _renderMe_br();
+  smBody.insertAdjacentHTML('afterbegin', `<p class="hintp" style="margin:0 0 8px">🐱 <b>${POCKET ? '용돈냥이' : '용돈냥이 PRO'}</b> ${POCKET ? '· 무료 기본 모드' : '· 가게·가정용'} · 지금은 무료 베타, 로그인 없이 체험할 수 있어요</p>`);
+  if (!POCKET) { const a = smBody.querySelector('a.linkghost'); if (a) a.href = '2d.html?mode=pro'; } };
 // 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
 const _applyCam_far = applyCam;
 applyCam = function () { _applyCam_far(); const out = cam.pos.z > ROOM.z1 - 0.45; if (back.visible === out) back.visible = !out; };
