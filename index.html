@@ -730,7 +730,7 @@ const LIVE_CH = ['홀 매출', '배민 매출', '쿠팡이츠 매출', '요기�
 const LIVE_FIX = ['임차료', '관리비', '통신비', '세금과공과', '기타'];
 const LIVE_ORDER = ['보통예금', '매출액', '식자재비', '임차료', '인건비', '지급수수료', '소모품비', '광고선전비', '통신비', '수도광열비', '보험료', '세금과공과', '차량유지비', '접대비', '기타비용', '개인출금'];
 const REAL = { on: false, uid: null, status: 'idle', docs: [], unsub: null, db: null, staff: null, staffState: 'idle' };
-const isLive = () => REAL.on && REAL.status === 'ok' && MODE !== 'home';
+const isLive = () => REAL.on && REAL.status === 'ok' && MODE !== 'home' && !POCKET; // 용돈냥이(POCKET)는 연습용: 실제 장부를 읽지도 쓰지도 않는다
 const byDateId = (a, b) => (String(a.date) + String(a.id)).localeCompare(String(b.date) + String(b.id));
 function liveMonth() {
   const k = kst(), ym = k.ym;
@@ -1871,7 +1871,7 @@ pBody.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || !pBody.contains(b)) return; const act = b.dataset.act;
   if (b.dataset.staff) { if (b.dataset.staff === 'connect') staffConnect(); else staffDisconnect(); return; }
   if (b.dataset.fc) { fixCat = b.dataset.fc; pBody.querySelectorAll('[data-fc]').forEach(x => x.classList.toggle('on', x === b)); return; }
-  if (isLive() && (act === 'save-sale' || act === 'save-ing' || act === 'save-fix')) { liveSave(act, b); return; }
+  if (!POCKET && isLive() && (act === 'save-sale' || act === 'save-ing' || act === 'save-fix')) { liveSave(act, b); return; }
   if (act === 'open-form' || act === 'open-spend') { formOpen = act === 'open-spend' ? 'spend' : true; renderPanel(); const f = pBody.querySelector('.form input'); f && f.focus({ preventScroll: true }); pBody.scrollTop = pBody.scrollHeight; return; }
   if (b.dataset.sid) { // 출근/퇴근 체크
     const k = kst(), sid = b.dataset.sid, today = (DATA.att || []).filter(a => a.sid === sid && a.date === k.date), last = today[today.length - 1];
@@ -2238,6 +2238,7 @@ function liveRefresh(first) {
 let lastIdNum = 0;
 const newLedgerId = () => { lastIdNum = Math.max(Date.now(), lastIdNum + 1); return String(lastIdNum); };
 async function liveSave(act, btn) {
+  if (POCKET) return; // 용돈냥이(연습용)에서는 어떤 경로로 불려도 users/{uid}/ledger 에 쓰지 않는다
   const amtIn = pBody.querySelector('#fAmt'), amount = Number(digits(amtIn && amtIn.value));
   if (!amount || amount > 100000000) { amtIn.classList.remove('err'); void amtIn.offsetWidth; amtIn.classList.add('err'); amtIn.focus(); return; }
   const date = kst().date, id = newLedgerId(); let rec;
@@ -4296,7 +4297,7 @@ function renderPocketPanel() { const mo = month(), c = MC(), gl = pkGoal(), p = 
 const _renderPanel_pk = renderPanel;
 renderPanel = function () { if (POCKET && activeKey === 'pos') { renderPocketPanel(); return; } _renderPanel_pk(); };
 pBody.addEventListener('click', e => { const b = e.target.closest('[data-act="pk-goal"]'); if (!b) return; closePanel(); setTimeout(() => openSm('pgoal'), 250); });
-pBody.addEventListener('click', e => { if (!POCKET) return; const b = e.target.closest('button'); if (b && (b.dataset.act === 'save-sale' || b.dataset.act === 'save-spend')) setTimeout(() => { refreshPos(); pkGoalCheck(); }, 60); });
+pBody.addEventListener('click', e => { if (!POCKET) return; const b = e.target.closest('button'); if (b && (b.dataset.act === 'save-sale' || b.dataset.act === 'save-spend')) { if (!formOpen) toast('📒 연습용으로 적었어요 · 계속 남기려면 2D 용돈냥이'); setTimeout(() => { refreshPos(); pkGoalCheck(); }, 60); } });
 
 // 🐷 저금통 창: 목표 이름·금액·진행률
 function renderPgoal() { const mo = month(), gl = pkGoal(), k = kst(), left = pkLeft(), p = gl.g ? Math.max(0, Math.min(100, mo.net / gl.g * 100)) : 0, need = Math.max(0, gl.g - mo.net);
@@ -4367,6 +4368,10 @@ const _renderMe_br = renderMe;
 renderMe = function () { _renderMe_br();
   smBody.insertAdjacentHTML('afterbegin', `<p class="hintp" style="margin:0 0 8px">🐱 <b>${POCKET ? '용돈냥이' : '용돈냥이 PRO'}</b> ${POCKET ? '· 무료 기본 모드' : '· 가게·가정용'} · 지금은 무료 베타, 로그인 없이 체험할 수 있어요</p>`);
   if (!POCKET) { const a = smBody.querySelector('a.linkghost'); if (a) a.href = '2d.html?mode=pro'; } };
+/* ---- 📒 용돈냥이는 연습용 (v26): 로그인해 있어도 실제 장부(users/{uid}/ledger)에 쓰지 않고, 헤더도 그렇게 보여 준다 ---- */
+const _renderAuth_pk = renderAuth;
+renderAuth = function () { _renderAuth_pk();
+  if (POCKET && REAL.on && (REAL.status === 'ok' || REAL.status === 'loading')) { authEl.innerHTML = '<span class="badge demo" title="용돈냥이 3D 방의 기록은 연습용이라 내 장부에 저장되지 않아요">🧪 연습용 · 저장 안 됨</span>'; setHudVar(); } };
 // 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
 const _applyCam_far = applyCam;
 applyCam = function () { _applyCam_far(); const out = cam.pos.z > ROOM.z1 - 0.45; if (back.visible === out) back.visible = !out; };

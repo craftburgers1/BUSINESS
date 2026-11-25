@@ -4028,6 +4028,54 @@
         renderDashboard = function () { const r = v25Prev.renderDashboard.apply(this, arguments); try { v25Apply(); } catch (e) {} return r; };
         startDemoMode = function (kind) { return v25StartDemo(kind); };
         try { v25Apply(); } catch (e) {}
+
+        /* ===================== v26: 📒 용돈냥이 화면에서 남은 사업자용 UI 숨김 =====================
+           용돈냥이(업종 = 용돈기입장 또는 ?mode=pocket)에서는 '들어온 돈'과 '나간 돈' 두 가지만 남긴다.
+           숨김: 항목 관리 버튼, 최근 입력 칩, 입력한 사람, 고정 지출 탭, 지출 분석 그래프, 쿠팡 검색·배너와 그 고지 문구, AI 자동 입력 버튼, 영수증 첨부. 다른 업종 화면은 그대로. */
+        const V26_CATS = { sales: ['용돈', '아르바이트', '기타 수입'], variable: ['간식', '학식·식비', '학용품', '교통', '장난감', '생활용품'] };
+        function v26EnsureDom() {
+            if (!document.getElementById('v26Style')) {
+                const st = document.createElement('style'); st.id = 'v26Style';
+                st.textContent = 'body.v24-pocket .v26-manage,body.v24-pocket #quickFillBox,body.v24-pocket #byToggle,body.v24-pocket #tab-fixed,body.v24-pocket .v26-chart,body.v24-pocket .v26-ad,body.v24-pocket #receiptAttachBox,body.v24-pocket .v26-ai{display:none!important}';
+                document.head.appendChild(st);
+            }
+            const cv = document.getElementById('expenseChart'), cs = cv && cv.closest('section'); if (cs) cs.classList.add('v26-chart');
+            document.querySelectorAll('button[onclick="openPickleGuideModal()"]').forEach(x => { if (x.id !== 'btnLoginPickle') x.classList.add('v26-ai'); });
+            document.querySelectorAll('footer p, section p, p').forEach(x => { if (!x.children.length && /^\s*이 포스팅\/배너는 쿠팡 파트너스/.test(x.textContent)) x.classList.add('v26-ad'); });
+            document.querySelectorAll('section.ios-card').forEach(s => { const h = s.firstElementChild; if (h && /쿠팡 파트너스/.test(h.textContent) && !s.querySelector('#expenseChart')) s.classList.add('v26-ad'); });
+        }
+        function v26FormText() {
+            const on = v24IsPocket(), fc = document.getElementById('form-container'); if (!fc) return;
+            fc.querySelectorAll('button[onclick^="openCategoryModal"]').forEach(x => { if (x.parentElement && x.parentElement !== fc) x.parentElement.classList.add('v26-manage'); });
+            const set = (el, txt) => { if (!el) return; if (on) v24SetText(el, txt); else v24Reset(el); };
+            const st = document.getElementById('salesType'), ic = document.getElementById('inputCategory');
+            set(st && st.previousElementSibling, '어디서 생겼나요?'); set(ic && ic.previousElementSibling, '어디에 썼나요?');
+            const memo = document.getElementById('inputMemo'), amt = document.getElementById('inputAmount');
+            if (memo) { if (on) { if (memo.dataset.v26Ph === undefined) memo.dataset.v26Ph = memo.placeholder; memo.placeholder = st ? '예: 이번 달 용돈' : '예: 떡볶이'; } else if (memo.dataset.v26Ph !== undefined) { memo.placeholder = memo.dataset.v26Ph; delete memo.dataset.v26Ph; } }
+            if (amt) { if (on) { if (amt.dataset.v26Ph === undefined) amt.dataset.v26Ph = amt.placeholder; amt.placeholder = st ? '예: 10000' : '예: 2500'; } else if (amt.dataset.v26Ph !== undefined) { amt.placeholder = amt.dataset.v26Ph; delete amt.dataset.v26Ph; } }
+            const sb = fc.querySelector('form button[type="submit"]');
+            if (sb) { if (on) { if (sb.dataset.v26Html === undefined) sb.dataset.v26Html = sb.innerHTML; sb.textContent = st ? '＋ 들어온 돈 적기' : '－ 나간 돈 적기'; } else if (sb.dataset.v26Html !== undefined) { sb.innerHTML = sb.dataset.v26Html; delete sb.dataset.v26Html; } }
+        }
+        const v26Prev = { switchTab, applyStoreConfigUI, renderDashboard };
+        // 용돈냥이에서는 고정 지출 탭을 쓰지 않고, 분류는 용돈기입장용만 보여 준다(저장된 내 항목 목록은 바꾸지 않음)
+        switchTab = function (tab) {
+            if (!v24IsPocket()) { const r0 = v26Prev.switchTab.apply(this, arguments); try { v26FormText(); } catch (e) {} return r0; }
+            if (tab === 'fixed') tab = 'variable';
+            const sc = storeConfig, swap = !!sc && sc.industryKey !== 'pocket', keep = swap ? { s: sc.sales, v: sc.variable } : null;
+            if (swap) { sc.sales = V26_CATS.sales; sc.variable = V26_CATS.variable; }
+            let r; try { r = v26Prev.switchTab.call(this, tab); } finally { if (swap) { sc.sales = keep.s; sc.variable = keep.v; } }
+            try { v26FormText(); } catch (e) {} return r;
+        };
+        let v26Was = null;
+        function v26Apply() {
+            v26EnsureDom();
+            const on = v24IsPocket();
+            if (v26Was !== on) { const first = v26Was === null; v26Was = on; if ((on || !first) && typeof currentTab !== 'undefined' && document.querySelector('#form-container form')) { try { switchTab(on && currentTab === 'fixed' ? 'variable' : currentTab); } catch (e) {} } }
+            try { v26FormText(); } catch (e) {}
+        }
+        applyStoreConfigUI = function () { const r = v26Prev.applyStoreConfigUI.apply(this, arguments); try { v26Apply(); } catch (e) {} return r; };
+        renderDashboard = function () { const r = v26Prev.renderDashboard.apply(this, arguments); try { v26Apply(); } catch (e) {} return r; };
+        try { v26Apply(); } catch (e) {}
     </script>
 </body>
 </html>
