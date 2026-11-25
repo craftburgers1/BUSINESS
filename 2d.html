@@ -55,6 +55,7 @@
         window.collection = collection;
         window.getDocs = getDocs;
         window.deleteDoc = deleteDoc;
+        window.__soloRawDeleteDoc = deleteDoc; // v28.1: 삭제 원본(지갑 되돌리기용 wrapper 가 이것만 부른다)
         window.query = query;
         window.where = where;
         window.getDoc = getDoc; window.runTransaction = runTransaction; window.onSnapshot = onSnapshot; window.serverTimestamp = serverTimestamp; window.orderBy = orderBy; window.limit = limit; // v28 지갑
@@ -4296,12 +4297,16 @@
             if (r.col === 'ledger' && Array.isArray(data.receipts) && data.receipts.length) v28Earn(r.id, 'receipt'); }
         (function () { const d = Object.getOwnPropertyDescriptor(window, 'setDoc');
             Object.defineProperty(window, 'setDoc', { configurable: true,
-                get() { const f = d && d.get ? d.get.call(window) : v27Raw.setDoc; if (typeof f !== 'function') return f; return function (ref, data, opt) { return Promise.resolve(f.apply(this, arguments)).then(x => { try { v28AfterSet(ref, data, opt); } catch (e) { console.warn('[wallet]', e && e.message); } return x; }); }; },
+                get() { const f = d && d.get ? d.get.call(window) : v27Raw.setDoc; if (typeof f !== 'function') return f; const w = function (ref, data, opt) { return Promise.resolve(f.apply(this, arguments)).then(x => { try { v28AfterSet(ref, data, opt); } catch (e) { console.warn('[wallet]', e && e.message); } return x; }); }; if (v27Raw.setDoc && v27Raw.setDoc.__v14Shield) w.__v14Shield = true; /* v28.1: 보호막이 이미 있으면 다시 씌우지 않게 */ return w; },
                 set(v) { if (d && d.set) d.set.call(window, v); else v27Raw.setDoc = v; } });
-            let rawDel = window.deleteDoc;
-            Object.defineProperty(window, 'deleteDoc', { configurable: true,
-                get() { if (typeof rawDel !== 'function') return rawDel; return function (ref) { const r = v28Rec(ref); return Promise.resolve(rawDel.apply(this, arguments)).then(x => { try { if (r) v28Unearn(r.id); } catch (e) { console.warn('[wallet]', e && e.message); } return x; }); }; },
-                set(v) { rawDel = v; } }); })();
+        })();
+        /* v28.1: 삭제는 getter 로 감싸지 않는다. 모듈이 보관한 원본(window.__soloRawDeleteDoc)만 부르는 보통 함수를 한 번만 설치한다.
+           (v28 은 getter 가 돌려준 함수를 체험판 보호막이 다시 window.deleteDoc 에 넣으면서 자기 자신을 부르는 무한 반복이 생겼다) */
+        function v28InstallDel() { if (window.__soloDelWrap || typeof window.__soloRawDeleteDoc !== 'function') return; // 이미 설치됨 · 원본이 아직 없음
+            const prev = window.deleteDoc;
+            const w = function (ref) { if (isDemoMode) return prev && prev.__v14Shield ? prev.apply(this, arguments) : Promise.resolve(); // 체험판: 기존 보호막 그대로(쓰기 0)
+                const r = v28Rec(ref); return Promise.resolve(window.__soloRawDeleteDoc.apply(this, arguments)).then(x => { try { if (r) v28Unearn(r.id); } catch (e) { console.warn('[wallet]', e && e.message); } return x; }); };
+            w.__v28Del = true; window.__soloDelWrap = true; window.deleteDoc = w; }
         // 헤더 칩 + 안내 창
         function v28Chip() { let c = document.getElementById('v28Chip'); const h = document.getElementById('displayStoreName');
             if (!v28Ok() || V28.uid !== currentUser.uid) { if (c) c.remove(); return; }
@@ -4332,11 +4337,11 @@
             try { V28.unsubs.push(window.onSnapshot(v28Ref('wallet', 'main'), sn => { if (V28.uid !== uid) return; V28.bal = sn.exists() ? (Number((sn.data() || {}).balance) || 0) : 0; v28Paint(); }, () => {}));
                 V28.unsubs.push(window.onSnapshot(v28Ref('wallet', 'daily'), sn => { if (V28.uid !== uid) return; V28.daily = sn.exists() ? (sn.data() || null) : null; v28Paint(); }, () => {})); } catch (e) { console.warn('[wallet] 구독 실패', e && e.message); }
             walletApply({ logId: 'welcome:v1', amount: 50, reason: 'welcome', refId: 'v1', source: 'business' }).catch(e => console.warn('[wallet] welcome 실패', e && e.message)); v28Chip(); }
-        function v28Sync() { try { if (v28Ok()) { if (V28.uid !== currentUser.uid) { if (V28.uid) v28Stop(); v28Start(); } else v28Chip(); } else if (V28.uid) v28Stop(); else v28Chip(); } catch (e) { console.warn('[wallet]', e && e.message); } }
+        function v28Sync() { try { v28InstallDel(); if (v28Ok()) { if (V28.uid !== currentUser.uid) { if (V28.uid) v28Stop(); v28Start(); } else v28Chip(); } else if (V28.uid) v28Stop(); else v28Chip(); } catch (e) { console.warn('[wallet]', e && e.message); } }
         const v28Prev = { load: loadUserDataFromCloud, apply: applyStoreConfigUI };
         loadUserDataFromCloud = async function () { v28Sync(); return v28Prev.load.apply(this, arguments); };
         applyStoreConfigUI = function () { const r = v28Prev.apply.apply(this, arguments); v28Sync(); return r; };
-        (function v28Wait(n) { if (typeof window.onAuthStateChanged === 'function' && window.firebaseAuth) { try { window.onAuthStateChanged(window.firebaseAuth, () => setTimeout(v28Sync, 0)); } catch (e) {} } else if (n < 100) setTimeout(() => v28Wait(n + 1), 200); })(0);
+        (function v28Wait(n) { if (typeof window.onAuthStateChanged === 'function' && window.firebaseAuth) { v28InstallDel(); try { window.onAuthStateChanged(window.firebaseAuth, () => setTimeout(v28Sync, 0)); } catch (e) {} } else if (n < 100) setTimeout(() => v28Wait(n + 1), 200); })(0);
     </script>
 </body>
 </html>
