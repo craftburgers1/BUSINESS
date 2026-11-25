@@ -4076,6 +4076,180 @@
         applyStoreConfigUI = function () { const r = v26Prev.applyStoreConfigUI.apply(this, arguments); try { v26Apply(); } catch (e) {} return r; };
         renderDashboard = function () { const r = v26Prev.renderDashboard.apply(this, arguments); try { v26Apply(); } catch (e) {} return r; };
         try { v26Apply(); } catch (e) {}
+
+        /* ===================== v27: ☁ 용돈냥이 계정 저장(사업자 장부와 분리) + 💼 내 알바비 =====================
+           · 용돈냥이 화면(업종 = 용돈기입장 또는 ?mode=pocket)에서 로그인해 있으면, 장부 경로 users/{uid}/ledger 가
+             자동으로 users/{uid}/pocket_ledger 로 바뀐다. 그래서 용돈냥이 화면에서는 사업자 장부를 읽지도 쓰지도 않는다.
+           · 목표·마지막 시급 = users/{uid}/settings/pocket (merge), 알바 기록 = users/{uid}/pocketJobs/{id}
+           · settings/config 에는 용돈 데이터를 쓰지 않는다(예전 pocketGoal 은 읽기만 하고 settings/pocket 으로 옮김).
+           · 다른 업종 화면에서는 아래 코드가 경로를 바꾸지 않고 카드도 보이지 않는다. */
+        const v27Raw = { doc: window.doc, collection: window.collection, setDoc: window.setDoc };
+        const v27Moved = typeof WeakSet === 'function' ? new WeakSet() : null;
+        const V27_MIN_WAGE = 10320, V27_JOBS_KEY = 'soloPocketJobs:v1';
+        function v27PocketCloud() { return !isDemoMode && !!currentUser && v24IsPocket(); }
+        function v27Path(args) { if (args.length >= 4 && args[1] === 'users' && args[3] === 'ledger' && v27PocketCloud()) { const a = Array.prototype.slice.call(args); a[3] = 'pocket_ledger'; return a; } return null; }
+        ['doc', 'collection'].forEach(name => { Object.defineProperty(window, name, { configurable: true,
+            get() { const raw = v27Raw[name]; if (typeof raw !== 'function') return raw; return function () { const a = v27Path(arguments), ref = raw.apply(this, a || arguments); if (a && v27Moved && ref && typeof ref === 'object') { try { v27Moved.add(ref); } catch (e) {} } return ref; }; },
+            set(v) { v27Raw[name] = v; } }); });
+        Object.defineProperty(window, 'setDoc', { configurable: true,
+            get() { const raw = v27Raw.setDoc; if (typeof raw !== 'function') return raw; return function (ref, data) { if (v27Moved && ref && typeof ref === 'object' && v27Moved.has(ref) && data && typeof data === 'object' && data.createdAt === undefined) data.createdAt = Date.now(); return raw.apply(this, arguments); }; },
+            set(v) { v27Raw.setDoc = v; } });
+
+        const v27S = { set: {}, jobs: null, rate: V27_MIN_WAGE, open: false, edit: null, f: null, arm: null, armT: 0, note: '' };
+        let v27Loaded = null, v27Loading = false;
+        const v27UserDoc = (...p) => v27Raw.doc(window.firebaseDb, 'users', currentUser.uid, ...p);
+        const v27UserCol = name => v27Raw.collection(window.firebaseDb, 'users', currentUser.uid, name);
+        async function v27SetSave(o) { try { await v27Raw.setDoc(v27UserDoc('settings', 'pocket'), Object.assign({ updatedAt: Date.now() }, o), { merge: true }); return true; } catch (e) { alert('내 계정에 저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.'); return false; } }
+        // 한 번만: 업종이 용돈기입장인 계정의 예전 기록(ledger)을 pocket_ledger 로 복사한다. 원본 ledger 는 그대로 둔다.
+        async function v27Migrate() {
+            const cats = new Set([].concat(['용돈', '아르바이트', '기타 수입', '저축', '통신비', '구독료', '간식', '학식·식비', '학용품', '교통', '장난감', '생활용품'], storeConfig.sales || [], storeConfig.fixed || [], storeConfig.variable || []));
+            if (!(await v27SetSave({ migrating: true }))) return;
+            const snap = await window.getDocs(v27UserCol('ledger')); let rows = [], other = 0;
+            snap.forEach(d => { const x = d.data(); if (!x) return; if (cats.has(x.category)) rows.push(Object.assign({}, x, { id: String(x.id || d.id), createdAt: x.createdAt || Number(x.id) || Date.now(), copiedFrom: 'ledger' })); else other++; });
+            // 용돈 항목이 아닌 기록이 하나라도 있으면(가게 장부를 쓰던 계정) 섞일 수 있으니 아무것도 복사하지 않는다
+            if (other > 0) { rows = []; v27S.note = '예전 장부에 다른 종류의 기록이 섞여 있어 자동으로 옮기지 않았어요. 용돈냥이 장부는 새로 시작해요 (예전 기록은 그대로 있어요)'; }
+            for (const x of rows) await v27Raw.setDoc(v27UserDoc('pocket_ledger', x.id), x);
+            await v27SetSave({ migrating: false, migratedAt: Date.now(), migratedCount: rows.length, migrateSkipped: other });
+            v27S.set.migratedAt = Date.now(); dbData = rows;
+            if (rows.length) v27S.note = '예전에 적은 용돈 기록 ' + rows.length + '건을 용돈냥이 전용 장부로 복사했어요 (원래 기록은 그대로 있어요)';
+        }
+        async function v27LoadPocket() {
+            try {
+                const [ss, js] = await Promise.all([window.getDocs(v27UserCol('settings')), window.getDocs(v27UserCol('pocketJobs'))]);
+                let set = {}; ss.forEach(d => { if (d.id === 'pocket') set = d.data() || {}; });
+                const jobs = []; js.forEach(d => jobs.push(Object.assign({}, d.data(), { id: d.id })));
+                v27S.set = set; v27S.jobs = jobs; if (Number(set.rate) > 0) v27S.rate = Number(set.rate);
+                if (set.goal == null && storeConfig && storeConfig.pocketGoal != null) { v27S.set.goal = Math.max(0, Number(storeConfig.pocketGoal) || 0); v27S.set.goalName = String(storeConfig.pocketGoalName || '').slice(0, 20); await v27SetSave({ goal: v27S.set.goal, goalName: v27S.set.goalName }); }
+                if (storeConfig && storeConfig.industryKey === 'pocket' && !set.migratedAt && (dbData.length === 0 || set.migrating)) await v27Migrate();
+            } catch (e) { v27S.jobs = v27S.jobs || []; v27S.note = '용돈냥이 계정 기록을 다 불러오지 못했어요. 새로고침해 보세요.'; }
+        }
+        const v27Prev = { loadUserDataFromCloud, v24GoalGet, v24GoalSet, applyStoreConfigUI, renderDashboard };
+        loadUserDataFromCloud = async function () {
+            v27Loading = true; let r;
+            try {
+                r = await v27Prev.loadUserDataFromCloud.apply(this, arguments); // 용돈냥이 화면이면 여기서 읽는 장부가 pocket_ledger
+                v27Loaded = (!isDemoMode && currentUser) ? (v24IsPocket() ? 'pocket' : 'biz') : null;
+                if (v27Loaded === 'pocket') { await v27LoadPocket(); renderDashboard(); } else { v27S.set = {}; v27S.jobs = null; v27S.rate = V27_MIN_WAGE; }
+            } finally { v27Loading = false; }
+            try { v27Apply(); } catch (e) {}
+            return r;
+        };
+        // 모으기 목표: 로그인 → settings/pocket, 아니면 예전처럼 이 기기
+        v24GoalGet = function () { if (v27PocketCloud()) return { g: Math.max(0, Number(v27S.set.goal) || 0), name: String(v27S.set.goalName || '').slice(0, 20) }; return v27Prev.v24GoalGet(); };
+        v24GoalSet = async function (g, name) { if (!v27PocketCloud()) { if (!isDemoMode && currentUser) return; return v27Prev.v24GoalSet(g, name); } /* 예전 함수의 settings/config 쓰기 경로로는 가지 않는다 */ v27S.set.goal = g; v27S.set.goalName = name; await v27SetSave({ goal: g, goalName: name }); v24RenderGoal(); };
+
+        // ---- 💼 내 알바비 ----
+        function v27Local() { try { const v = JSON.parse(localStorage.getItem(V27_JOBS_KEY) || 'null'); if (v && Array.isArray(v.jobs)) return v; } catch (e) {} return { jobs: [], rate: V27_MIN_WAGE }; }
+        function v27Jobs() { if (v27PocketCloud()) return v27S.jobs || []; if (!v27S.local) { v27S.local = v27Local(); if (Number(v27S.local.rate) > 0) v27S.rate = Number(v27S.local.rate); } return v27S.local.jobs; }
+        function v27LocalSave() { if (v27PocketCloud() || !v27S.local) return; v27S.local.rate = v27S.rate; try { localStorage.setItem(V27_JOBS_KEY, JSON.stringify(v27S.local)); } catch (e) {} }
+        const v27ToMin = t => { const p = String(t || '0:0').split(':').map(Number); return (p[0] || 0) * 60 + (p[1] || 0); };
+        function v27Min(start, end, brk) { let m = v27ToMin(end) - v27ToMin(start); if (m <= 0) m += 1440; return Math.max(0, m - (Number(brk) || 0)); }
+        const v27Hm = m => Math.floor(m / 60) + '시간' + (m % 60 ? ' ' + (m % 60) + '분' : '');
+        const v27W = n => (Number(n) || 0).toLocaleString() + '원';
+        function v27Month() {
+            const k = getKstParts(), ym = k.year + '-' + String(k.month).padStart(2, '0');
+            const list = v27Jobs().filter(j => String(j.date || '').startsWith(ym)).sort((a, b) => (String(b.date) + b.id).localeCompare(String(a.date) + a.id));
+            let pay = 0, min = 0, unpaid = 0, paid = 0; list.forEach(j => { pay += j.pay || 0; min += j.min || 0; if (j.paid) paid += j.pay || 0; else unpaid += j.pay || 0; });
+            return { list, pay, min, unpaid, paid, n: list.length, month: k.month };
+        }
+        function v27Form() { if (!v27S.f) v27S.f = { place: '', rate: v27S.rate, date: getTodayStr(), mode: 'time', start: '09:00', end: '13:00', brk: 0, hours: '' }; return v27S.f; }
+        function v27Read() {
+            const f = v27Form(), v = id => { const el = document.getElementById(id); return el ? el.value : null; };
+            if (v('v27Place') !== null) {
+                f.place = v('v27Place').trim().slice(0, 20); f.rate = Math.min(parseInt(String(v('v27Rate')).replace(/[^0-9]/g, ''), 10) || 0, 1000000); f.date = v('v27Date') || getTodayStr();
+                if (f.mode === 'time') { f.start = v('v27Start') || f.start; f.end = v('v27End') || f.end; f.brk = Math.max(0, Math.min(parseInt(String(v('v27Brk')).replace(/[^0-9]/g, ''), 10) || 0, 600)); }
+                else f.hours = String(v('v27Hours') || '').replace(/[^0-9.]/g, '').slice(0, 5);
+            }
+            const min = f.mode === 'time' ? v27Min(f.start, f.end, f.brk) : Math.round((parseFloat(f.hours) || 0) * 60);
+            return { f, min, pay: Math.round(f.rate * min / 60) };
+        }
+        function v27PreviewText(f, min) { return min > 0 && f.rate > 0 ? f.rate.toLocaleString() + '원 × ' + v27Hm(min) + ' = <b class="text-slate-900">' + Math.round(f.rate * min / 60).toLocaleString() + '원</b>' : '시급과 근무 시간을 넣으면 알바비가 바로 보여요'; }
+        async function v27Write(rec, del) {
+            if (v27PocketCloud()) { try { if (del) await window.deleteDoc(v27UserDoc('pocketJobs', rec.id)); else await v27Raw.setDoc(v27UserDoc('pocketJobs', rec.id), rec); } catch (e) { alert('저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.'); return false; } }
+            const L = v27Jobs(), i = L.findIndex(j => j.id === rec.id); if (del) { if (i >= 0) L.splice(i, 1); } else if (i >= 0) L[i] = rec; else L.push(rec);
+            v27LocalSave(); return true;
+        }
+        function v27Arm(key) { const now = Date.now(); if (v27S.arm === key && now - v27S.armT < 4000) { v27S.arm = null; return true; } v27S.arm = key; v27S.armT = now; return false; }
+        async function v27Save() {
+            const r = v27Read(), f = r.f, bad = id => { const e = document.getElementById(id); if (e) { e.classList.add('border-rose-500'); e.focus(); } };
+            if (!f.place) return bad('v27Place'); if (!(f.rate > 0)) return bad('v27Rate'); if (!(r.min > 0) || r.min > 1440) return bad(f.mode === 'time' ? 'v27End' : 'v27Hours');
+            const old = v27S.edit ? v27Jobs().find(j => j.id === v27S.edit) : null, now = Date.now();
+            const rec = Object.assign({}, old || { id: String(now), paid: false, createdAt: now }, { place: f.place, rate: f.rate, date: f.date, start: f.mode === 'time' ? f.start : '', end: f.mode === 'time' ? f.end : '', breakMin: f.mode === 'time' ? f.brk : 0, min: r.min, pay: r.pay, updatedAt: now });
+            if (!(await v27Write(rec))) return;
+            v27S.rate = f.rate; if (v27PocketCloud()) v27SetSave({ rate: f.rate }); else v27LocalSave();
+            v27S.edit = null; v27S.f = null; v27S.open = true; v27Render();
+        }
+        async function v27Act(act, id) {
+            const j = v27Jobs().find(x => x.id === id); if (!j) return;
+            if (act === 'edit') { v27S.edit = id; v27S.open = true; v27S.f = { place: j.place, rate: j.rate, date: j.date, mode: j.start ? 'time' : 'hours', start: j.start || '09:00', end: j.end || '13:00', brk: j.breakMin || 0, hours: j.start ? '' : String(Math.round(j.min / 6) / 10) }; v27Render(); const c = document.getElementById('v27JobCard'); if (c) c.scrollIntoView({ block: 'start' }); return; }
+            if (act === 'del') { if (!v27Arm('del' + id)) return v27Render(); if (await v27Write(j, true)) v27Render(); return; }
+            if (act === 'paid') { if (await v27Write(Object.assign({}, j, { paid: !j.paid, paidAt: j.paid ? 0 : Date.now(), updatedAt: Date.now() }))) v27Render(); return; }
+            if (act === 'book') { // 누를 때만, 한 번 더 확인하고 용돈기입장 '들어온 돈'에 남긴다. 사업자 장부에는 쓰지 않는다
+                if (!j.paid || j.booked) return; if (!v27Arm('book' + id)) return v27Render();
+                const entry = { id: String(Date.now()), type: 'sales', date: getTodayStr(), category: '아르바이트', amount: j.pay, memo: (j.place + ' 알바비').slice(0, 30), createdAt: Date.now() };
+                if (v27PocketCloud()) { try { await v27Raw.setDoc(v27UserDoc('pocket_ledger', entry.id), entry); } catch (e) { alert('들어온 돈에 적지 못했어요. 잠시 뒤 다시 눌러 주세요.'); return; } }
+                else if (!v24IsPocket()) return;
+                dbData.push(entry); await v27Write(Object.assign({}, j, { booked: true, updatedAt: Date.now() })); renderDashboard(); return;
+            }
+        }
+        function v27EnsureDom() {
+            if (document.getElementById('v27JobCard')) return;
+            const goal = document.getElementById('v24GoalCard'); if (!goal || !goal.parentNode) return;
+            const card = document.createElement('section'); card.id = 'v27JobCard'; card.className = 'ios-card hidden';
+            goal.parentNode.insertBefore(card, goal.nextSibling);
+            card.addEventListener('click', e => {
+                const b = e.target.closest('button'); if (!b || !card.contains(b)) return; const a = b.dataset.v27;
+                if (b.dataset.v27p) { v27Read(); v27S.f.place = b.dataset.v27p; const i = document.getElementById('v27Place'); i.value = b.dataset.v27p; i.classList.remove('border-rose-500'); return; }
+                if (b.dataset.v27m) { v27Read(); v27S.f.mode = b.dataset.v27m; v27Render(); return; }
+                if (a === 'toggle') { v27S.open = !v27S.open; if (!v27S.open) { v27S.edit = null; v27S.f = null; } v27Render(); return; }
+                if (a === 'write') { v27S.open = true; v27S.edit = null; v27S.f = null; v27Render(); const i = document.getElementById('v27Place'); if (i) i.focus(); return; }
+                if (a === 'min') { document.getElementById('v27Rate').value = V27_MIN_WAGE.toLocaleString(); v27Preview(); return; }
+                if (a === 'cancel') { v27S.edit = null; v27S.f = null; v27Render(); return; }
+                if (a === 'save') { v27Save(); return; }
+                if (b.dataset.jid) v27Act(a, b.dataset.jid);
+            });
+            card.addEventListener('input', e => { const t = e.target; if (t.id === 'v27Rate') { const d = String(t.value).replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '').slice(0, 7); t.value = d ? Number(d).toLocaleString() : ''; } if (t.classList) t.classList.remove('border-rose-500'); v27Preview(); });
+            card.addEventListener('change', () => v27Preview());
+        }
+        function v27Preview() { const el = document.getElementById('v27Prev'); if (!el) return; const r = v27Read(); el.innerHTML = v27PreviewText(r.f, r.min); }
+        function v27Render() {
+            v27EnsureDom(); const card = document.getElementById('v27JobCard'); if (!card) return;
+            const on = v24IsPocket(); card.classList.toggle('hidden', !on); if (!on) return;
+            const m = v27Month(), IN = 'w-full text-sm rounded-xl p-2.5 border border-slate-300 min-w-0', LB = 'text-[11px] text-slate-500 font-medium', BT = 'min-h-[44px] px-3 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700';
+            let h = '<div class="flex items-center justify-between gap-2"><p class="text-sm font-bold text-slate-900">💼 내 알바비</p><button type="button" data-v27="toggle" class="min-h-[44px] px-3 rounded-xl bg-slate-100 text-slate-600 text-[11px] font-bold shrink-0">' + (v27S.open ? '접기' : '펼치기') + '</button></div>' +
+                '<p class="text-xs text-slate-600 mt-1 break-keep">' + m.month + '월 받을 알바비 <b id="v27Total" class="text-lg text-slate-900">' + v27W(m.pay) + '</b></p>' +
+                '<p class="text-xs text-slate-600 break-keep">총 <b id="v27HoursT">' + v27Hm(m.min) + '</b> · ' + m.n + '건</p>' +
+                '<p class="text-xs text-slate-600 break-keep">아직 못 받은 돈 <b id="v27Unpaid" class="text-rose-600">' + v27W(m.unpaid) + '</b> · 받은 돈 <b class="text-emerald-600">' + v27W(m.paid) + '</b></p>';
+            if (!v27S.open) h += '<button type="button" data-v27="write" class="w-full mt-3 min-h-[44px] rounded-xl bg-blue-600 text-white text-xs font-bold">＋ 알바 기록 적기</button>';
+            else {
+                const f = v27Form(), min = f.mode === 'time' ? v27Min(f.start, f.end, f.brk) : Math.round((parseFloat(f.hours) || 0) * 60), seg = (k, t) => '<button type="button" data-v27m="' + k + '" class="flex-1 min-h-[44px] rounded-lg text-xs font-bold ' + (f.mode === k ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500') + '">' + t + '</button>';
+                h += '<div class="mt-3 space-y-2"><div><label for="v27Place" class="' + LB + '">어디서 일했나요?</label><input id="v27Place" type="text" maxlength="20" autocomplete="off" placeholder="예: 편의점" value="' + v24Esc(f.place) + '" class="' + IN + '"></div>' +
+                    '<div class="flex flex-wrap gap-1.5">' + ['편의점', '카페', '식당', '학원 조교', '마트', '행사'].map(q => '<button type="button" data-v27p="' + q + '" class="min-h-[44px] px-3 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">' + q + '</button>').join('') + '</div>' +
+                    '<div><label for="v27Rate" class="' + LB + '">시급 (원)</label><div class="flex gap-2"><input id="v27Rate" type="text" inputmode="numeric" maxlength="9" value="' + (f.rate || 0).toLocaleString() + '" class="' + IN + ' flex-1"><button type="button" data-v27="min" class="' + BT + ' shrink-0 whitespace-nowrap">최저시급으로</button></div></div>' +
+                    '<div><label for="v27Date" class="' + LB + '">일한 날짜</label><input id="v27Date" type="date" value="' + v24Esc(f.date) + '" class="' + IN + '"></div>' +
+                    '<div class="flex bg-slate-100 p-0.5 rounded-xl">' + seg('time', '시작·종료 시각') + seg('hours', '시간 수 직접') + '</div>' +
+                    (f.mode === 'time' ? '<div class="grid grid-cols-3 gap-2"><div><label for="v27Start" class="' + LB + '">시작</label><input id="v27Start" type="time" value="' + v24Esc(f.start) + '" class="' + IN + '"></div><div><label for="v27End" class="' + LB + '">종료</label><input id="v27End" type="time" value="' + v24Esc(f.end) + '" class="' + IN + '"></div><div><label for="v27Brk" class="' + LB + '">휴게(분)</label><input id="v27Brk" type="text" inputmode="numeric" maxlength="3" value="' + (f.brk || 0) + '" class="' + IN + '"></div></div>'
+                        : '<div><label for="v27Hours" class="' + LB + '">일한 시간 (예: 4.5)</label><input id="v27Hours" type="text" inputmode="decimal" maxlength="5" placeholder="예: 4.5" value="' + v24Esc(f.hours) + '" class="' + IN + '"></div>') +
+                    '<p id="v27Prev" class="text-xs text-slate-600 bg-slate-50 rounded-xl px-3 py-2.5 break-keep">' + v27PreviewText(f, min) + '</p>' +
+                    '<div class="flex gap-2">' + (v27S.edit ? '<button type="button" data-v27="cancel" class="' + BT + '">고치기 취소</button>' : '') + '<button type="button" data-v27="save" class="flex-1 min-h-[44px] rounded-xl bg-blue-600 text-white text-xs font-bold">' + (v27S.edit ? '고친 내용 저장' : '저장') + '</button></div></div>';
+                h += '<p class="text-[11px] font-bold text-slate-500 mt-4 mb-1">' + m.month + '월 기록 · ' + m.n + '건</p>';
+                h += m.list.length ? m.list.map(j => '<div class="py-2 border-t border-slate-100"><div class="flex items-center justify-between gap-2"><p class="text-xs text-slate-700 min-w-0 truncate"><span class="text-slate-400">' + v24Esc(String(j.date).slice(5).replace('-', '/')) + '</span> ' + v24Esc(j.place) + ' · ' + v27Hm(j.min || 0) + '</p><b class="text-xs text-slate-900 shrink-0">' + v27W(j.pay) + '</b></div><div class="flex flex-wrap gap-1.5 mt-1.5">' +
+                    [['paid', j.paid ? '✅ 받음' : '정산 완료', j.paid ? ' bg-emerald-50' : ''], ...(j.paid && !j.booked ? [['book', v27S.arm === 'book' + j.id ? '한 번 더 누르면 적어요' : '📝 들어온 돈에 적기', v27S.arm === 'book' + j.id ? ' text-rose-600 border-rose-400' : '']] : []), ['edit', '수정', ''], ['del', v27S.arm === 'del' + j.id ? '한 번 더 누르면 삭제' : '삭제', v27S.arm === 'del' + j.id ? ' text-rose-600 border-rose-400' : '']].map(x => '<button type="button" data-v27="' + x[0] + '" data-jid="' + v24Esc(j.id) + '" class="' + BT + x[2] + '">' + x[1] + '</button>').join('') +
+                    (j.booked ? '<span class="self-center text-[11px] text-slate-400">들어온 돈에 적음</span>' : '') + '</div></div>').join('') : '<p class="text-xs text-slate-400 py-2">아직 이번 달 알바 기록이 없어요.</p>';
+            }
+            h += '<p class="text-[11px] text-slate-400 mt-2 break-keep">주휴수당·세금은 빼고 계산한 참고 금액이에요. ' + (v27PocketCloud() ? '☁ 내 계정에 저장돼요.' : (isDemoMode ? '체험판: 이 기기에만 남아요 · 로그인하면 계정에 저장돼요.' : '이 기기에만 남아요 · 로그인하면 계정에 저장돼요.')) + '</p>';
+            if (v27S.note) h += '<p class="text-[11px] text-amber-700 mt-1 break-keep">' + v24Esc(v27S.note) + '</p>';
+            card.innerHTML = h;
+        }
+        function v27Apply() {
+            const want = (!isDemoMode && currentUser) ? (v24IsPocket() ? 'pocket' : 'biz') : null;
+            if (!want) { v27Loaded = null; if (v27S.jobs) { v27S.jobs = null; v27S.set = {}; } }
+            else if (v27Loaded && want !== v27Loaded && !v27Loading) { v27Loaded = want; loadUserDataFromCloud(); } // 용돈냥이 ↔ 다른 업종을 오가면 그 화면의 장부로 다시 읽는다
+            v27Render();
+        }
+        applyStoreConfigUI = function () { const r = v27Prev.applyStoreConfigUI.apply(this, arguments); try { v27Apply(); } catch (e) {} return r; };
+        renderDashboard = function () { const r = v27Prev.renderDashboard.apply(this, arguments); try { v27Apply(); } catch (e) {} return r; };
+        try { v27Apply(); } catch (e) {}
     </script>
 </body>
 </html>

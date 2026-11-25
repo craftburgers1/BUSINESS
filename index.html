@@ -559,26 +559,27 @@ const MODES = {
       owner: ['🙋', '우리집', '말 걸기', '우리집'], staff: ['🗓️', '가족 일정 보드', '일정·알림 보기', '일정']
     }
   },
-  pocket: { // 📒 용돈기입장(v24): 주부·가정 방을 재사용하는 심플 모드. 여기 없는 항목(fridge·ledger·staff·robot·supply)은 숨김
+  pocket: { // 📒 용돈기입장(v24): 주부·가정 방을 재사용하는 심플 모드. 여기 없는 항목(fridge·ledger·supply)은 숨김 · v27 부터 AI 비서·용돈 도우미는 보임
     icon: '📒', label: '용돈냥이', short: '용돈', face: '🐷', boss: '내 지갑',
     hud: ['들어온 돈', '나간 돈', '남은 돈'], inc: '들어온 돈', incAcc: '들어온 돈', varW: '나간 돈', varAcc: '지출', varTotal: '나간 돈', fixW: '고정 지출', netW: '남은 돈',
     channels: ['용돈', '아르바이트', '기타'], quickVar: ['간식', '학용품', '장난감', '교통', '식비', '선물'],
     views: ['내 방', '저금통 앞'], screen: '이번 달 남은 돈', ledger: false,
     obj: {
       pos: ['📝', '내 장부', '탭해서 기록하기', '장부'], safe: ['🐷', '저금통', '탭해서 목표 보기', '저금통'],
-      cat: ['🐱', '방 고양이', '쓰다듬기', '고양이'], owner: ['🙋', '나', '말 걸기', '나']
+      cat: ['🐱', '방 고양이', '쓰다듬기', '고양이'], owner: ['🙋', '나', '말 걸기', '나'],
+      staff: ['🧑‍💼', '용돈 도우미', '탭해서 절약 팁 보기', '도우미'], robot: ['🤖', 'AI 비서 · 용돈 도우미', '탭해서 물어보기', 'AI 비서']
     }
   }
 };
 // 📒 용돈기입장(pocket)은 주부·가정 방을 그대로 쓴다: 안에서는 MODE='home' + POCKET=true, 저장·표시용 이름만 'pocket'
-let POCKET = false, PCFG = null;
+let POCKET = false, PCFG = null, PK_FIRST = false;
 let MODE = (() => { let m = null; try { m = localStorage.getItem(MODE_KEY); } catch (e) {} try { if (/[?&]mode=pocket\b/.test(location.search)) { m = 'pocket'; localStorage.setItem(MODE_KEY, m); } } catch (e) {} if (m === 'pocket') { POCKET = true; return 'home'; }
   if (/[?&]mode=pro\b/.test(location.search)) return m !== 'pocket' && MODES[m] ? m : 'restaurant'; // 2D PRO 화면에서 넘어옴
   if (m !== null) return MODES[m] ? m : 'restaurant'; // 저장된 방은 그대로
   // 저장된 방이 없을 때: 이 기기를 예전부터 쓰던 사람(다른 기록이 남아 있음)은 식당 방 그대로, 처음 온 사람은 용돈냥이(무료)로 시작
   let old = true; try { old = ['solo3d_tour', 'solo3d_zoom', 'solo3d_q', 'solo3d_theme', 'solo3d_brief', 'solo_terms_agreed'].some(k => localStorage.getItem(k) !== null); } catch (e) {}
   if (old) return 'restaurant';
-  try { localStorage.setItem(MODE_KEY, 'pocket'); } catch (e) {} POCKET = true; return 'home'; })();
+  PK_FIRST = true; POCKET = true; return 'home'; })(); // 처음 온 사람: 용돈냥이 방을 뒤에 두고 4가지 모드 고르기 창을 띄운다(고르는 순간 저장)
 const modeId = () => POCKET ? 'pocket' : MODE;
 const pocketCfg = () => PCFG || Object.assign({}, MODES.home, MODES.pocket, { obj: Object.assign({}, MODES.home.obj, MODES.pocket.obj) });
 const MC = () => POCKET ? pocketCfg() : MODES[MODE];
@@ -3767,7 +3768,7 @@ smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (
   if (smOpen === 'me' && b.dataset.act === 'tour-again') { smOpen = null; openTour(); } });
 const _renderMe_tour = renderMe; renderMe = function () { _renderMe_tour(); const f = smBody.querySelector('.factions'); if (f) f.insertAdjacentHTML('afterend', '<button type="button" class="ghost" data-act="tour-again" style="margin-top:8px">👋 처음 안내 다시 보기</button>'); };
 { let seen = false; try { seen = !!localStorage.getItem(TOUR_KEY); } catch (e) { seen = true; }
-  if (!seen) { const tryOpen = n => setTimeout(() => { if (!started || camTween || switching) { if (n < 40) tryOpen(n + 1); return; } if (!smOpen && !aiOpen && !activeKey) openTour(); }, n ? 400 : 2600); tryOpen(0); } }
+  if (!seen && !PK_FIRST) { const tryOpen = n => setTimeout(() => { if (!started || camTween || switching) { if (n < 40) tryOpen(n + 1); return; } if (!smOpen && !aiOpen && !activeKey) openTour(); }, n ? 400 : 2600); tryOpen(0); } }
 /* ---- ✍️ 입력한 사람 (🙋 주인장 / 🤖 피클): 2D v21과 같은 필드(by:'pickle'). 기본 주인장, 피클 전용 주소(?by=pickle)로 오면 자동 피클 ---- */
 const BY = { v: 'owner' };
 try { if (/[?&]by=pickle\b/.test(location.search)) sessionStorage.setItem('soloBy', 'pickle'); if (sessionStorage.getItem('soloBy') === 'pickle') BY.v = 'pickle'; } catch (e) {}
@@ -4202,7 +4203,7 @@ legalNotice(0);
 /* ---- 📒 용돈기입장(pocket) 심플 모드 (v24) ----
    주부·가정 방(home)을 그대로 쓰되 들어온 돈·나간 돈·모으기 목표만 남긴다. 안에서는 MODE='home' + POCKET=true.
    장부(Firestore ledger)는 건드리지 않는다. 3D 용돈기입장의 기록은 가정 방과 같이 이 기기의 체험 데이터. */
-const PK_HIDE = ['fridge', 'supply', 'ledger', 'staff', 'robot', 'arcade', 'shop'];
+const PK_HIDE = ['fridge', 'supply', 'ledger', 'arcade', 'shop'];
 const PK_2D = '2d.html?mode=pocket';
 const pkLive = () => !!(REAL.on && REAL.status === 'ok' && REAL.db && FSm && fbAuth && fbAuth.currentUser && fbAuth.currentUser.uid === REAL.uid);
 function pocketSample() { const k = kst(), day = n => `${k.ym}-${String(Math.max(1, k.d - n)).padStart(2, '0')}`;
@@ -4221,8 +4222,7 @@ function pkGoal() { if (pkCfgOk() && REAL.cfg.pocketGoal != null) return { g: Ma
   if (G.s && G.s.pGoal === undefined && !pkLive()) { G.s.pGoal = 50000; G.s.pGoalName = '자전거 사기'; }
   return { g: (G.s && +G.s.pGoal) || 0, name: (G.s && G.s.pGoalName) || '' }; }
 function pkSetGoal(g, name) { if (G.s) { G.s.pGoal = g; G.s.pGoalName = name; G.s.pGoalHit = ''; gSave(); }
-  if (pkCfgOk()) { const u = REAL.uid; REAL.cfg = Object.assign({}, REAL.cfg, { pocketGoal: g, pocketGoalName: name });
-    FSm.setDoc(FSm.doc(REAL.db, 'users', u, 'settings', 'config'), { pocketGoal: g, pocketGoalName: name }, { merge: true }).catch(() => toast('목표를 내 계정에 저장하지 못했어요', true)); } }
+  /* v27: 목표는 사업자 설정(settings/config)에 쓰지 않는다. 계정 저장은 아래 v27 의 pkSetGoal → settings/pocket */ }
 function pkLeft() { const k = kst(); return Math.max(1, new Date(Date.UTC(k.y, k.m, 0)).getUTCDate() - (+k.date.slice(8)) + 1); }
 function pkGoalCheck() { if (!G.s) return; const g = pkGoal(), k = kst(); if (g.g > 0 && month().net >= g.g && G.s.pGoalHit !== k.ym) { G.s.pGoalHit = k.ym; gReward(100, 50, `🐷 ${k.m}월 모으기 목표 달성! +100 🪙`, true); } }
 const _gGoalCheck_pk = gGoalCheck; gGoalCheck = function () { if (POCKET) return pkGoalCheck(); return _gGoalCheck_pk(); };
@@ -4297,7 +4297,7 @@ function renderPocketPanel() { const mo = month(), c = MC(), gl = pkGoal(), p = 
 const _renderPanel_pk = renderPanel;
 renderPanel = function () { if (POCKET && activeKey === 'pos') { renderPocketPanel(); return; } _renderPanel_pk(); };
 pBody.addEventListener('click', e => { const b = e.target.closest('[data-act="pk-goal"]'); if (!b) return; closePanel(); setTimeout(() => openSm('pgoal'), 250); });
-pBody.addEventListener('click', e => { if (!POCKET) return; const b = e.target.closest('button'); if (b && (b.dataset.act === 'save-sale' || b.dataset.act === 'save-spend')) { if (!formOpen) toast('📒 연습용으로 적었어요 · 계속 남기려면 2D 용돈냥이'); setTimeout(() => { refreshPos(); pkGoalCheck(); }, 60); } });
+pBody.addEventListener('click', e => { if (!POCKET) return; const b = e.target.closest('button'); if (b && (b.dataset.act === 'save-sale' || b.dataset.act === 'save-spend')) { if (!formOpen) toast('📒 체험으로 적었어요 · 로그인하면 계정에 저장돼요'); setTimeout(() => { refreshPos(); pkGoalCheck(); }, 60); } });
 
 // 🐷 저금통 창: 목표 이름·금액·진행률
 function renderPgoal() { const mo = month(), gl = pkGoal(), k = kst(), left = pkLeft(), p = gl.g ? Math.max(0, Math.min(100, mo.net / gl.g * 100)) : 0, need = Math.max(0, gl.g - mo.net);
@@ -4368,10 +4368,242 @@ const _renderMe_br = renderMe;
 renderMe = function () { _renderMe_br();
   smBody.insertAdjacentHTML('afterbegin', `<p class="hintp" style="margin:0 0 8px">🐱 <b>${POCKET ? '용돈냥이' : '용돈냥이 PRO'}</b> ${POCKET ? '· 무료 기본 모드' : '· 가게·가정용'} · 지금은 무료 베타, 로그인 없이 체험할 수 있어요</p>`);
   if (!POCKET) { const a = smBody.querySelector('a.linkghost'); if (a) a.href = '2d.html?mode=pro'; } };
-/* ---- 📒 용돈냥이는 연습용 (v26): 로그인해 있어도 실제 장부(users/{uid}/ledger)에 쓰지 않고, 헤더도 그렇게 보여 준다 ---- */
+/* ---- 📒 용돈냥이 헤더 (v26 → v27): 로그인하면 ☁ 내 용돈기입장(계정 저장), 아니면 🧪 체험 + 로그인 버튼. 사업자 장부(users/{uid}/ledger)에는 쓰지 않는다 ---- */
 const _renderAuth_pk = renderAuth;
-renderAuth = function () { _renderAuth_pk();
-  if (POCKET && REAL.on && (REAL.status === 'ok' || REAL.status === 'loading')) { authEl.innerHTML = '<span class="badge demo" title="용돈냥이 3D 방의 기록은 연습용이라 내 장부에 저장되지 않아요">🧪 연습용 · 저장 안 됨</span>'; setHudVar(); } };
+renderAuth = function () { _renderAuth_pk(); pkSync(false); if (!POCKET) return;
+  if (REAL.on && (REAL.status === 'ok' || REAL.status === 'loading')) authEl.innerHTML = `<span class="badge live">☁ 내 용돈기입장 · ${PKC.on ? '저장 중' : PKC.err ? '연결 실패' : '불러오는 중…'}</span><button class="obtn" type="button" data-auth="out" title="로그아웃하고 체험으로 돌아가요">↩ 체험 모드로</button>`;
+  else if (!REAL.on) authEl.innerHTML = '<span class="badge demo">🧪 <em>체험 · 저장 안 됨</em></span><button class="gbtn" type="button" data-auth="in"><i class="g"></i>Google 로그인하면 저장돼요</button>';
+  setHudVar(); };
+/* ---- 💼 알바비 + ☁ 용돈냥이 계정 저장 + 🤖 용돈 도우미 + 첫 방문 모드 고르기 (v27) ----
+   · 용돈냥이(POCKET)에서 로그인하면 users/{uid}/pocket_ledger · settings/pocket · pocketJobs 에 저장한다(2D 용돈냥이와 같은 데이터).
+   · 사업자 장부(users/{uid}/ledger)와 사업자 설정(settings/config)에는 쓰지 않는다. v26 의 차단(isLive 의 !POCKET, liveSave 첫 줄)은 그대로.
+   · 여기 있는 것은 모두 POCKET 일 때만 움직인다. 식당·미용실·가정 방은 그대로. */
+const PKC = { on: false, uid: null, loading: false, t: 0, err: '', docs: [], jobs: [], set: {} };
+const PKJ = { rate: 10320, local: null, f: null, edit: null, arm: null, armT: 0, open: false, key: '' };
+const PK_MIN_WAGE = 10320; // 2026년 최저시급
+const PK_IN = 'width:100%;box-sizing:border-box;font-size:16px;height:46px;border-radius:12px;border:1.5px solid var(--line2);padding:0 12px;background:#fff;margin-top:4px;min-width:0';
+const PK_LB = 'display:block;font-size:12.5px;font-weight:700;color:var(--muted)';
+const pkHm = m => `${Math.floor(m / 60)}시간${m % 60 ? ' ' + (m % 60) + '분' : ''}`;
+const pkCol = name => FSm.collection(REAL.db, 'users', REAL.uid, name);
+const pkDoc = (...p) => FSm.doc(REAL.db, 'users', REAL.uid, ...p);
+function pkCloudData() { const sales = [], personal = [];
+  PKC.docs.forEach(d => { const amount = Number(d.amount) || 0, id = String(d.id); if (d.type === 'sales') sales.push({ id, date: d.date, time: '', amount, channel: d.category || '기타' }); else personal.push({ id, date: d.date, name: d.category || d.memo || '나간 돈', amount }); });
+  return { v: 2, mode: 'pocket', cloud: true, sales, ingredients: [], fixed: [], personal, opening: 0, staff: [], att: [], family: [] }; }
+function pkRefresh() { if (!POCKET) return; refreshPos(); renderHud(true); drawBoard(); pkDrawAlba(); if (activeKey) renderPanel(); if (smOpen === 'alba' || smOpen === 'pkai' || smOpen === 'pkhelp' || smOpen === 'pgoal') renderSm(); }
+function pkAdopt() { if (!POCKET) return; DATA = PKC.on ? pkCloudData() : loadData(MODE); G.key = ''; // 장부가 통째로 바뀌므로 코인 계산은 다시 기준을 잡는다(기존 기록을 새 기록으로 세지 않게)
+  saleChannel = MC().channels[0]; renderAuth(); pkRefresh(); }
+async function pkCloudLoad() { if (!pkLive() || PKC.loading) return; const uid = REAL.uid; PKC.loading = true;
+  try { const [a, b, s] = await Promise.all([FSm.getDocs(pkCol('pocket_ledger')), FSm.getDocs(pkCol('pocketJobs')), FSm.getDoc(pkDoc('settings', 'pocket'))]);
+    if (REAL.uid !== uid || !pkLive()) return;
+    PKC.docs = []; a.forEach(d => PKC.docs.push(Object.assign({}, d.data(), { id: d.id }))); PKC.jobs = []; b.forEach(d => PKC.jobs.push(Object.assign({}, d.data(), { id: d.id })));
+    PKC.set = s.exists() ? (s.data() || {}) : {};
+    // 예전에 사업자 설정에 들어간 목표(config.pocketGoal)는 읽기만 하고, 용돈 전용 문서로 한 번 옮긴다
+    if (PKC.set.goal == null && REAL.cfg && REAL.cfg.pocketGoal != null) { PKC.set.goal = Math.max(0, +REAL.cfg.pocketGoal || 0); PKC.set.goalName = String(REAL.cfg.pocketGoalName || '').slice(0, 20); pkSetSave({ goal: PKC.set.goal, goalName: PKC.set.goalName }); }
+    if (+PKC.set.rate > 0) PKJ.rate = +PKC.set.rate;
+    PKC.uid = uid; PKC.on = true; PKC.err = ''; PKC.t = performance.now();
+  } catch (e) { PKC.uid = uid; PKC.on = false; PKC.err = 'load'; toast('내 용돈기입장을 불러오지 못했어요 · 지금은 체험으로 보여요', true); }
+  finally { PKC.loading = false; }
+  pkAdopt(); }
+function pkSync(entered) {
+  if (POCKET && pkLive()) { if (PKC.uid !== REAL.uid || (entered && !PKC.on && PKC.err)) { PKC.on = false; PKC.err = ''; pkCloudLoad(); } else if (PKC.on && !DATA.cloud) { pkAdopt(); if (entered && performance.now() - PKC.t > 20000) pkCloudLoad(); } }
+  else if (!pkLive() && (PKC.on || PKC.uid)) { PKC.on = false; PKC.uid = null; PKC.err = ''; PKC.docs = []; PKC.jobs = []; PKC.set = {}; PKJ.rate = PK_MIN_WAGE; if (POCKET && DATA.cloud) pkAdopt(); } }
+function pkSetSave(o) { if (!pkLive()) return; FSm.setDoc(pkDoc('settings', 'pocket'), Object.assign({ updatedAt: Date.now() }, o), { merge: true }).catch(() => toast('내 계정에 저장하지 못했어요', true)); }
+const _saveData_pk = saveData; saveData = function (d = DATA) { if (POCKET && d && d.cloud) return; _saveData_pk(d); }; // 계정 데이터는 이 기기 체험 저장소에 섞지 않는다
+
+// 들어온 돈 / 나간 돈 → pocket_ledger (로그인했을 때만. 아니면 예전처럼 이 기기 체험 기록)
+async function pocketSave(act, btn) { if (!POCKET || !PKC.on || !pkLive()) return;
+  const i = pBody.querySelector('#fAmt'), amount = Number(digits(i && i.value)); let category = saleChannel;
+  if (act === 'save-spend') { const n = pBody.querySelector('#fName'); category = (n.value || '').trim().slice(0, 20); if (!category) { n.classList.add('err'); n.focus(); return; } }
+  if (!amount || amount > 100000000) { i.classList.remove('err'); void i.offsetWidth; i.classList.add('err'); i.focus(); return; }
+  const id = newLedgerId(), rec = { id, type: act === 'save-sale' ? 'sales' : 'variable', date: kst().date, category, amount, memo: '', createdAt: Date.now() };
+  const lab = btn.textContent; btn.disabled = true; btn.textContent = '저장 중…';
+  try { await FSm.setDoc(pkDoc('pocket_ledger', id), rec); } catch (e) { btn.disabled = false; btn.textContent = lab; toast('저장하지 못했어요 — 다시 눌러 주세요', true); return; }
+  PKC.docs.push(rec); DATA = pkCloudData(); lastNewId = id; formOpen = false; toast('☁ 내 용돈기입장에 저장됐어요');
+  if (act === 'save-sale') { burstMoney(amount); floatText('+' + won(amount), V3(0.2, COUNTER_TOP + 0.45, -0.3)); screenGlow = 1; } else floatText('−' + won(amount), V3(0.2, COUNTER_TOP + 0.45, -0.3), true);
+  pkRefresh(); pkGoalCheck(); }
+pBody.addEventListener('click', e => { if (!POCKET || !PKC.on) return; const b = e.target.closest('button'); if (!b || (b.dataset.act !== 'save-sale' && b.dataset.act !== 'save-spend')) return; e.stopImmediatePropagation(); e.preventDefault(); pocketSave(b.dataset.act, b); }, true);
+const _deleteEntryAny_pk = deleteEntryAny;
+deleteEntryAny = async function (id) { if (!(POCKET && PKC.on)) return _deleteEntryAny_pk(id);
+  const i = PKC.docs.findIndex(d => String(d.id) === String(id)); if (i < 0) return;
+  try { await FSm.deleteDoc(pkDoc('pocket_ledger', String(id))); } catch (e) { toast('삭제하지 못했어요 — 다시 시도해 주세요', true); return; }
+  PKC.docs.splice(i, 1); DATA = pkCloudData(); toast('🗑 삭제했어요'); CAL.delArm = null; pkRefresh(); renderSm(); };
+
+// 모으기 목표: 로그인 → settings/pocket, 아니면 이 기기 체험
+pkGoal = function () { if (PKC.on) return { g: Math.max(0, +PKC.set.goal || 0), name: String(PKC.set.goalName || '').slice(0, 20) };
+  if (G.s && G.s.pGoal === undefined) { G.s.pGoal = 50000; G.s.pGoalName = '자전거 사기'; }
+  return { g: (G.s && +G.s.pGoal) || 0, name: (G.s && G.s.pGoalName) || '' }; };
+pkSetGoal = function (g, name) { if (G.s) { G.s.pGoalHit = ''; if (!PKC.on) { G.s.pGoal = g; G.s.pGoalName = name; } gSave(); }
+  if (PKC.on) { PKC.set.goal = g; PKC.set.goalName = name; pkSetSave({ goal: g, goalName: name }); } drawBoard(); };
+
+// 💼 알바비
+function pkJobs() { if (PKC.on) return PKC.jobs;
+  if (!PKJ.local) { const k = kst(), day = n => `${k.ym}-${String(Math.max(1, k.d - n)).padStart(2, '0')}`; PKJ.local = [[5, '편의점', '18:00', '22:00', 0], [2, '카페', '13:00', '18:30', 30]].map(([n, place, start, end, breakMin], i) => { const min = pkJobMin(start, end, breakMin); return { id: 'sample' + i, place, rate: PK_MIN_WAGE, date: day(n), start, end, breakMin, min, pay: Math.round(PK_MIN_WAGE * min / 60), paid: false, createdAt: i }; }); }
+  return PKJ.local; }
+function pkJobMin(start, end, brk) { let m = toMin(end) - toMin(start); if (m <= 0) m += 1440; return Math.max(0, m - (Number(brk) || 0)); }
+function pkJobMonth() { const ym = kst().ym, list = pkJobs().filter(j => String(j.date).startsWith(ym)).sort((a, b) => (String(b.date) + b.id).localeCompare(String(a.date) + a.id));
+  let pay = 0, min = 0, unpaid = 0, paid = 0; list.forEach(j => { pay += j.pay || 0; min += j.min || 0; if (j.paid) paid += j.pay || 0; else unpaid += j.pay || 0; });
+  return { list, pay, min, unpaid, paid, n: list.length }; }
+function pkJobForm() { if (!PKJ.f) PKJ.f = { place: '', rate: PKJ.rate, date: kst().date, mode: 'time', start: '09:00', end: '13:00', brk: 0, hours: '' }; return PKJ.f; }
+function pkJobRead() { const f = pkJobForm(), v = id => { const el = document.getElementById(id); return el ? el.value : null; };
+  if (v('ajPlace') !== null) { f.place = v('ajPlace').trim().slice(0, 20); f.rate = Math.min(Number(digits(v('ajRate'))) || 0, 1000000); f.date = v('ajDate') || kst().date;
+    if (f.mode === 'time') { f.start = v('ajStart') || f.start; f.end = v('ajEnd') || f.end; f.brk = Math.max(0, Math.min(Number(digits(v('ajBrk'))) || 0, 600)); } else f.hours = (v('ajHours') || '').replace(/[^0-9.]/g, '').slice(0, 5); }
+  const min = f.mode === 'time' ? pkJobMin(f.start, f.end, f.brk) : Math.round((parseFloat(f.hours) || 0) * 60);
+  return { f, min, pay: Math.round(f.rate * min / 60) }; }
+function pkJobPreview() { const r = pkJobRead(), el = document.getElementById('ajPrev'); if (!el) return;
+  el.innerHTML = r.min > 0 && r.f.rate > 0 ? `${r.f.rate.toLocaleString('ko-KR')}원 × ${pkHm(r.min)} = <b class="num">${r.pay.toLocaleString('ko-KR')}원</b>` : '시급과 근무 시간을 넣으면 알바비가 바로 보여요'; }
+async function pkJobWrite(rec, del) { // 계정(pocketJobs) 또는 이 기기 체험 메모리
+  if (PKC.on) { try { if (del) await FSm.deleteDoc(pkDoc('pocketJobs', rec.id)); else await FSm.setDoc(pkDoc('pocketJobs', rec.id), rec); } catch (e) { toast('저장하지 못했어요 — 다시 눌러 주세요', true); return false; } }
+  const L = pkJobs(), i = L.findIndex(j => j.id === rec.id); if (del) { if (i >= 0) L.splice(i, 1); } else if (i >= 0) L[i] = rec; else L.push(rec); return true; }
+async function pkJobSave(btn) { const r = pkJobRead(), f = r.f, pl = document.getElementById('ajPlace');
+  if (!f.place) { pl.style.borderColor = '#dd5e47'; pl.focus(); return; }
+  if (!(f.rate > 0)) { const e = document.getElementById('ajRate'); e.style.borderColor = '#dd5e47'; e.focus(); return; }
+  if (!(r.min > 0) || r.min > 1440) { const e = document.getElementById(f.mode === 'time' ? 'ajEnd' : 'ajHours'); e.style.borderColor = '#dd5e47'; e.focus(); return; }
+  const old = PKJ.edit ? pkJobs().find(j => j.id === PKJ.edit) : null, now = Date.now();
+  const rec = Object.assign({}, old || { id: newLedgerId(), paid: false, createdAt: now }, { place: f.place, rate: f.rate, date: f.date, start: f.mode === 'time' ? f.start : '', end: f.mode === 'time' ? f.end : '', breakMin: f.mode === 'time' ? f.brk : 0, min: r.min, pay: r.pay, updatedAt: now });
+  btn.disabled = true; if (!(await pkJobWrite(rec))) { btn.disabled = false; return; }
+  PKJ.rate = f.rate; if (PKC.on) pkSetSave({ rate: f.rate });
+  PKJ.edit = null; PKJ.open = false; PKJ.f = null; toast(PKC.on ? '☁ 알바 기록을 저장했어요' : '💼 체험으로 적었어요 · 로그인하면 계정에 저장돼요'); pkRefresh(); }
+function pkArm(key) { const now = performance.now(); if (PKJ.arm === key && now - PKJ.armT < 4000) { PKJ.arm = null; return true; } PKJ.arm = key; PKJ.armT = now; return false; }
+async function pkJobAct(act, id, btn) { const j = pkJobs().find(x => x.id === id); if (!j) return;
+  if (act === 'aj-edit') { PKJ.edit = id; PKJ.open = true; PKJ.f = { place: j.place, rate: j.rate, date: j.date, mode: j.start ? 'time' : 'hours', start: j.start || '09:00', end: j.end || '13:00', brk: j.breakMin || 0, hours: j.start ? '' : String(Math.round(j.min / 6) / 10) }; renderSm(); smEl.querySelector('.aisheet').scrollTop = 0; return; }
+  if (act === 'aj-del') { if (!pkArm('del' + id)) { renderSm(); return; } if (await pkJobWrite(j, true)) { toast('🗑 알바 기록을 지웠어요'); pkRefresh(); } return; }
+  if (act === 'aj-paid') { if (await pkJobWrite(Object.assign({}, j, { paid: !j.paid, paidAt: j.paid ? 0 : Date.now(), updatedAt: Date.now() }))) pkRefresh(); return; }
+  if (act === 'aj-book') { if (!j.paid || j.booked) return; if (!pkArm('book' + id)) { renderSm(); return; } // 누를 때만, 한 번 더 확인하고 용돈기입장 '들어온 돈'에 남긴다
+    const iid = newLedgerId(), k = kst();
+    if (PKC.on) { const rec = { id: iid, type: 'sales', date: k.date, category: '아르바이트', amount: j.pay, memo: `${j.place} 알바비`.slice(0, 30), createdAt: Date.now() };
+      try { await FSm.setDoc(pkDoc('pocket_ledger', iid), rec); } catch (e) { toast('들어온 돈에 적지 못했어요 — 다시 눌러 주세요', true); return; } PKC.docs.push(rec); DATA = pkCloudData(); }
+    else { DATA.sales.push({ id: iid, date: k.date, time: k.time, amount: j.pay, channel: '아르바이트' }); saveData(DATA); }
+    await pkJobWrite(Object.assign({}, j, { booked: true, updatedAt: Date.now() })); toast('📝 들어온 돈에 아르바이트로 적었어요'); pkRefresh(); pkGoalCheck(); } }
+function pkStat(a, b, c) { return `<div class="cards">${[a, b, c].map(x => `<div class="card"><span>${x[0]}</span><b class="num">${x[1]}</b></div>`).join('')}</div>`; }
+function renderAlba() { const m = pkJobMonth(), k = kst(), f = pkJobForm(), r = { min: f.mode === 'time' ? pkJobMin(f.start, f.end, f.brk) : Math.round((parseFloat(f.hours) || 0) * 60) }, W = n => n.toLocaleString('ko-KR') + '원';
+  smTitle.textContent = '💼 알바비 — 이번 달 받을 돈';
+  let h = `<div class="instcard"><p class="ib" style="margin:0">${k.m}월 받을 알바비</p><p style="font-size:26px;font-weight:800;margin:4px 0 0" class="num" id="ajTotal">${W(m.pay)}</p><p style="margin:2px 0 0">총 <b id="ajHoursT">${pkHm(m.min)}</b> · ${m.n}건</p></div>`;
+  h += pkStat(['아직 못 받은 돈', W(m.unpaid)], ['받은 돈', W(m.paid)], ['시급(마지막)', W(PKJ.rate)]);
+  h += `<p class="hintp" style="margin:6px 0 10px">주휴수당·세금은 빼고 계산한 참고 금액이에요. ${PKC.on ? '☁ 내 계정에 저장돼요.' : '🧪 지금은 체험이에요 · 로그인하면 계정에 저장돼요.'}</p>`;
+  if (!PKJ.open) h += `<button type="button" class="primary" data-act="aj-open">＋ 알바 기록 적기</button>`;
+  else { h += `<div class="sec"><span>${PKJ.edit ? '✏️ 기록 고치기' : '✏️ 알바 기록 적기'}</span></div>
+    <label for="ajPlace" style="${PK_LB}">어디서 일했나요?</label><input id="ajPlace" autocomplete="off" maxlength="20" placeholder="예: 편의점" value="${esc(f.place)}" style="${PK_IN}">
+    <div class="qk" style="margin:6px 0 10px">${['편의점', '카페', '식당', '학원 조교', '마트', '행사'].map(q => `<button type="button" data-ajp="${q}">${q}</button>`).join('')}</div>
+    <label for="ajRate" style="${PK_LB}">시급 (원)</label><div style="display:flex;gap:6px"><input id="ajRate" class="num" inputmode="numeric" autocomplete="off" maxlength="9" value="${(f.rate || 0).toLocaleString('ko-KR')}" style="${PK_IN};flex:1"><button type="button" data-act="aj-min" class="ghost" style="flex:none;width:auto;margin:4px 0 0;height:46px;padding:0 12px;white-space:nowrap">최저시급으로</button></div>
+    <label for="ajDate" style="${PK_LB};margin-top:10px">일한 날짜</label><input id="ajDate" type="date" value="${esc(f.date)}" style="${PK_IN}">
+    <div class="seg" style="margin:10px 0 6px"><button type="button" data-ajm="time" class="${f.mode === 'time' ? 'on' : ''}">시작·종료 시각</button><button type="button" data-ajm="hours" class="${f.mode === 'hours' ? 'on' : ''}">시간 수 직접</button></div>
+    ${f.mode === 'time' ? `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px"><div><label for="ajStart" style="${PK_LB}">시작</label><input id="ajStart" type="time" value="${esc(f.start)}" style="${PK_IN};padding:0 6px"></div><div><label for="ajEnd" style="${PK_LB}">종료</label><input id="ajEnd" type="time" value="${esc(f.end)}" style="${PK_IN};padding:0 6px"></div><div><label for="ajBrk" style="${PK_LB}">휴게(분)</label><input id="ajBrk" class="num" inputmode="numeric" maxlength="3" value="${f.brk || 0}" style="${PK_IN}"></div></div>`
+      : `<label for="ajHours" style="${PK_LB}">일한 시간 (예: 4.5)</label><input id="ajHours" class="num" inputmode="decimal" maxlength="5" placeholder="예: 4.5" value="${esc(f.hours)}" style="${PK_IN}">`}
+    <p class="psum num" id="ajPrev" style="margin:10px 0">${r.min > 0 && f.rate > 0 ? `${f.rate.toLocaleString('ko-KR')}원 × ${pkHm(r.min)} = <b class="num">${Math.round(f.rate * r.min / 60).toLocaleString('ko-KR')}원</b>` : '시급과 근무 시간을 넣으면 알바비가 바로 보여요'}</p>
+    <div class="factions"><button type="button" class="cancel" data-act="aj-cancel">취소</button><button type="button" class="save" data-act="aj-save">${PKJ.edit ? '고친 내용 저장' : '저장'}</button></div>`; }
+  h += `<div class="sec" style="margin-top:14px"><span>${k.m}월 기록</span><span>${m.n}건</span></div>`;
+  h += m.list.length ? `<div class="rows">${m.list.map(j => `<div class="row" style="flex-wrap:wrap;gap:6px"><div class="l" style="min-width:0"><span class="d num">${md(j.date)}</span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.place)} · ${pkHm(j.min || 0)}</span></div><b class="num">${W(j.pay || 0)}</b>
+      <div style="flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap">${[['aj-paid', j.paid ? '✅ 받음' : '정산 완료'], ...(j.paid && !j.booked ? [['aj-book', PKJ.arm === 'book' + j.id ? '한 번 더 누르면 적어요' : '📝 들어온 돈에 적기']] : []), ['aj-edit', '수정'], ['aj-del', PKJ.arm === 'del' + j.id ? '한 번 더 누르면 삭제' : '삭제']].map(([a, t]) => `<button type="button" data-act="${a}" data-jid="${esc(j.id)}" style="min-height:44px;padding:0 12px;border-radius:11px;background:${a === 'aj-paid' && j.paid ? '#e5f6ef' : '#fff'};border:1px solid var(--line2);font-size:12.5px;font-weight:800${(a === 'aj-del' && PKJ.arm === 'del' + j.id) || (a === 'aj-book' && PKJ.arm === 'book' + j.id) ? ';color:#dd5e47;border-color:#dd5e47' : ''}">${t}</button>`).join('')}${j.booked ? '<span class="chip" style="align-self:center">들어온 돈에 적음</span>' : ''}</div></div>`).join('')}</div>` : '<p class="empty">아직 이번 달 알바 기록이 없어요.</p>';
+  smBody.innerHTML = h; }
+smBody.addEventListener('input', e => { if (smOpen !== 'alba') return; const t = e.target; if (t.id === 'ajRate') { const d = digits(t.value).slice(0, 7); t.value = d ? Number(d).toLocaleString('ko-KR') : ''; } if (t.style) t.style.borderColor = ''; pkJobPreview(); });
+smBody.addEventListener('change', e => { if (smOpen === 'alba') pkJobPreview(); });
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return;
+  if (smOpen === 'pick' && b.dataset.pick) { pkPick(b.dataset.pick); return; }
+  if ((smOpen === 'pkai' || smOpen === 'pkhelp') && b.dataset.act === 'pk-go') { const to = b.dataset.to; smOpen = to; renderSm(); smEl.querySelector('.aisheet').scrollTop = 0; return; }
+  if (smOpen === 'pkai' && b.dataset.act === 'pk-copy') { copyText(pkAiPrompt()).then(ok => toast(ok ? '📋 복사했어요 · 피클에 붙여 넣어 보세요' : '복사하지 못했어요 · 글자를 길게 눌러 복사해 주세요', !ok)); return; }
+  if (smOpen !== 'alba') return; const a = b.dataset.act;
+  if (b.dataset.ajp) { pkJobRead(); PKJ.f.place = b.dataset.ajp; const i = document.getElementById('ajPlace'); i.value = b.dataset.ajp; i.style.borderColor = ''; return; }
+  if (b.dataset.ajm) { pkJobRead(); PKJ.f.mode = b.dataset.ajm; renderSm(); return; }
+  if (a === 'aj-open') { PKJ.open = true; PKJ.edit = null; PKJ.f = null; renderSm(); return; }
+  if (a === 'aj-cancel') { PKJ.open = false; PKJ.edit = null; PKJ.f = null; renderSm(); return; }
+  if (a === 'aj-min') { const i = document.getElementById('ajRate'); i.value = PK_MIN_WAGE.toLocaleString('ko-KR'); pkJobPreview(); return; }
+  if (a === 'aj-save') { pkJobSave(b); return; }
+  if (b.dataset.jid) pkJobAct(a, b.dataset.jid, b); });
+
+// 💼 알바비 보드(카운터 오른쪽 메모판) — 용돈냥이 방에서만 보인다
+const albaBoard = new THREE.Group(); albaBoard.position.set(0.66, COUNTER_TOP, -0.56); albaBoard.rotation.y = -0.2; albaBoard.visible = false; scene.add(albaBoard);
+const albaCanvas = document.createElement('canvas'); albaCanvas.width = 320; albaCanvas.height = 240;
+const albaTex = new THREE.CanvasTexture(albaCanvas); albaTex.colorSpace = THREE.SRGBColorSpace;
+{ const wd = S(0xc9a57c, 0.6);
+  add(albaBoard, RB(0.4, 0.31, 0.025, 0.02), wd, 0, 0.2, 0).rotation.x = -0.14;
+  add(albaBoard, new THREE.PlaneGeometry(0.36, 0.27), S(0xffffff, 0.8, { map: albaTex }), 0, 0.2, 0.014, false).rotation.x = -0.14;
+  add(albaBoard, RB(0.3, 0.02, 0.12, 0.008), wd, 0, 0.012, -0.03); }
+function pkDrawAlba() { const m = pkJobMonth(), key = [m.pay, m.min, m.n, m.unpaid, kst().m].join('|'); if (key === PKJ.key) return; PKJ.key = key;
+  const g = albaCanvas.getContext('2d'), w = 320, h = 240; g.fillStyle = '#e9c48f'; g.fillRect(0, 0, w, h); g.fillStyle = '#fffdf6'; g.fillRect(12, 12, w - 24, h - 24);
+  g.fillStyle = '#b8862a'; g.font = `800 24px ${FONT}`; g.fillText('💼 이번 달 알바비', 26, 50);
+  let size = 50; const t = m.pay.toLocaleString('ko-KR') + '원'; do { g.font = `800 ${size}px ${FONT}`; size -= 2; } while (g.measureText(t).width > w - 56 && size > 22);
+  g.fillStyle = '#4a3b30'; g.fillText(t, 26, 122);
+  g.fillStyle = '#8f7a69'; g.font = `700 20px ${FONT}`; g.fillText(`${pkHm(m.min)} · ${m.n}건`, 26, 164);
+  g.fillStyle = m.unpaid > 0 ? '#dd5e47' : '#2c8a6e'; g.fillText(m.unpaid > 0 ? `못 받은 돈 ${m.unpaid.toLocaleString('ko-KR')}원` : '모두 받았어요', 26, 200);
+  albaTex.needsUpdate = true; }
+register('alba', albaBoard, { emoji: '💼', name: '알바비 보드', short: '알바비', chip: '탭해서 알바비 적기', anchor: V3(0.66, COUNTER_TOP + 0.42, -0.54), focus: null, noPick: true });
+{ const o = OBJ.alba, el = document.createElement('button'); el.type = 'button'; el.className = 'tg hide';
+  el.innerHTML = `<span class="b">💼</span><span class="e"><span class="ee"></span>💼 알바비</span>`; el.setAttribute('aria-label', '알바비 보드 열기');
+  el.addEventListener('click', e => { e.stopPropagation(); firstUse(); if (el.classList.contains('edge')) lookAt(o.anchor); else interact('alba'); });
+  tagsEl.appendChild(el); o.el = el; o.arrow = el.querySelector('.ee'); }
+
+// 🧑‍💼 용돈 도우미 보드(가정 방의 가족 일정 보드 자리) · 🤖 AI 비서 패널
+const _drawBoard_pk = drawBoard;
+drawBoard = function () { if (!POCKET) return _drawBoard_pk();
+  const g = boardCanvas.getContext('2d'), w = 320, h = 240, gl = pkGoal(), mo = month(), jm = pkJobMonth(), p = gl.g ? Math.max(0, Math.min(1, mo.net / gl.g)) : 0;
+  g.fillStyle = '#fffaf2'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#b8862a'; g.font = `800 24px ${FONT}`; g.fillText('🧑‍💼 용돈 도우미', 18, 38);
+  g.fillStyle = '#4a3b30'; g.font = `700 18px ${FONT}`; g.fillText(gl.g ? `🐷 ${String(gl.name || '모으기 목표').slice(0, 9)} ${(p * 100).toFixed(0)}%` : '🐷 목표를 정해 보세요', 18, 82);
+  g.fillStyle = '#f3ead8'; g.fillRect(18, 96, w - 36, 14); g.fillStyle = '#f5b54a'; g.fillRect(18, 96, (w - 36) * p, 14);
+  g.fillStyle = '#4a3b30'; g.fillText(`💼 알바비 ${jm.pay.toLocaleString('ko-KR')}원`, 18, 152);
+  g.fillStyle = '#8f7a69'; g.font = `600 16px ${FONT}`; g.fillText(`남은 돈 ${won(mo.net)}`, 18, 190); g.fillText('탭하면 절약 팁이 나와요', 18, 216);
+  boardTex.needsUpdate = true; };
+function pkAiPrompt() { return `내 용돈냥이 용돈기입장(${LEDGER_URL}2d.html?mode=pocket&by=pickle)에 들어온 돈·나간 돈을 대신 적어 줘. 처음 로그인은 내가 직접 할게.`; }
+function pkSummary() { const mo = month(), jm = pkJobMonth(); return cards3(['들어온 돈', mo.s], ['나간 돈', mo.exp], ['받을 알바비', jm.pay]); }
+function renderPkAi() { const L = pickleLinks();
+  smTitle.textContent = '🤖 AI 비서 · 용돈 도우미';
+  smBody.innerHTML = `<p class="ailead">이번 달 내 용돈을 한눈에 정리했어요.</p>${pkSummary()}
+    <div class="sec"><span>💬 피클에게 물어보기</span></div>
+    <p class="hintp" style="margin:0 0 8px">AI 비서 앱 <b>피클</b>에게 아래 문장을 보내면 용돈기입장을 대신 적어 달라고 맡길 수 있어요. 처음 한 번은 피클 안에서 직접 로그인해야 해요.</p>
+    <p class="pnote" style="margin:0 0 8px;user-select:text;-webkit-user-select:text">${esc(pkAiPrompt())}</p>
+    <div class="factions"><button type="button" class="cancel" data-act="pk-copy">📋 문장 복사</button><a class="ghost linkghost" href="${esc(L.store)}" target="_blank" rel="noopener" style="flex:1;margin:0;height:46px">${esc(L.label)}</a></div>
+    <button type="button" class="ghost" data-act="pk-go" data-to="alba" style="margin-top:8px">💼 알바비 보기</button><button type="button" class="ghost" data-act="pk-go" data-to="pgoal">🐷 모으기 목표 보기</button>
+    <p class="hintp">여기서는 영수증 자동 입력 같은 가게용 기능은 쓰지 않아요.</p>`; }
+function renderPkHelp() { const gl = pkGoal(), mo = month(), jm = pkJobMonth(), p = gl.g ? Math.max(0, Math.min(100, mo.net / gl.g * 100)) : 0;
+  smTitle.textContent = '🧑‍💼 용돈 도우미';
+  smBody.innerHTML = `${pkSummary()}
+    <div class="instcard"><p class="ib" style="margin:0">🐷 ${esc(gl.g ? (gl.name || kst().m + '월 모으기 목표') : '모으기 목표가 아직 없어요')}</p>${gl.g ? `${pkBar(p)}<p><span class="num">${won(mo.net)}</span> / <span class="num">${won(gl.g)}</span> (${p.toFixed(0)}%)</p>` : '<p>저금통을 눌러 목표를 정하면 여기서도 진행률이 보여요.</p>'}</div>
+    <div class="sec"><span>💡 절약 팁 3가지</span></div>
+    <div class="rows">${[['1', '쓰기 전에 적기', '사고 싶은 것을 먼저 적어 두고 하루 뒤에 다시 보면 꼭 필요한 것만 남아요.'], ['2', '들어오면 먼저 떼어 두기', '용돈이나 알바비가 들어온 날, 모을 돈부터 저금통 목표만큼 떼어 두세요.'], ['3', '작은 돈 묶어 보기', '간식·교통처럼 자주 나가는 돈은 한 주 단위로 합쳐 보면 줄일 곳이 보여요.']].map(([n, t, d]) => `<div class="row" style="align-items:flex-start"><div class="l" style="align-items:flex-start;min-width:0;flex:1"><span class="rkn">${n}</span><span style="min-width:0"><b>${t}</b><br><span class="d" style="white-space:normal;display:block;overflow:visible">${d}</span></span></div></div>`).join('')}</div>
+    <p class="pnote" style="margin:10px 0 0">연말정산·알바 세금·주휴수당은 일한 곳과 상황에 따라 달라요. 여기 금액은 참고용이니, 궁금한 점은 <b>피클</b>에게 물어보거나 일하는 곳에 확인해 보세요.</p>
+    <button type="button" class="ghost" data-act="pk-go" data-to="alba" style="margin-top:8px">💼 알바비 적기</button><button type="button" class="ghost" data-act="pk-go" data-to="pkai">🤖 피클에게 물어보는 법</button>`; }
+
+// 처음 온 사람: 4가지 모드 고르기 (한 번 고르면 solo3d_mode 에 기억. 왼쪽 벽 📋 업종 게시판에서 언제든 바꿈)
+function renderPick() { smTitle.textContent = '🐱 용돈냥이에 오신 걸 환영해요';
+  smBody.innerHTML = `<p class="ailead">어떤 모드로 시작할까요? <b>한 번 고르면 기억</b>해 두고, 왼쪽 벽 <b>📋 업종 게시판</b>에서 언제든 바꿀 수 있어요.</p>
+    <div class="mcards" style="grid-template-columns:repeat(2,minmax(0,1fr))">${[['restaurant', '식당·카페'], ['salon', '미용실'], ['home', '주부·가정'], ['pocket', '용돈냥이']].map(([m, t]) => `<button type="button" class="mcard" data-pick="${m}" style="min-height:104px"><span class="tierc${m === 'pocket' ? ' free' : ''}">${m === 'pocket' ? '무료' : 'PRO'}</span><i>${MODES[m].icon}</i><b>${t}</b><span style="font-size:11px;color:var(--muted);font-weight:600">${m === 'pocket' ? '용돈기입장 · 알바비' : m === 'home' ? '가계부 · 정산표' : '가게 장부 · 직원'}</span></button>`).join('')}</div>
+    <p class="pnote" style="margin:10px 0 0">🧪 지금은 <b>무료 베타</b>예요. PRO 모드도 로그인 없이 바로 체험할 수 있어요.</p>`; }
+function pkPickDone(m) { PK_FIRST = false; try { localStorage.setItem(MODE_KEY, m); } catch (e) {} let seen = true; try { seen = !!localStorage.getItem(TOUR_KEY); } catch (e) {}
+  if (!seen) { const go = n => setTimeout(() => { if (camTween || switching) { if (n < 40) go(n + 1); return; } if (!smOpen && !aiOpen && !activeKey) openTour(); }, n ? 400 : 900); go(0); } }
+function pkPick(m) { if (!MODES[m]) return; _closeSm_pk(); pkPickDone(m); if (m !== modeId()) switchMode(m); }
+if (PK_FIRST) { const tryPick = n => setTimeout(() => { if (!PK_FIRST) return; if (!started || camTween || switching) { if (n < 60) tryPick(n + 1); return; } if (activeKey) closePanel(); if (!smOpen && !aiOpen) openSm('pick'); else if (n < 60) tryPick(n + 1); }, n ? 300 : 900); tryPick(0); }
+const _closeSm_pk = closeSm;
+closeSm = function () { const wasPick = smOpen === 'pick'; PKJ.arm = null; _closeSm_pk(); if (wasPick && PK_FIRST) pkPickDone(modeId()); };
+
+const _renderSm_27 = renderSm;
+renderSm = function () { const k = smOpen;
+  if (k === 'pick') { smEl.classList.remove('arcwide'); renderPick(); smAd.hidden = true; return; }
+  if (POCKET && (k === 'alba' || k === 'pkai' || k === 'pkhelp')) { smEl.classList.remove('arcwide'); if (k === 'alba') renderAlba(); else if (k === 'pkai') renderPkAi(); else renderPkHelp(); smAd.hidden = true; return; }
+  _renderSm_27(); };
+const _interact_27 = interact;
+interact = function (k) { if (k === 'alba' && !POCKET) return;
+  if (POCKET && (k === 'alba' || k === 'robot' || k === 'staff')) { if (DEC.on) return; firstUse(); if (activeKey) closePanel(); if (k === 'alba') { PKJ.open = false; PKJ.edit = null; PKJ.f = null; } openSm(k === 'alba' ? 'alba' : k === 'robot' ? 'pkai' : 'pkhelp'); return; }
+  return _interact_27(k); };
+const _applyMode3D_27 = applyMode3D;
+applyMode3D = function (...a) { const r = _applyMode3D_27(...a); albaBoard.visible = POCKET; OBJ.alba.noPick = !POCKET; if (!POCKET) OBJ.alba.el.classList.add('hide'); else { PKJ.key = ''; pkDrawAlba(); } refreshPickable(); return r; };
+const _applyModeUI_27 = applyModeUI;
+applyModeUI = function () { _applyModeUI_27(); pkSync(true); };
+const _renderPanel_27 = renderPanel;
+renderPanel = function () { _renderPanel_27(); if (!POCKET || activeKey !== 'pos') return; const hs = pBody.querySelectorAll('.hintp'), hp = hs[hs.length - 1]; if (!hp) return;
+  hp.innerHTML = PKC.on ? `☁ 여기서 적은 내용은 <b>내 계정에 저장</b>되고 <a href="${PK_2D}" style="color:var(--coral);font-weight:800">📊 2D 용돈냥이</a>에서도 똑같이 보여요.` : `🧪 지금은 <b>체험</b>이라 새로 열면 처음으로 돌아가요. <b>Google 로그인</b>하면 내 계정에 저장돼요.`; };
+POCKET_TOUR = function () { return [
+  ['👋', '용돈냥이에 오신 걸 환영해요', '내 방을 둘러보며 쓰는 용돈기입장이에요. <b>들어온 돈</b>, <b>나간 돈</b>, <b>모으기 목표</b>, <b>알바비</b>를 적을 수 있어요.'],
+  ['👆', '둘러보기', '화면을 <b>드래그</b>하면 고개를 돌려요. 아래 <b>➖ ➕</b> 버튼으로 앞뒤로 움직여요.'],
+  ['📝', '노트북을 눌러서 적어요', '<b>📝 내 장부</b>를 누르고 <b>들어온 돈</b>이나 <b>나간 돈</b>을 고른 뒤 금액만 넣으면 끝이에요.'],
+  ['🐷', '저금통에 목표를 정해요', '<b>🐷 저금통</b>을 누르면 이번 달에 얼마를 모을지 정하고, 지금 얼마나 모았는지 볼 수 있어요.'],
+  ['💼', '알바비 보드에 일한 날을 적어요', '<b>💼 알바비 보드</b>에 일한 곳·시급·시간을 적으면 <b>이번 달 받을 알바비</b>를 바로 계산해 줘요. 주휴수당·세금은 뺀 참고 금액이에요.'],
+  ['🤖', 'AI 비서와 용돈 도우미', '<b>🤖 AI 비서</b>는 이번 달 요약과 피클에게 맡기는 법을, <b>🧑‍💼 용돈 도우미</b>는 절약 팁을 알려 줘요.'],
+  ['☁️', '기록을 계속 남기려면', '지금은 <b>체험</b>이라 새로 열면 처음으로 돌아가요. 위의 <b>Google 로그인</b>을 하면 내 계정에 저장되고 📊 2D 용돈냥이와 똑같이 이어져요.']]; };
+const _renderMe_27 = renderMe;
+renderMe = function () { _renderMe_27(); if (!POCKET) return; const m = smBody.querySelector('.rows.manual'); if (!m) return;
+  const row = (x, y) => `<div class="row"><div class="l"><b>${x}</b></div><span class="d" style="text-align:right">${y}</span></div>`;
+  const rs = m.querySelectorAll('.row'); if (rs[2]) rs[2].insertAdjacentHTML('afterend', row('💼 알바비 보드', '일한 곳·시급·시간 적기 · 이번 달 받을 알바비') + row('🤖 AI 비서 · 🧑‍💼 용돈 도우미', '이번 달 요약 · 피클 안내 · 절약 팁'));
+  const last = m.lastElementChild; if (last) last.outerHTML = row('📊 2D 버튼', '글자로 보는 용돈냥이 · 로그인하면 같은 장부'); };
 // 뒷벽 밖으로 나가면 등 뒤 선반·시계가 시야를 가리지 않게 숨김 + 멀리서도 안개에 묻히지 않게
 const _applyCam_far = applyCam;
 applyCam = function () { _applyCam_far(); const out = cam.pos.z > ROOM.z1 - 0.45; if (back.visible === out) back.visible = !out; };
