@@ -4342,6 +4342,98 @@
         loadUserDataFromCloud = async function () { v28Sync(); return v28Prev.load.apply(this, arguments); };
         applyStoreConfigUI = function () { const r = v28Prev.apply.apply(this, arguments); v28Sync(); return r; };
         (function v28Wait(n) { if (typeof window.onAuthStateChanged === 'function' && window.firebaseAuth) { v28InstallDel(); try { window.onAuthStateChanged(window.firebaseAuth, () => setTimeout(v28Sync, 0)); } catch (e) {} } else if (n < 100) setTimeout(() => v28Wait(n + 1), 200); })(0);
+        /* ==== V29_BOSS_LINK_BEGIN: 🔗 사장님앱(근태관리) 연동 — 내 근무 기록을 읽기만 한다. 근태 DB에는 아무것도 쓰지 않는다 ==== */
+        const v29 = { M: null, app: null, auth: null, db: null, user: null, state: 'off', open: false, busy: false, staff: null, att: [], unsub: null, err: '', arm: 0, f: { store: '', code: '', pw: '' } };
+        const V29_FB = 'https://www.gstatic.com/firebasejs/10.7.1/', V29_STORE_KEY = 'soloBossLink:store', V29_PAID_KEY = 'soloBossLink:paid';
+        const V29_CFG = { apiKey: "AIzaSyCD4M452qAiF7JnG7Z9wcI_qjxNB6cwkbI", authDomain: "craftburgers-database.firebaseapp.com", projectId: "craftburgers-database", storageBucket: "craftburgers-database.firebasestorage.app", messagingSenderId: "975736531", appId: "1:975736531:web:a0e140c464331bb2ea0e26" };
+        const v29Get = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+        const v29Set = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} };
+        const v29Paid = () => { try { const v = JSON.parse(v29Get(V29_PAID_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } };
+        const v29Safe = s => String(s).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        const v29Email = (store, code) => 'staff-' + v29Safe(store) + '-' + v29Safe(code) + '-v1@staff-login.example.com'; // 근태관리 앱의 직원 로그인과 같은 규칙
+        const v29Ym = () => { const k = getKstParts(); return k.year + '-' + String(k.month).padStart(2, '0'); };
+        async function v29Mods() { if (!v29.M) { const r = await Promise.all([import(V29_FB + 'firebase-app.js'), import(V29_FB + 'firebase-auth.js'), import(V29_FB + 'firebase-firestore.js')]); v29.M = { A: r[0], U: r[1], F: r[2] }; } return v29.M; }
+        function v29Recs() { if (v29.state !== 'ok' || !v29.staff) return []; const ym = v29Ym(), P = v29Paid();
+            return v29.att.filter(a => a && typeof a.startTime === 'string' && a.startTime.slice(0, 7) === ym && typeof a.endTime === 'string' && a.endTime).map(a => {
+                const raw = (Date.parse(a.endTime) - Date.parse(a.startTime)) / 60000, brk = Number(a.breakMinutes) || 0;
+                const min = a.minutes != null && isFinite(+a.minutes) ? Math.max(0, Math.round(+a.minutes)) : Math.max(0, Math.round((isFinite(raw) ? raw : 0) - brk));
+                const rate = Number(a.wageAtTime) || v29.staff.wage || 0, pay = a.pay != null && isFinite(+a.pay) ? Math.round(+a.pay) : Math.round(rate * min / 60), id = 'boss:' + a.id;
+                return { id, boss: true, place: '🔗 사장님앱', rate, date: a.startTime.slice(0, 10), start: a.startTime.slice(11, 16), end: a.endTime.slice(11, 16), breakMin: brk, min, pay, paid: !!P[id], booked: true }; }); }
+        const v29PrevMonth = v27Month;
+        v27Month = function () { const m = v29PrevMonth(), x = v29Recs(); if (!x.length) return m;
+            const list = m.list.concat(x).sort((a, b) => (String(b.date) + b.id).localeCompare(String(a.date) + a.id)); let pay = 0, min = 0, unpaid = 0, paid = 0;
+            list.forEach(j => { pay += j.pay || 0; min += j.min || 0; if (j.paid) paid += j.pay || 0; else unpaid += j.pay || 0; });
+            return Object.assign({}, m, { list, pay, min, unpaid, paid, n: list.length }); };
+        function v29Read() { const v = id => { const el = document.getElementById(id); return el ? el.value : null; };
+            if (v('v29Store') !== null) { v29.f.store = v('v29Store').trim().slice(0, 128); v29.f.code = String(v('v29Code') || '').replace(/[^0-9]/g, '').slice(0, 8); v29.f.pw = v('v29Pw') || ''; } }
+        function v29Rerender() { if (document.getElementById('v27JobCard') && v27S.open) v27Read(); v29Read(); v27Render(); }
+        function v29Unsub() { if (v29.unsub) { try { v29.unsub(); } catch (e) {} } v29.unsub = null; }
+        function v29Stop() { v29Unsub(); Object.assign(v29, { user: null, state: 'off', staff: null, att: [], busy: false }); v29Rerender(); }
+        async function v29Init() { if (v29.auth) return true;
+            try { const M = await v29Mods(); v29.app = M.A.getApps().find(a => a.name === 'soloPocketBossLink') || M.A.initializeApp(V29_CFG, 'soloPocketBossLink'); const au = M.U.getAuth(v29.app);
+                try { await M.U.setPersistence(au, M.U.browserLocalPersistence); } catch (e) {}
+                v29.auth = au; M.U.onAuthStateChanged(au, u => { if (u) v29Start(u); else v29Stop(); }); return true; // 한 번 연동하면 이 기기에서 다시 열어도 자동 연동
+            } catch (e) { v29.auth = null; return false; } }
+        async function v29Start(u) {
+            if (v29.user && v29.user.uid === u.uid && (v29.state === 'ok' || v29.state === 'loading')) return;
+            const store = v29Get(V29_STORE_KEY), mine = () => !!v29.user && v29.user.uid === u.uid; v29Unsub();
+            Object.assign(v29, { user: u, state: 'loading', staff: null, att: [], err: '' }); v29Rerender();
+            const fail = msg => { if (!mine()) return; v29Unsub(); v29.err = msg; v29.open = true; v29Set(V29_STORE_KEY, ''); v29.M.U.signOut(v29.auth).catch(() => v29Stop()); };
+            const LOADERR = '사장님앱 기록을 불러오지 못했어요. 사장님앱(근태관리)에서 로그인이 되는지 먼저 확인해 주세요.';
+            if (!/^[A-Za-z0-9_-]{20,128}$/.test(store)) return fail('매장 연결 코드를 다시 넣어 주세요.');
+            try { const F = (await v29Mods()).F; try { F.setLogLevel('silent'); } catch (e) {}
+                if (!v29.db) v29.db = F.getFirestore(v29.app); if (!mine()) return;
+                const snap = await F.getDocs(F.query(F.collection(v29.db, 'users', store, 'staffs'), F.where('authUid', '==', u.uid), F.limit(1)));
+                if (!mine()) return; if (snap.empty) return fail('이 매장에 등록된 직원 계정이 아니에요. 사장님께 확인해 주세요.');
+                const d = snap.docs[0], x = d.data() || {};
+                const map = await F.getDoc(F.doc(v29.db, 'users', store, 'staffAuth', u.uid)), mv = map.exists() ? map.data() : null;
+                if (!mine()) return; if (!mv || mv.active !== true || mv.staffId !== d.id) return fail('직원 계정이 꺼져 있어요. 사장님께 문의해 주세요.');
+                v29.staff = { id: d.id, name: String(x.name || '직원'), wage: Number(x.wage) || 0 };
+                const col = F.collection(v29.db, 'users', store, 'attendance');
+                const on = s => { if (!mine()) return; v29.att = s.docs.map(q => Object.assign({}, q.data() || {}, { id: q.id })); v29.state = 'ok'; v29.open = false; v29.busy = false; v29.f.pw = ''; const p = document.getElementById('v29Pw'); if (p) p.value = ''; v29Rerender(); };
+                // 근태관리 앱의 직원 화면과 같은 조건(본인 기록 + 이번 달 이후). 복합 색인이 없으면 본인 기록 전체로 대신 읽는다.
+                v29.unsub = F.onSnapshot(F.query(col, F.where('staffId', '==', d.id), F.where('startTime', '>=', v29Ym() + '-01')), on, e => { if (!mine()) return;
+                    if (e && e.code === 'failed-precondition') { v29Unsub(); try { v29.unsub = F.onSnapshot(F.query(col, F.where('staffId', '==', d.id)), on, () => fail(LOADERR)); } catch (er) { fail(LOADERR); } return; }
+                    fail(LOADERR); });
+            } catch (e) { fail(LOADERR); } }
+        async function v29Connect() { if (v29.busy) return; v29Read(); const store = v29.f.store, code = v29.f.code, pw = v29.f.pw;
+            const bad = (id, msg) => { v29.err = msg; v29Rerender(); const e = document.getElementById(id); if (e) { e.classList.add('border-rose-500'); e.focus(); } };
+            if (!/^[A-Za-z0-9_-]{20,128}$/.test(store)) return bad('v29Store', '매장 연결 코드를 확인해 주세요. 사장님이 알려 준 긴 코드예요.');
+            if (!/^\d{8}$/.test(code)) return bad('v29Code', '직원 로그인 코드는 숫자 8자리예요.');
+            if (!pw) return bad('v29Pw', '비밀번호를 넣어 주세요.');
+            v29.busy = true; v29.err = ''; v29Rerender();
+            if (!(await v29Init())) { v29.busy = false; v29.err = '연결하지 못했어요 — 인터넷을 확인하고 다시 눌러 주세요.'; return v29Rerender(); }
+            v29Set(V29_STORE_KEY, store);
+            try { await v29.M.U.signInWithEmailAndPassword(v29.auth, v29Email(store, code), pw); }
+            catch (e) { const c = (e && e.code) || ''; v29.busy = false; v29Set(V29_STORE_KEY, '');
+                v29.err = c === 'auth/network-request-failed' ? '연결하지 못했어요 — 인터넷을 확인하고 다시 눌러 주세요.' : c === 'auth/too-many-requests' ? '여러 번 틀려서 잠시 막혔어요. 조금 뒤에 다시 해 주세요.' : '연동하지 못했어요. 매장 코드·직원 코드·비밀번호를 다시 확인해 주세요.';
+                v29Rerender(); } }
+        function v29Card() { const IN = 'w-full text-sm rounded-xl p-2.5 border border-slate-300 min-w-0', LB = 'text-[11px] text-slate-500 font-medium', BT = 'min-h-[44px] px-3 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700';
+            const er = v29.err ? '<p id="v29Err" class="text-xs font-bold text-rose-600 mt-2 break-keep">' + v24Esc(v29.err) + '</p>' : '', BOX = '<div id="v29Card" class="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3">';
+            if (v29.state === 'ok' && v29.staff) { const x = v29Recs(), pay = x.reduce((t, j) => t + j.pay, 0), min = x.reduce((t, j) => t + j.min, 0), arm = Date.now() - v29.arm < 4000;
+                return BOX + '<p class="text-xs font-bold text-slate-800 break-keep">🔗 사장님앱과 연동됨 · ' + v24Esc(v29.staff.name) + '님</p><p class="text-xs text-slate-600 mt-1 break-keep">이번 달 사장님앱 기록 <b id="v29Count">' + x.length + '건</b> · ' + v27Hm(min) + ' · <b id="v29Pay" class="text-slate-900">' + v27W(pay) + '</b></p><p class="text-[11px] text-slate-500 mt-1 break-keep">사장님앱에 올라온 근무 기록이 자동으로 들어와요. 고치는 건 사장님앱에서만 돼요.</p><button type="button" data-v29="off" class="' + BT + ' mt-2' + (arm ? ' text-rose-600 border-rose-400' : '') + '">' + (arm ? '한 번 더 누르면 연동을 풀어요' : '연동 해제') + '</button></div>'; }
+            if (v29.state === 'loading' || v29.busy) return BOX + '<p class="text-xs font-bold text-slate-800">🔗 사장님앱에 연결하는 중…</p><p class="text-[11px] text-slate-500 mt-1">잠시만 기다려 주세요.</p></div>';
+            if (!v29.open) return '<div id="v29Card" class="mt-3"><button type="button" data-v29="open" class="w-full min-h-[44px] rounded-xl bg-slate-100 text-slate-800 text-xs font-bold">🔗 사장님앱과 연동하기</button><p class="text-[11px] text-slate-400 mt-1 break-keep">사장님이 근태관리 앱에 올린 내 근무 기록·알바비를 자동으로 가져와요.</p>' + er + '</div>';
+            return BOX + '<p class="text-xs font-bold text-slate-800">🔗 사장님앱과 연동하기</p><p class="text-[11px] text-slate-500 mt-1 mb-2 break-keep">근태관리 앱에 로그인할 때 쓰는 3가지를 넣어 주세요. 한 번만 하면 이 기기에서 계속 연동돼요.</p><div class="space-y-2">' +
+                '<div><label for="v29Store" class="' + LB + '">매장 연결 코드</label><input id="v29Store" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="128" placeholder="사장님이 알려 준 긴 코드" value="' + v24Esc(v29.f.store) + '" class="' + IN + '"></div>' +
+                '<div><label for="v29Code" class="' + LB + '">직원 로그인 코드 (숫자 8자리)</label><input id="v29Code" type="text" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="예: 12345678" value="' + v24Esc(v29.f.code) + '" class="' + IN + '"></div>' +
+                '<div><label for="v29Pw" class="' + LB + '">비밀번호</label><input id="v29Pw" type="password" autocomplete="off" maxlength="64" value="' + v24Esc(v29.f.pw) + '" class="' + IN + '"></div></div>' + er +
+                '<div class="flex gap-2 mt-3"><button type="button" data-v29="cancel" class="' + BT + '">취소</button><button type="button" data-v29="go" class="flex-1 min-h-[44px] rounded-xl bg-blue-600 text-white text-xs font-bold">연동하기</button></div></div>'; }
+        const v29PrevRender = v27Render;
+        v27Render = function () { const r = v29PrevRender.apply(this, arguments); const card = document.getElementById('v27JobCard'); if (!card || card.classList.contains('hidden')) return r;
+            const P = v29Paid(), seen = [], BT = 'min-h-[44px] px-3 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700';
+            card.querySelectorAll('button[data-jid^="boss:"]').forEach(b => { const box = b.parentNode, id = b.dataset.jid; if (!box || seen.indexOf(box) >= 0) return; seen.push(box);
+                box.innerHTML = '<button type="button" data-v29="paid" data-bid="' + v24Esc(id) + '" class="' + BT + (P[id] ? ' bg-emerald-50' : '') + '">' + (P[id] ? '✅ 받음' : '정산 완료') + '</button><span class="self-center text-[11px] text-slate-400">사장님앱 기록</span>'; });
+            card.insertAdjacentHTML('beforeend', v29Card()); return r; };
+        document.addEventListener('click', e => { const b = e.target && e.target.closest ? e.target.closest('button[data-v29]') : null; if (!b) return; const a = b.dataset.v29;
+            if (a === 'open') { v29.open = true; v29.err = ''; if (!v29.f.store) v29.f.store = v29Get(V29_STORE_KEY) || v29Get('connected_store_code'); v29Rerender(); const i = document.getElementById(v29.f.store ? 'v29Code' : 'v29Store'); if (i) i.focus(); return; }
+            if (a === 'cancel') { const p = document.getElementById('v29Pw'); if (p) p.value = ''; v29.open = false; v29.err = ''; v29Rerender(); return; }
+            if (a === 'go') { v29Connect(); return; }
+            if (a === 'off') { if (Date.now() - v29.arm >= 4000) { v29.arm = Date.now(); v29Rerender(); return; } v29.arm = 0; v29Set(V29_STORE_KEY, ''); v29.open = false; v29.err = '';
+                if (v29.auth) v29.M.U.signOut(v29.auth).catch(() => v29Stop()); else v29Stop(); return; }
+            if (a === 'paid' && b.dataset.bid) { const P = v29Paid(), id = b.dataset.bid; if (P[id]) delete P[id]; else P[id] = 1; v29Set(V29_PAID_KEY, JSON.stringify(P)); v29Rerender(); return; } });
+        if (v29Get(V29_STORE_KEY)) v29Init();
+        /* ==== V29_BOSS_LINK_END ==== */
     </script>
 </body>
 </html>

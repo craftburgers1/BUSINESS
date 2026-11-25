@@ -4806,6 +4806,93 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+/* ==== V29_BOSS_LINK_BEGIN: 🔗 사장님앱(근태관리) 연동 — 내 근무 기록을 읽기만 한다. 근태 DB에는 아무것도 쓰지 않는다 ==== */
+const BL = { app: null, auth: null, db: null, user: null, state: 'off', open: false, busy: false, staff: null, att: [], unsub: null, err: '', arm: 0, f: { store: '', code: '', pw: '' } };
+const BL_STORE_KEY = 'soloBossLink:store', BL_PAID_KEY = 'soloBossLink:paid';
+const blGet = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+const blSet = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} };
+const blPaid = () => { try { const v = JSON.parse(blGet(BL_PAID_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } };
+const blSafe = s => String(s).replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+const blEmail = (store, code) => `staff-${blSafe(store)}-${blSafe(code)}-v1@staff-login.example.com`; // 근태관리 앱의 직원 로그인과 같은 규칙
+function blRecs() { if (BL.state !== 'ok' || !BL.staff) return []; const ym = kst().ym, P = blPaid();
+  return BL.att.filter(a => a && typeof a.startTime === 'string' && a.startTime.slice(0, 7) === ym && typeof a.endTime === 'string' && a.endTime).map(a => {
+    const raw = (Date.parse(a.endTime) - Date.parse(a.startTime)) / 60000, brk = Number(a.breakMinutes) || 0;
+    const min = a.minutes != null && isFinite(+a.minutes) ? Math.max(0, Math.round(+a.minutes)) : Math.max(0, Math.round((isFinite(raw) ? raw : 0) - brk));
+    const rate = Number(a.wageAtTime) || BL.staff.wage || 0, pay = a.pay != null && isFinite(+a.pay) ? Math.round(+a.pay) : Math.round(rate * min / 60), id = 'boss:' + a.id;
+    return { id, boss: true, place: '🔗 사장님앱', rate, date: a.startTime.slice(0, 10), start: a.startTime.slice(11, 16), end: a.endTime.slice(11, 16), breakMin: brk, min, pay, paid: !!P[id], booked: true }; }); }
+const _pkJobMonth_bl = pkJobMonth;
+pkJobMonth = function () { const m = _pkJobMonth_bl(), x = blRecs(); if (!x.length) return m;
+  const list = m.list.concat(x).sort((a, b) => (String(b.date) + b.id).localeCompare(String(a.date) + a.id)); let pay = 0, min = 0, unpaid = 0, paid = 0;
+  list.forEach(j => { pay += j.pay || 0; min += j.min || 0; if (j.paid) paid += j.pay || 0; else unpaid += j.pay || 0; });
+  return Object.assign({}, m, { list, pay, min, unpaid, paid, n: list.length }); };
+function blRead() { const v = id => { const el = document.getElementById(id); return el ? el.value : null; };
+  if (v('blStore') !== null) { BL.f.store = v('blStore').trim().slice(0, 128); BL.f.code = String(v('blCode') || '').replace(/[^0-9]/g, '').slice(0, 8); BL.f.pw = v('blPw') || ''; } }
+function blRerender() { if (!POCKET) return; if (smOpen === 'alba') { if (PKJ.open) pkJobRead(); blRead(); } PKJ.key = ''; pkRefresh(); }
+function blUnsub() { if (BL.unsub) { try { BL.unsub(); } catch (e) {} } BL.unsub = null; }
+function blStop() { blUnsub(); Object.assign(BL, { user: null, state: 'off', staff: null, att: [], busy: false }); blRerender(); }
+async function blInit() { if (BL.auth) return true;
+  try { await loadFB(); BL.app = FBA.getApps().find(a => a.name === 'soloPocketBossLink') || FBA.initializeApp(staffConfig, 'soloPocketBossLink'); const au = FBAU.getAuth(BL.app);
+    try { await FBAU.setPersistence(au, FBAU.browserLocalPersistence); } catch (e) {}
+    BL.auth = au; FBAU.onAuthStateChanged(au, u => { if (u) blStart(u); else blStop(); }); return true; // 한 번 연동하면 이 기기에서 다시 열어도 자동 연동
+  } catch (e) { BL.auth = null; return false; } }
+async function blStart(u) {
+  if (BL.user && BL.user.uid === u.uid && (BL.state === 'ok' || BL.state === 'loading')) return;
+  const store = blGet(BL_STORE_KEY), mine = () => !!BL.user && BL.user.uid === u.uid; blUnsub();
+  Object.assign(BL, { user: u, state: 'loading', staff: null, att: [], err: '' }); blRerender();
+  const fail = msg => { if (!mine()) return; blUnsub(); BL.err = msg; BL.open = true; blSet(BL_STORE_KEY, ''); FBAU.signOut(BL.auth).catch(() => blStop()); };
+  const LOADERR = '사장님앱 기록을 불러오지 못했어요. 사장님앱(근태관리)에서 로그인이 되는지 먼저 확인해 주세요.';
+  if (!/^[A-Za-z0-9_-]{20,128}$/.test(store)) return fail('매장 연결 코드를 다시 넣어 주세요.');
+  try { const F = await loadFS(); try { F.setLogLevel('silent'); } catch (e) {}
+    if (!BL.db) BL.db = F.getFirestore(BL.app); if (!mine()) return;
+    const snap = await F.getDocs(F.query(F.collection(BL.db, 'users', store, 'staffs'), F.where('authUid', '==', u.uid), F.limit(1)));
+    if (!mine()) return; if (snap.empty) return fail('이 매장에 등록된 직원 계정이 아니에요. 사장님께 확인해 주세요.');
+    const d = snap.docs[0], x = d.data() || {};
+    const map = await F.getDoc(F.doc(BL.db, 'users', store, 'staffAuth', u.uid)), mv = map.exists() ? map.data() : null;
+    if (!mine()) return; if (!mv || mv.active !== true || mv.staffId !== d.id) return fail('직원 계정이 꺼져 있어요. 사장님께 문의해 주세요.');
+    BL.staff = { id: d.id, name: String(x.name || '직원'), wage: Number(x.wage) || 0 };
+    const col = F.collection(BL.db, 'users', store, 'attendance');
+    const on = s => { if (!mine()) return; BL.att = s.docs.map(q => Object.assign({}, q.data() || {}, { id: q.id })); const first = BL.state !== 'ok'; BL.state = 'ok'; BL.open = false; BL.busy = false; BL.f.pw = ''; blRerender(); if (first) toast('🔗 사장님앱과 연동했어요 · ' + BL.staff.name + '님 근무 기록을 가져왔어요'); };
+    // 근태관리 앱의 직원 화면과 같은 조건(본인 기록 + 이번 달 이후). 복합 색인이 없으면 본인 기록 전체로 대신 읽는다.
+    BL.unsub = F.onSnapshot(F.query(col, F.where('staffId', '==', d.id), F.where('startTime', '>=', kst().ym + '-01')), on, e => { if (!mine()) return;
+      if (e && e.code === 'failed-precondition') { blUnsub(); try { BL.unsub = F.onSnapshot(F.query(col, F.where('staffId', '==', d.id)), on, () => fail(LOADERR)); } catch (er) { fail(LOADERR); } return; }
+      fail(LOADERR); });
+  } catch (e) { fail(LOADERR); } }
+async function blConnect() { if (BL.busy) return; blRead(); const store = BL.f.store, code = BL.f.code, pw = BL.f.pw;
+  const bad = (id, msg) => { BL.err = msg; blRerender(); const e = document.getElementById(id); if (e) { e.style.borderColor = '#dd5e47'; e.focus(); } };
+  if (!/^[A-Za-z0-9_-]{20,128}$/.test(store)) return bad('blStore', '매장 연결 코드를 확인해 주세요. 사장님이 알려 준 긴 코드예요.');
+  if (!/^\d{8}$/.test(code)) return bad('blCode', '직원 로그인 코드는 숫자 8자리예요.');
+  if (!pw) return bad('blPw', '비밀번호를 넣어 주세요.');
+  BL.busy = true; BL.err = ''; blRerender();
+  if (!(await blInit())) { BL.busy = false; BL.err = '연결하지 못했어요 — 인터넷을 확인하고 다시 눌러 주세요.'; return blRerender(); }
+  blSet(BL_STORE_KEY, store);
+  try { await FBAU.signInWithEmailAndPassword(BL.auth, blEmail(store, code), pw); }
+  catch (e) { const c = (e && e.code) || ''; BL.busy = false; blSet(BL_STORE_KEY, '');
+    BL.err = c === 'auth/network-request-failed' ? '연결하지 못했어요 — 인터넷을 확인하고 다시 눌러 주세요.' : c === 'auth/too-many-requests' ? '여러 번 틀려서 잠시 막혔어요. 조금 뒤에 다시 해 주세요.' : '연동하지 못했어요. 매장 코드·직원 코드·비밀번호를 다시 확인해 주세요.';
+    blRerender(); } }
+function blCard() { const W = n => n.toLocaleString('ko-KR') + '원', er = BL.err ? `<p id="blErr" style="margin:8px 0 0;font-size:12.5px;font-weight:700;color:#dd5e47;word-break:keep-all">${esc(BL.err)}</p>` : '';
+  if (BL.state === 'ok' && BL.staff) { const x = blRecs(), pay = x.reduce((t, j) => t + j.pay, 0), min = x.reduce((t, j) => t + j.min, 0), arm = Date.now() - BL.arm < 4000;
+    return `<div class="instcard" id="blCard"><p class="ib" style="margin:0">🔗 사장님앱과 연동됨 · ${esc(BL.staff.name)}님</p><p style="margin:4px 0 0">이번 달 사장님앱 기록 <b class="num" id="blCount">${x.length}건</b> · ${pkHm(min)} · <b class="num" id="blPay">${W(pay)}</b></p><p style="margin:4px 0 0">사장님앱에 올라온 근무 기록이 자동으로 들어와요. 고치는 건 사장님앱에서만 돼요.</p><button type="button" class="ghost" data-act="bl-off" style="margin-top:8px${arm ? ';color:#dd5e47' : ''}">${arm ? '한 번 더 누르면 연동을 풀어요' : '연동 해제'}</button></div>`; }
+  if (BL.state === 'loading' || BL.busy) return `<div class="instcard" id="blCard"><p class="ib" style="margin:0">🔗 사장님앱에 연결하는 중…</p><p style="margin:4px 0 0">잠시만 기다려 주세요.</p></div>`;
+  if (!BL.open) return `<div id="blCard" style="margin:0 0 10px"><button type="button" class="ghost" data-act="bl-open" style="margin-top:0;height:46px">🔗 사장님앱과 연동하기</button><p class="hintp" style="margin:6px 0 0">사장님이 근태관리 앱에 올린 내 근무 기록·알바비를 자동으로 가져와요.</p>${er}</div>`;
+  return `<div class="instcard" id="blCard"><p class="ib" style="margin:0">🔗 사장님앱과 연동하기</p><p style="margin:4px 0 8px">근태관리 앱에 로그인할 때 쓰는 3가지를 넣어 주세요. 한 번만 하면 이 기기에서 계속 연동돼요.</p>
+    <label for="blStore" style="${PK_LB}">매장 연결 코드</label><input id="blStore" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="128" placeholder="사장님이 알려 준 긴 코드" value="${esc(BL.f.store)}" style="${PK_IN}">
+    <label for="blCode" style="${PK_LB};margin-top:8px">직원 로그인 코드 (숫자 8자리)</label><input id="blCode" class="num" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="예: 12345678" value="${esc(BL.f.code)}" style="${PK_IN}">
+    <label for="blPw" style="${PK_LB};margin-top:8px">비밀번호</label><input id="blPw" type="password" autocomplete="off" maxlength="64" value="${esc(BL.f.pw)}" style="${PK_IN}">${er}
+    <div class="factions" style="margin-top:10px"><button type="button" class="cancel" data-act="bl-cancel">취소</button><button type="button" class="save" data-act="bl-go">연동하기</button></div></div>`; }
+const _renderAlba_bl = renderAlba;
+renderAlba = function () { _renderAlba_bl(); const P = blPaid(), seen = [];
+  smBody.querySelectorAll('button[data-jid^="boss:"]').forEach(b => { const box = b.parentNode, id = b.dataset.jid; if (!box || seen.indexOf(box) >= 0) return; seen.push(box);
+    box.innerHTML = `<button type="button" data-act="bl-paid" data-bid="${esc(id)}" style="min-height:44px;padding:0 12px;border-radius:11px;background:${P[id] ? '#e5f6ef' : '#fff'};border:1px solid var(--line2);font-size:12.5px;font-weight:800">${P[id] ? '✅ 받음' : '정산 완료'}</button><span class="chip" style="align-self:center;background:#f7efe4;color:var(--muted)">사장님앱 기록</span>`; });
+  const hint = smBody.querySelector('.hintp'); if (hint) hint.insertAdjacentHTML('afterend', blCard()); else smBody.insertAdjacentHTML('afterbegin', blCard()); };
+smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || smOpen !== 'alba') return; const a = b.dataset.act || ''; if (a.slice(0, 3) !== 'bl-') return;
+  if (a === 'bl-open') { BL.open = true; BL.err = ''; if (!BL.f.store) BL.f.store = blGet(BL_STORE_KEY) || blGet('connected_store_code'); blRerender(); const i = document.getElementById(BL.f.store ? 'blCode' : 'blStore'); if (i) i.focus(); return; }
+  if (a === 'bl-cancel') { const p = document.getElementById('blPw'); if (p) p.value = ''; BL.open = false; BL.err = ''; blRerender(); return; }
+  if (a === 'bl-go') { blConnect(); return; }
+  if (a === 'bl-off') { if (Date.now() - BL.arm >= 4000) { BL.arm = Date.now(); blRerender(); return; } BL.arm = 0; blSet(BL_STORE_KEY, ''); BL.open = false; BL.err = '';
+    if (BL.auth) FBAU.signOut(BL.auth).then(() => toast('사장님앱 연동을 풀었어요 · 사장님앱 기록은 그대로예요')).catch(() => blStop()); else blStop(); return; }
+  if (a === 'bl-paid' && b.dataset.bid) { const P = blPaid(), id = b.dataset.bid; if (P[id]) delete P[id]; else P[id] = 1; blSet(BL_PAID_KEY, JSON.stringify(P)); blRerender(); return; } });
+if (POCKET && blGet(BL_STORE_KEY)) blInit();
+/* ==== V29_BOSS_LINK_END ==== */
 window.__solo3d = { info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, dpr: renderer.getPixelRatio(), geos: renderer.info.memory.geometries, fb: !!fbAuth, live: REAL.status }) };
 }
 </script>
