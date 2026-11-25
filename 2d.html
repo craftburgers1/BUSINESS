@@ -4504,6 +4504,32 @@
             main.dataset.v30View = 'home'; sync(); setTimeout(sync, 800); setTimeout(sync, 2500);
         })();
         /* ==== V30_HOME_END ==== */
+        /* ==== V31_HEADER_BEGIN: 📱 휴대폰 맨 위 줄 정리 — 640px 미만에서만 2줄로 나눈다(PC는 그대로) ==== */
+        (function () {
+            const hd = document.querySelector('header.ios-header'); if (!hd || document.getElementById('v31HeaderStyle')) return;
+            const left = hd.firstElementChild, right = hd.lastElementChild, txt = left && left.lastElementChild;
+            if (!left || !right || left === right || !txt) return;
+            left.setAttribute('data-v31', 'left'); right.setAttribute('data-v31', 'right'); txt.setAttribute('data-v31', 'txt');
+            const css = document.createElement('style'); css.id = 'v31HeaderStyle';
+            css.textContent = '@media (max-width:639.98px){' +
+                'header.ios-header{flex-wrap:wrap;row-gap:10px;padding-top:10px;padding-bottom:10px}' +
+                'header.ios-header>[data-v31="left"]{flex:1 1 100%;min-width:0}' +
+                // 1줄: [가게 이름(길면 …으로 줄임)] [PRO] [✦크레딧]  2줄: 업종
+                'header.ios-header [data-v31="txt"]{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:minmax(0,max-content) auto auto 1fr;column-gap:6px;row-gap:1px;align-items:center}' +
+                'header.ios-header [data-v31="txt"]>div:first-child{grid-column:1;grid-row:1;min-width:0}' +
+                'header.ios-header #v25Tier{grid-column:2;grid-row:1;margin-left:0!important;justify-self:start}' +
+                'header.ios-header #v28Chip{grid-column:3;grid-row:1;margin-left:0!important;justify-self:start}' +
+                'header.ios-header #displayIndustry{grid-column:1/-1;grid-row:2;min-width:0}' +
+                'header.ios-header>[data-v31="right"]{flex:1 1 100%;display:grid;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));gap:6px}' +
+                'header.ios-header>[data-v31="right"]>*{justify-content:center;min-height:40px;min-width:0;padding-left:4px!important;padding-right:4px!important;border-radius:12px!important;overflow:hidden}' +
+                '}' +
+                '@media (max-width:359.98px){header.ios-header #staffAppExternalLink .fa-arrow-up-right-from-square{display:none}header.ios-header>[data-v31="right"]{gap:4px}}';
+            document.head.appendChild(css);
+            // v30 처음 화면의 '← 처음 화면' 막대가 헤더 바로 아래 붙도록 높이를 다시 맞춘다
+            const fix = () => { const bar = document.getElementById('v30Bar'); if (bar && bar.style.top) bar.style.top = (hd.offsetHeight + 6) + 'px'; };
+            window.addEventListener('resize', fix); setTimeout(fix, 0);
+        })();
+        /* ==== V31_HEADER_END ==== */
     </script>
 </body>
 </html>
