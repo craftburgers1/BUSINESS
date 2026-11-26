@@ -1,7 +1,7 @@
 {
   "name": "용돈냥이",
   "short_name": "용돈냥이",
-  "start_url": "./",
+  "start_url": "2d.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f1f5f9",

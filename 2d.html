@@ -689,7 +689,7 @@
             <a id="staffAppExternalLink" href="https://craftburgers1.github.io/craftburger/" target="_blank" rel="noopener noreferrer" title="근태관리 앱 열기 (새 탭)" class="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 flex items-center gap-1 transition whitespace-nowrap flex-shrink-0 max-sm:px-2 max-sm:text-[11px] max-sm:gap-0.5 max-sm:whitespace-nowrap max-sm:flex-shrink-0">
                 <i class="fa-solid fa-users"></i> 근태관리<i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
             </a>
-            <a id="solo3dLink" href="./" title="3D 매장으로 보기" class="group inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-extrabold text-orange-700 bg-gradient-to-r from-amber-100 to-orange-100 border border-orange-200 shadow-sm shadow-orange-200/60 hover:from-amber-200 hover:to-orange-200 hover:shadow-md active:scale-95 transition whitespace-nowrap shrink-0 max-sm:px-2 max-sm:text-[11px] max-sm:gap-0.5"><span class="inline-block transition-transform group-hover:-rotate-12 group-hover:scale-125 drop-shadow-sm">🎮</span>3D<span class="max-sm:hidden"> 매장</span></a>
+            <a id="solo3dLink" href="3d.html" title="3D 일터(매장)로 입장" aria-label="일터입장 — 3D 매장으로 가기"><span class="v37ic" aria-hidden="true">🏪</span><span>일터입장</span></a>
             <button onclick="openBoardModal()" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold border border-blue-200 flex items-center gap-1 transition max-sm:px-2 max-sm:text-[11px] max-sm:gap-0.5 max-sm:whitespace-nowrap max-sm:flex-shrink-0">
                 <i class="fa-solid fa-comments"></i> 게시판
             </button>
@@ -3957,7 +3957,7 @@
             const on = v24IsPocket();
             document.body.classList.toggle('v24-pocket', on);
             v24Targets().forEach(([el, txt]) => { if (on) v24SetText(el, txt); else v24Reset(el); });
-            const link = document.getElementById('solo3dLink'); if (link) link.setAttribute('href', on ? './?mode=pocket' : './');
+            const link = document.getElementById('solo3dLink'); if (link) link.setAttribute('href', on ? '3d.html?mode=pocket' : '3d.html');
             const banner = document.getElementById('v24Banner'); if (banner) banner.classList.toggle('hidden', !(on && V24_URL_POCKET && !(storeConfig && storeConfig.industryKey === 'pocket')));
             const card = document.getElementById('v24GoalCard'); if (card) { card.classList.toggle('hidden', !on); if (on) v24RenderGoal(); }
             if (on && typeof v17SetScope === 'function' && typeof v17CurrentScope !== 'undefined' && v17CurrentScope !== V17_SCOPE_STORE) v17SetScope(V17_SCOPE_STORE);
@@ -4023,7 +4023,7 @@
             if (chip) { chip.classList.toggle('hidden', !on); chip.textContent = pocket ? '무료' : 'PRO'; chip.title = pocket ? '용돈냥이 · 무료 기본 모드' : '용돈냥이 PRO · 가게·가정용 (지금은 무료 베타)';
                 chip.style.background = pocket ? '#dcfce7' : '#1e293b'; chip.style.color = pocket ? '#15803d' : '#fde68a'; }
             const sw = document.getElementById('v25DemoSwitch'); if (sw) sw.textContent = pocket ? '🏪 PRO 체험 보기' : '🐱 용돈냥이 체험 보기';
-            const link = document.getElementById('solo3dLink'); if (link && !pocket) link.setAttribute('href', './?mode=pro');
+            const link = document.getElementById('solo3dLink'); if (link && !pocket) link.setAttribute('href', '3d.html?mode=pro');
         }
         const v25Prev = { applyStoreConfigUI, renderDashboard, startDemoMode };
         applyStoreConfigUI = function () { const r = v25Prev.applyStoreConfigUI.apply(this, arguments); try { v25Apply(); } catch (e) {} return r; };
@@ -4323,7 +4323,7 @@
                 <div style="${row}"><span>📝 기록 저장 (✦2)</span><b id="v28Today">${n('ledger_entry')}/10건</b></div><div style="${row}"><span>🧾 영수증 사진 (✦3)</span><b>${n('receipt')}/5건</b></div>
                 <p style="font-size:12px;color:#64748b;line-height:1.55;margin:10px 0">가계부에 기록을 저장하면 ✦2, 영수증 사진을 붙이면 ✦3, 직원 출근이 있으면 ✦5. 기록을 지우면 그 크레딧도 되돌아가요.</p>
                 <p style="font-size:12.5px;color:#334155;margin:0 0 8px">🛋️ 3D 매장의 <b>가게 꾸미기</b>에서 쓸 수 있어요.</p>
-                <a href="./" style="display:block;text-align:center;height:44px;line-height:44px;border-radius:12px;background:#f97316;color:#fff;font-weight:800;font-size:14px;text-decoration:none">🛋️ 3D 매장에서 꾸미기</a>
+                <a href="3d.html" style="display:block;text-align:center;height:44px;line-height:44px;border-radius:12px;background:#f97316;color:#fff;font-weight:800;font-size:14px;text-decoration:none">🛋️ 3D 매장에서 꾸미기</a>
                 <div style="font-size:12px;font-weight:800;color:#64748b;margin:14px 0 2px">최근 내역</div>
                 ${V28.logs === null ? '<p style="font-size:12.5px;color:#94a3b8;padding:8px 0">불러오는 중…</p>' : V28.logs.length ? V28.logs.map(l => `<div style="${row}"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${v28Esc(String(l.date || '').slice(5))} · ${v28Esc(v28LogName(l))}</span><b style="flex:none;color:${l.amount < 0 ? '#dc2626' : '#059669'}">${l.amount > 0 ? '+' : '−'}✦${Math.abs(Number(l.amount) || 0)}</b></div>`).join('') : '<p style="font-size:12.5px;color:#94a3b8;padding:8px 0">아직 내역이 없어요.</p>'}`; }
         function v28Close() { V28.open = false; const m = document.getElementById('v28Modal'); if (m) m.remove(); }
@@ -4662,6 +4662,17 @@
                 '#dayStickerButtons button.sticker-btn:not([aria-pressed]){font-size:12px!important;color:#6B7684!important;padding:0 12px!important}';
             document.head.appendChild(css); })();
         /* ==== V36_STICKER_FIX_END ==== */
+        /* ==== V37_ENTER_BEGIN: 첫 화면을 2D로 바꾸고(3D는 3d.html), 머리글의 3D 버튼을 잘 보이는 「🏪 일터입장」 버튼으로 ==== */
+        (function () { if (document.getElementById('v37Style')) return; const css = document.createElement('style'); css.id = 'v37Style';
+            css.textContent = '#solo3dLink{display:inline-flex!important;align-items:center;gap:5px;flex:none;white-space:nowrap;height:36px;padding:0 14px!important;border-radius:999px!important;border:0!important;' +
+                'background:linear-gradient(135deg,#FF8A3D,#F04452)!important;color:#fff!important;font-size:13px!important;font-weight:800!important;letter-spacing:-.01em;text-decoration:none!important;' +
+                'box-shadow:0 4px 14px rgba(240,68,82,.35)!important;-webkit-tap-highlight-color:transparent;transition:transform .12s;animation:v37glow 2.4s ease-in-out infinite}' +
+                '#solo3dLink:active{transform:scale(.94)}#solo3dLink .v37ic{font-size:15px;line-height:1}' +
+                '@keyframes v37glow{0%,100%{box-shadow:0 4px 14px rgba(240,68,82,.30)}50%{box-shadow:0 4px 20px rgba(240,68,82,.55)}}' +
+                '@media (max-width:639px){#solo3dLink{height:32px;padding:0 10px!important;font-size:12px!important;gap:3px}#solo3dLink .v37ic{font-size:13px}}' +
+                '@media (prefers-reduced-motion:reduce){#solo3dLink{animation:none}}';
+            document.head.appendChild(css); })();
+        /* ==== V37_ENTER_END ==== */
     </script>
 </body>
 </html>
