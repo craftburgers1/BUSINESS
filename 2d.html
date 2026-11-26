@@ -801,24 +801,6 @@
             </div>
         </section>
 
-        <!-- 🔍 쿠팡 파트너스 최저가 검색 배너 -->
-        <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
-            <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                    🔍 식자재/소모품 쿠팡 최저가 검색
-                </span>
-                <span class="text-[10px] text-slate-400">쿠팡 파트너스</span>
-            </div>
-            <div class="w-full flex justify-center items-center bg-white py-1">
-                <iframe src="https://coupa.ng/cqC4zG" width="100%" height="75" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe>
-            </div>
-            <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-center">
-                <p class="text-[9px] text-slate-400">
-                    이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
-                </p>
-            </div>
-        </section>
-
         <!-- 수입 및 지출 상세 내역 -->
         <section class="ios-card space-y-3">
             <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-2.5 gap-2">
@@ -864,6 +846,24 @@
                         "tsource": ""
                     });
                 </script>
+            </div>
+            <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-center">
+                <p class="text-[9px] text-slate-400">
+                    이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+                </p>
+            </div>
+        </section>
+
+        <!-- 🔍 쿠팡 파트너스 최저가 검색 배너 -->
+        <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
+            <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                    🔍 식자재/소모품 쿠팡 최저가 검색
+                </span>
+                <span class="text-[10px] text-slate-400">쿠팡 파트너스</span>
+            </div>
+            <div class="w-full flex justify-center items-center bg-white py-1">
+                <iframe src="https://coupa.ng/cqC4zG" width="100%" height="75" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe>
             </div>
             <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-center">
                 <p class="text-[9px] text-slate-400">
@@ -4673,6 +4673,36 @@
                 '@media (prefers-reduced-motion:reduce){#solo3dLink{animation:none}}';
             document.head.appendChild(css); })();
         /* ==== V37_ENTER_END ==== */
+        /* ==== V38_CAL_BEGIN: 📅 달력 날짜 고르기를 맨 위 '연·월' 하나로 통일. '연간 전체'를 고르면 1월~12월 달력 12개를 아래로 이어서 보여 준다. 데이터는 읽기만 한다 ==== */
+        (function () {
+            if (window.__v38) return; window.__v38 = true;
+            const css = document.createElement('style'); css.id = 'v38Style';
+            css.textContent = '.v38m{margin-top:18px}.v38m:first-child{margin-top:0}.v38h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:2px 2px 8px}' +
+                '.v38h b{font-size:16px;font-weight:800;color:#191F28;letter-spacing:-.02em}.v38h span{font-size:11px;font-weight:700;white-space:nowrap}.v38h .p{color:#059669}.v38h .n{color:#E11D48}.v38tip{font-size:11px;color:#8B95A1;text-align:center;padding:0 0 8px}';
+            document.head.appendChild(css);
+            const prev = renderCalendarView;
+            function top() { const y = parseInt((document.getElementById('yearSelect') || {}).value, 10), m = (document.getElementById('monthSelect') || {}).value; return { y: isNaN(y) ? calendarYear : y, m: m === 'ALL' ? 'ALL' : (parseInt(m, 10) || calendarMonth) }; }
+            function monthSum(y, m) { let a = 0, b = 0; (Array.isArray(dbData) ? dbData : []).forEach(x => { if (!x || !x.date) return; const p = x.date.split('-'); if (+p[0] !== y || +p[1] !== m) return; if (x.type === 'sales') a += Number(x.amount) || 0; else b += Number(x.amount) || 0; }); return { a, b }; }
+            const man = n => n >= 10000 ? Math.round(n / 10000).toLocaleString() + '만' : (Math.round(n) || 0).toLocaleString() + '원';
+            function one(y, m) { // 한 달 달력을 그려서 돌려준다(달력 안의 연·월 고르기 줄은 빼고 제목으로 바꿈)
+                const tmp = document.createElement('div'); calendarYear = y; calendarMonth = m; prev.call(this, tmp);
+                const head = tmp.querySelector('#calYearSelect'); const row = head && head.closest('div.flex.items-center.justify-between'); if (row) row.remove();
+                const t = monthSum(y, m), h = document.createElement('div'); h.className = 'v38h';
+                h.innerHTML = '<b>' + y + '년 ' + m + '월</b><span>' + (t.a ? '<span class="p">+' + man(t.a) + '</span> ' : '') + (t.b ? '<span class="n">-' + man(t.b) + '</span>' : '') + '</span>';
+                const wrap = document.createElement('div'); wrap.className = 'v38m'; wrap.appendChild(h); while (tmp.firstChild) wrap.appendChild(tmp.firstChild); return wrap;
+            }
+            renderCalendarView = function (container) {
+                if (!container) return prev.apply(this, arguments);
+                const t = top(), box = document.createDocumentFragment(), tip = document.createElement('p'); tip.className = 'v38tip'; tip.textContent = '날짜를 누르면 그날 내역·삭제·기분 스티커를 볼 수 있어요 · 날짜는 맨 위에서 골라요';
+                box.appendChild(tip);
+                if (t.m === 'ALL') { for (let m = 1; m <= 12; m++) box.appendChild(one(t.y, m)); calendarMonth = getKstParts().year === t.y ? getKstParts().month : 1; }
+                else box.appendChild(one(t.y, t.m));
+                calendarYear = t.y; if (t.m !== 'ALL') calendarMonth = t.m;
+                container.innerHTML = ''; container.appendChild(box);
+            };
+            try { if (currentHistoryView === 'calendar') renderCalendarView(document.getElementById('history-container')); } catch (e) {}
+        })();
+        /* ==== V38_CAL_END ==== */
     </script>
 </body>
 </html>
