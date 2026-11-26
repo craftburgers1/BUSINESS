@@ -3252,21 +3252,22 @@ const calBar = () => `<div class="calbar"><button type="button" data-cal="-1" ar
 const isPers = x => x.scope === 'personal';
 function monthEntries() { const ym = `${CAL.y}-${String(CAL.m).padStart(2, '0')}`; return allEntries().filter(x => x.date.startsWith(ym)); }
 /* 🔎 목록 검색(2D와 같은 규칙): 항목 이름·메모(가게 이름)에서 찾고, 이 달 합계·지난달 비교·올해 누적을 보여 준다 */
-CAL.q = '';
+CAL.q = ''; CAL.s = 'all';
 const cqNorm = v => String(v == null ? '' : v).toLowerCase().replace(/\s+/g, '');
 const cqTerms = () => CAL.q.split(/[\s,]+/).map(cqNorm).filter(Boolean);
-const cqHit = (x, ts) => (CAL.filter === 'all' || (CAL.filter === 'in' ? x.type === 'sales' : x.type !== 'sales')) && (!ts.length || ts.every(t => cqNorm([x.category, x.memo, x.merchant].filter(Boolean).join(' ')).includes(t)));
-function cqSum(ym, ts) { let out = 0, inn = 0, n = 0; allEntries().forEach(x => { if (!String(x.date || '').startsWith(ym) || !cqHit(x, ts)) return; n++; const a = Number(x.amount) || 0; if (x.type === 'sales') inn += a; else out += a; }); return { out, inn, n }; }
+const cqPers = x => x.type !== 'sales' && isPers(x);
+const cqHit = (x, ts) => (CAL.s === 'all' || (CAL.s === 'pers' ? cqPers(x) : !cqPers(x))) && (CAL.filter === 'all' || (CAL.filter === 'in' ? x.type === 'sales' : x.type !== 'sales')) && (!ts.length || ts.every(t => cqNorm([x.category, x.memo, x.merchant].filter(Boolean).join(' ')).includes(t)));
+function cqSum(ym, ts) { let out = 0, inn = 0, n = 0, pers = 0; allEntries().forEach(x => { if (!String(x.date || '').startsWith(ym) || !cqHit(x, ts)) return; n++; const a = Number(x.amount) || 0; if (x.type === 'sales') inn += a; else { out += a; if (cqPers(x)) pers += a; } }); return { out, inn, n, pers }; }
 function calListRes() {
-  const ts = cqTerms(), on = !!ts.length || CAL.filter !== 'all';
+  const ts = cqTerms(), on = !!ts.length || CAL.filter !== 'all' || CAL.s !== 'all';
   const E = monthEntries().filter(x => cqHit(x, ts)).sort((a, b) => (b.date + b.id).localeCompare(a.date + a.id));
   let h = '';
   if (on) {
     const ym = `${CAL.y}-${String(CAL.m).padStart(2, '0')}`, pmN = CAL.m === 1 ? 12 : CAL.m - 1, pym = `${CAL.m === 1 ? CAL.y - 1 : CAL.y}-${String(pmN).padStart(2, '0')}`;
     const cur = cqSum(ym, ts), prev = cqSum(pym, ts), yr = cqSum(String(CAL.y), ts), useIn = CAL.filter === 'in' || (CAL.filter === 'all' && cur.inn > 0 && cur.out === 0);
     const a = useIn ? cur.inn : cur.out, b = useIn ? prev.inn : prev.out, d = a - b, lab = useIn ? '수입' : '지출';
-    h += `<div style="background:#fff8ee;border-radius:14px;padding:12px;margin-bottom:8px"><div class="d">${CAL.q.trim() ? `‘${esc(CAL.q.trim())}’ · ` : ''}${CAL.m}월 · ${cur.n}건</div><div style="font-size:20px;font-weight:800;margin:2px 0 6px">${lab} <span class="num">${won(a)}</span></div>
-      <div class="d">지난달(${pmN}월) <span class="num">${won(b)}</span>${a || b ? ` <b style="color:${d > 0 ? 'var(--neg)' : 'var(--pos)'}">${d === 0 ? '같음' : (d > 0 ? '▲' : '▼') + won(Math.abs(d))}</b>` : ''} · 올해 누적 <span class="num">${won(useIn ? yr.inn : yr.out)}</span>${!useIn && CAL.filter === 'all' && cur.inn > 0 ? ` · 수입 ${won(cur.inn)}도 함께 찾음` : ''}</div></div>`;
+    h += `<div style="background:#fff8ee;border-radius:14px;padding:12px;margin-bottom:8px"><div class="d">${CAL.q.trim() ? `‘${esc(CAL.q.trim())}’ · ` : ''}${CAL.s === 'store' ? '🏪 가게 · ' : CAL.s === 'pers' ? '👤 개인 · ' : ''}${CAL.m}월 · ${cur.n}건</div><div style="font-size:20px;font-weight:800;margin:2px 0 6px">${lab} <span class="num">${won(a)}</span></div>
+      <div class="d">지난달(${pmN}월) <span class="num">${won(b)}</span>${a || b ? ` <b style="color:${d > 0 ? 'var(--neg)' : 'var(--pos)'}">${d === 0 ? '같음' : (d > 0 ? '▲' : '▼') + won(Math.abs(d))}</b>` : ''} · 올해 누적 <span class="num">${won(useIn ? yr.inn : yr.out)}</span>${!useIn && CAL.filter === 'all' && cur.inn > 0 ? ` · 수입 ${won(cur.inn)}도 함께 찾음` : ''}</div>${!useIn && CAL.s === 'all' && cur.pers > 0 ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px"><div style="background:#fff;border-radius:10px;padding:8px"><div class="d">🏪 가게에서 쓴 돈</div><b class="num">${won(cur.out - cur.pers)}</b></div><div style="background:#fff;border-radius:10px;padding:8px"><div class="d">👤 개인이 쓴 돈</div><b class="num">${won(cur.pers)}</b></div></div>` : ''}</div>`;
   }
   h += '<div class="rows">' + (E.map(x => { const s = x.type === 'sales', canDel = isLive() || (x.src && x.src !== 'fixed');
     return `<div class="row"><div class="l"><span class="d num">${md(x.date)}</span><span><b>${esc(x.category)}</b>${x.memo ? ` <span class="d">${esc(x.memo)}</span>` : ''}${x.by === 'pickle' ? ' <span class="chip" style="background:#e8f0ff;color:#2f5fd0">🤖 피클</span>' : ''}${isPers(x) ? ' <span class="d">👛개인</span>' : ''}</span></div>
@@ -3282,6 +3283,7 @@ function renderCalList() {
   smTitle.textContent = `📋 ${CAL.y}년 ${CAL.m}월 내역`;
   let h = calTabs() + calBar() + `<div style="display:flex;align-items:center;gap:8px;background:#f6efe4;border-radius:14px;padding:0 12px;margin-bottom:8px"><span aria-hidden="true">🔎</span><input id="calQ" type="search" enterkeyhint="search" autocomplete="off" maxlength="30" placeholder="어디에 썼는지 검색 (예: 감자튀김)" aria-label="내역 검색" value="${esc(CAL.q)}" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:16px;padding:11px 0"></div>`;
   h += `<div class="seg" style="margin-bottom:6px">${[['all', '전체'], ['in', '수입'], ['out', '지출']].map(([v, l]) => `<button type="button" data-cflt="${v}" class="${CAL.filter === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  if (CAL.s !== 'all' || allEntries().some(cqPers)) h += `<div class="seg" style="margin-bottom:6px">${[['all', '가게+개인'], ['store', '🏪 가게'], ['pers', '👤 개인']].map(([v, l]) => `<button type="button" data-cscope="${v}" class="${CAL.s === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
   const ch = calChips(); if (ch) h += `<div class="seg" style="margin-bottom:8px;overflow-x:auto;flex-wrap:nowrap">${ch}</div>`;
   h += `<div id="calRes">${calListRes()}</div>`;
   smBody.innerHTML = h;
@@ -3308,6 +3310,7 @@ smEl.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b || smOpen !== 'cal') return;
   if (b.dataset.cview) { CAL.view = b.dataset.cview; CAL.delArm = null; renderSm(); return; }
   if (b.dataset.cflt) { CAL.filter = b.dataset.cflt; renderSm(); return; }
+  if (b.dataset.cscope) { CAL.s = b.dataset.cscope; CAL.delArm = null; renderSm(); return; }
   if (b.dataset.cq != null) { CAL.q = cqNorm(CAL.q) === cqNorm(b.dataset.cq) ? '' : b.dataset.cq; CAL.delArm = null; renderSm(); return; }
   if (b.dataset.cqx) { CAL.q = ''; renderSm(); const q = document.getElementById('calQ'); if (q) q.focus(); return; }
   if (b.dataset.del) { e.stopImmediatePropagation(); if (CAL.delArm === b.dataset.del) deleteEntryAny(b.dataset.del); else { CAL.delArm = b.dataset.del; renderSm(); } }
