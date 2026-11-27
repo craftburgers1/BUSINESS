@@ -1929,7 +1929,7 @@
 "홈 화면에 추가":"Add to Home Screen",
 "홈 화면에 추가됐어요":"Added to home screen",
 "홈택스 업로드":"🇰🇷 Hometax import (Korea only)",
-"홈택스 자료 넣기":"Korean tax data (Korea only)",
+"홈택스 자료 넣기":"Add Korean tax data",
 "홈택스/카드 엑셀":"🇰🇷 Hometax/card Excel (Korea only)",
 "홍보":"promotion",
 "화":"Tue",
