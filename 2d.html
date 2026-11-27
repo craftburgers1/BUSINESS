@@ -827,8 +827,8 @@
             <div id="history-container"></div>
         </section>
 
-        <!-- 🛒 Coupang Partners Dynamic Banner Section -->
-        <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
+        <!-- 🛒 Coupang Partners Dynamic Banner Section (v41: 한국어 화면에서만 — en/ja 는 스크립트도 불러오지 않음) -->
+        <section data-ko-only class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
             <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                     🛒 고객 관심 맞춤 상품 추천 (쿠팡)
@@ -836,9 +836,9 @@
                 <span class="text-[10px] text-slate-400">쿠팡 파트너스 연동</span>
             </div>
             <div class="w-full flex justify-center items-center bg-white py-2 overflow-x-auto">
-                <script src="https://ads-partners.coupang.com/g.js"></script>
+                <script>if (!window.soloI18n || soloI18n.ads()) document.write('<script src="https://ads-partners.coupang.com/g.js"><\/script>');</script>
                 <script>
-                    new PartnersCoupang.G({
+                    if (window.PartnersCoupang) new PartnersCoupang.G({
                         "id": 1046008,
                         "template": "carousel",
                         "trackingCode": "AF4185384",
@@ -856,8 +856,8 @@
             </div>
         </section>
 
-        <!-- 🔍 쿠팡 파트너스 최저가 검색 배너 -->
-        <section class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
+        <!-- 🔍 쿠팡 파트너스 최저가 검색 배너 (v41: 한국어 화면에서만) -->
+        <section data-ko-only class="ios-card overflow-hidden p-0 border-none shadow-md bg-white">
             <div class="p-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                     🔍 식자재/소모품 쿠팡 최저가 검색
@@ -865,7 +865,7 @@
                 <span class="text-[10px] text-slate-400">쿠팡 파트너스</span>
             </div>
             <div class="w-full flex justify-center items-center bg-white py-1">
-                <iframe src="https://coupa.ng/cqC4zG" width="100%" height="75" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe>
+                <script>if (!window.soloI18n || soloI18n.ads()) document.write('<iframe src="https://coupa.ng/cqC4zG" width="100%" height="75" frameborder="0" scrolling="no" referrerpolicy="unsafe-url"></iframe>');</script>
             </div>
             <div class="px-3 py-1.5 bg-slate-50 border-t border-slate-100 text-center">
                 <p class="text-[9px] text-slate-400">
@@ -892,7 +892,7 @@
 
         <!-- Footer -->
         <footer class="text-center py-4 space-y-1">
-            <p class="text-[10px] text-slate-400">
+            <p data-ko-only class="text-[10px] text-slate-400">
                 이 포스팅/배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
             </p>
             <p class="text-[10px] text-slate-300">© 용돈냥이. All rights reserved.</p>
@@ -2485,10 +2485,14 @@
         const driveQ = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
         async function driveFindOrCreateFolder(token, name, parentId) {
-            const q = `name='${driveQ(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${driveQ(parentId || 'root')}' in parents`;
+            const names = [].concat(name); name = names[names.length - 1]; // v41: 이름 후보를 차례로 찾고(기존 폴더 먼저), 없을 때만 마지막 이름으로 만든다
+            for (const n of names) {
+            const q = `name='${driveQ(n)}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${driveQ(parentId || 'root')}' in parents`;
             const r = await driveFetch(`${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&pageSize=10&spaces=drive`, {}, token);
             const j = await r.json();
             if (j.files && j.files.length) return j.files[0].id;
+            }
+            if (window.soloI18n) soloI18n.folderMade(name);
             const c = await driveFetch(`${DRIVE_API}/files?fields=id`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8' },
                 body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: parentId ? [parentId] : ['root'] })
@@ -2502,7 +2506,7 @@
             const cfg = storeConfig.receiptDrive && typeof storeConfig.receiptDrive === 'object' ? storeConfig.receiptDrive : { rootId: '', months: {} };
             if (!cfg.months) cfg.months = {};
             let changed = false;
-            if (!cfg.rootId) { cfg.rootId = await driveFindOrCreateFolder(token, RECEIPT_ROOT_FOLDER, ''); cfg.months = {}; changed = true; }
+            if (!cfg.rootId) { cfg.rootId = await driveFindOrCreateFolder(token, window.soloI18n ? soloI18n.folder('receipt') : RECEIPT_ROOT_FOLDER, ''); cfg.months = {}; changed = true; }
             if (!cfg.months[ym]) { cfg.months[ym] = await driveFindOrCreateFolder(token, ym, cfg.rootId); changed = true; }
             storeConfig.receiptDrive = cfg;
             if (changed && currentUser && !isDemoMode) {
@@ -3465,7 +3469,7 @@
             const run = async (token) => {
                 // v20: 세무사용 구성(요약·손익계산서·합계잔액시산표·분개장·계정별원장·거래처별 집계)을 시트 탭으로 나눈 구글 시트 1개
                 await window.SoloBook.load();
-                const folderId = await driveFindOrCreateFolder(token, '솔로운영_장부', '');
+                const folderId = await driveFindOrCreateFolder(token, window.soloI18n ? soloI18n.folder('book') : '솔로운영_장부', '');
                 const n1 = await v19UniqueSheetName(token, folderId, `용돈냥이PRO_세무장부_${L.tag}`);
                 return window.SoloBook.uploadAsGoogleSheet((u, o) => driveFetch(u, o, token), folderId, n1, window.SoloBook.build(v20BookOpts(L)));
             };
@@ -4760,6 +4764,8 @@
             };
             const prevGoal = v24GoalGet; // 체험판 목표 금액(50,000)도 그 통화에 맞는 숫자로
             v24GoalGet = function () { const r = prevGoal.apply(this, arguments); if (isDemoMode && r && I.lang !== 'ko' && r.g === 50000 && r.name === '자전거 사기') return { g: I.amt(r.g), name: r.name }; return r; };
+            const prevCp = openCoupangSearch; // v41: en/ja 는 쿠팡 대신 제휴 없는 Amazon 검색(ko 는 그대로)
+            openCoupangSearch = function (k) { if (I.ads()) return prevCp.apply(this, arguments); I.shop(k); };
             I.on(() => { if (isDemoMode) { startDemoMode(v24IsPocket() ? 'pocket' : 'pro'); } else { tell(); renderDashboard(); } });
             tell();
         })();

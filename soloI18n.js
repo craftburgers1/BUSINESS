@@ -138,16 +138,10 @@
     return !!el.closest('[data-i18n-skip],[data-i18n-ui],[contenteditable="true"],[contenteditable=""]');
   }
   function origOf(v, r) { if (r && v === r[1]) return r[0]; if (everTr && !HANGUL.test(v)) { var k = REV.get(v.trim()); if (k) return v.replace(v.trim(), k); } return v; }
-  function adNote(el, orig) { // 쿠팡 파트너스 고지문은 한국어 원문 그대로 + 번역 한 줄(속성 → CSS ::after, 자식 노드 추가 없음)
-    if (!el || !/배너는 쿠팡 파트너스/.test(orig)) return;
-    if (lang === 'ko') el.removeAttribute('data-i18n-note');
-    else el.setAttribute('data-i18n-note', lang === 'ja' ? '（このバナーはクーパン・パートナーズの活動の一環で、一定の手数料を受け取ります）' : '(This banner is part of the Coupang Partners program; we receive a commission.)');
-  }
   function doText(n) {
     var p = n.parentElement; if (!p || skipEl(p)) return;
     var v = n.nodeValue; if (!v || !/\S/.test(v)) return;
     var r = recT.get(n), o = origOf(v, r);
-    if (/쿠팡 파트너스/.test(o)) { adNote(p, o); return; } // MUST KEEP: 광고 고지·분류 문구는 원문 유지
     if (p.tagName === 'OPTION' && !p.hasAttribute('value') && p.parentElement) p.setAttribute('value', p.value); // 번역해도 option 값은 원래 글자
     var tr = t(o);
     if (tr !== v) n.nodeValue = tr;
@@ -241,6 +235,8 @@
     opts = opts || {};
     load(l, function () {
       var changed = l !== lang; lang = l; lsSet('soloLang', l); api.lang = l;
+      if (l === 'ko' && adsGone) { location.reload(); return; } // 쿠팡 광고는 처음 그릴 때만 넣을 수 있어 ko 로 돌아오면 다시 연다
+      dropAds();
       if (opts.autoCur && !SYM[lsGet('soloCur')]) lsSet('soloCurAuto', LANG_CUR[l]);
       refresh(); if (changed || opts.autoCur) emit();
     });
@@ -251,6 +247,18 @@
   // ---------- 체험판 샘플 현지화(메모리 안에서만) ----------
   var SHELF = { en: { '세무': ['TAX', '🧾'], '회계': ['ACC', '📊'], '급여': ['PAY', '💵'], '장부': ['LOG', '📒'], '예약': ['RSV', '📅'], '가계': ['BGT', '🏠'], '영수': ['RCP', '🧾'], '보험': ['INS', '🛡️'] },
     ja: { '세무': '税務', '회계': '会計', '급여': '給与', '장부': '帳簿', '예약': '予約', '가계': '家計', '영수': '領収', '보험': '保険' } };
+  // ---------- v41: 한국 전용 요소(쿠팡 파트너스) · 현지 검색 · 드라이브 폴더 이름 · 3D 판매 채널 ----------
+  var adsGone = lang !== 'ko'; // en/ja 로 시작하면 광고 스크립트·iframe 을 아예 쓰지 않는다(2d.html·3d.html 의 soloI18n.ads())
+  function dropAds() { if (lang === 'ko') return; var n = document.querySelectorAll('[data-ko-only]'); for (var i = 0; i < n.length; i++) n[i].remove(); if (n.length) adsGone = true; }
+  var SHOP = { en: 'https://www.amazon.com/s?k=', ja: 'https://www.amazon.co.jp/s?k=' };
+  function shop(q) { q = t(String(q || '')).replace(/\s+/g, ' ').trim().slice(0, 60); if (!q || !SHOP[lang]) return false; window.open(SHOP[lang] + encodeURIComponent(q), '_blank', 'noopener'); return true; }
+  var FOLDER = { receipt: { ko: '솔로운영_영수증', en: 'PocketNyan_Receipts', ja: 'おこづかいニャン_レシート' }, book: { ko: '솔로운영_장부', en: 'PocketNyan_Books', ja: 'おこづかいニャン_帳簿' } };
+  var FKEY = { receipt: 'soloDriveReceiptFolder', book: 'soloDriveBookFolder' };
+  // 찾을 이름 후보(앞에서부터): 기억한 폴더 → 기존 한국어 폴더 → 다른 언어 폴더 → 지금 언어 폴더(마지막 = 없을 때 만들 이름). ko 는 예전처럼 한국어 이름 하나
+  function folder(kind) { var f = FOLDER[kind], mem = lsGet(FKEY[kind]), c = lang === 'ko' ? [mem, f.ko] : [mem, f.ko, f.en, f.ja];
+    var out = c.filter(function (n, i) { return n && n !== f[lang] && c.indexOf(n) === i; }); out.push(f[lang]); return out.length === 1 ? out[0] : out; }
+  function folderMade(name) { for (var k in FOLDER) for (var l in FOLDER[k]) if (FOLDER[k][l] === name) lsSet(FKEY[k], name); }
+  var LIVE = { en: ['Dine-in sales', 'DoorDash sales', 'Uber Eats sales', 'Grubhub sales', 'Daily total sales'], ja: ['店内売上', '出前館 売上', 'Uber Eats 売上', 'Wolt 売上', '1日の総売上'] };
   var SCALE = { ko: 1, en: 0.001, ja: 0.1 };
   function amt(n) { var v = Number(n); if (!isFinite(v) || lang === 'ko') return n; v = v * SCALE[lang]; return lang === 'en' ? (Math.abs(v) >= 1 ? Math.round(v) : Math.round(v * 100) / 100) : Math.round(v); }
   function demoT(s) { if (typeof s !== 'string' || lang === 'ko') return s; var d = (window.soloI18nDemo || {})[lang] || {}; var k = s.replace(/\s+/g, ' ').trim(); if (Object.prototype.hasOwnProperty.call(d, k)) return d[k]; var nums = [], nk = k.replace(/\d+(?:[,.]\d+)*/g, function (n) { nums.push(n); return '{' + (nums.length - 1) + '}'; }); if (Object.prototype.hasOwnProperty.call(d, nk)) return d[nk].replace(/\{(M?)(\d+)\}/g, function (a, M, i) { var v = nums[i]; if (v == null) return a; return M ? (lang === 'en' ? MON[parseInt(v, 10) - 1] || v : v + '月') : v; }); return t(s); }
@@ -271,7 +279,7 @@
   }
 
   // ---------- 언어 고르기 UI (2D·3D 공용, 스크립트가 직접 붙인다) ----------
-  var CSS = '[data-i18n-note]::after{content:" " attr(data-i18n-note)}' +
+  var CSS = 'html:not([lang="ko"]) [data-ko-only]{display:none!important}' +
     '.sl-seg{display:flex;gap:4px;padding:3px;border-radius:12px;background:rgba(148,163,184,.16);width:100%;box-sizing:border-box}' +
     '.sl-seg button{flex:1 1 0;min-width:0;min-height:34px;padding:4px 6px;border:0;border-radius:9px;background:transparent;font:inherit;font-size:12px;font-weight:700;color:#475569;cursor:pointer;white-space:nowrap}' +
     '.sl-seg button[aria-pressed="true"]{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,.12)}' +
@@ -331,6 +339,7 @@
     return b;
   }
   function mount() { // 페이지마다 자리 잡기(없으면 건너뜀). 나중에 그려지는 창은 observer 대신 가벼운 주기 검사
+    dropAds();
     var st = document.getElementById('soloI18nCss'); if (!st) { st = el('style', { id: 'soloI18nCss' }); st.textContent = CSS; document.head.appendChild(st); }
     // 2D: 첫 화면(로그인·체험 선택) 맨 위
     var lm = document.querySelector('#loginModal > div'); if (lm && !lm.querySelector('[data-i18n-ui]')) lm.insertBefore(box(false, true), lm.firstChild);
@@ -374,6 +383,7 @@
     lang: lang, langs: LANGS, t: function (s) { return t(s); }, money: money, cur: cur, sym: function () { return SYM[cur()]; },
     set: setLang, setCur: setCur, ctx: setCtx, on: function (f) { listeners.push(f); },
     missing: function () { return Array.from(missing); }, plain: plain,
+    ads: function () { return lang === 'ko'; }, shop: shop, folder: folder, folderMade: folderMade, liveCh: function () { return LIVE[lang] ? LIVE[lang].slice() : null; },
     shelf: function (w) { var m = SHELF[lang]; return m && m[w] ? m[w] : w; }, // 3D 책장 바인더 등 글자(세로 2줄)
     localizeDemo: localizeDemo, sample: sample, amt: amt, apply: function () { refresh(); }
   };
