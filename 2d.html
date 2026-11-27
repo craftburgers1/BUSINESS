@@ -4703,6 +4703,46 @@
             try { if (currentHistoryView === 'calendar') renderCalendarView(document.getElementById('history-container')); } catch (e) {}
         })();
         /* ==== V38_CAL_END ==== */
+        /* ==== V39_LIST_BEGIN: 📋 내역 목록 표 줄 맞춤 — 칸 너비 고정, 날짜 짧게(11.26), 구분·금액 한 줄, '더싼 식자재/필수품' → '최저가 검색'. 데이터·광고 코드는 그대로 ==== */
+        (function () {
+            if (window.__v39) return; window.__v39 = true;
+            const css = document.createElement('style'); css.id = 'v39Style';
+            css.textContent = 'table.v39t{table-layout:fixed;width:100%;border-collapse:collapse}' +
+                'table.v39t th,table.v39t td{vertical-align:middle!important;padding-top:11px!important;padding-bottom:11px!important}' +
+                'table.v39t th{white-space:nowrap;font-size:11px!important;font-weight:600!important;color:#8B95A1!important;padding-top:4px!important;padding-bottom:8px!important}' +
+                'table.v39t col.c1{width:46px}table.v39t col.c2{width:40px}table.v39t col.c4{width:92px}table.v39t col.c5{width:52px}table.v39t col.c6{width:34px}' +
+                'table.v39t td.v39d{white-space:nowrap;font-size:12px;color:#4E5968;font-variant-numeric:tabular-nums}' +
+                'table.v39t td.v39k span:first-child{display:inline-block;white-space:nowrap;padding:2px 6px!important;font-size:10.5px!important;font-weight:700;line-height:1.3}' +
+                'table.v39t td.v39i{word-break:keep-all;overflow-wrap:anywhere;line-height:1.45;padding-right:6px!important}' +
+                'table.v39t td.v39a{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums;font-size:13px}' +
+                'table.v39t td.v39s,table.v39t th.v39s{text-align:center}table.v39t td.v39s button{white-space:nowrap;padding:4px 6px!important;font-size:10.5px!important;line-height:1.2;border-radius:8px!important}' +
+                'table.v39t td.v39x{text-align:center}table.v39t td.v39x button{padding:4px!important}' +
+                '@media (min-width:640px){table.v39t col.c1{width:96px}table.v39t col.c2{width:52px}table.v39t col.c4{width:110px}table.v39t col.c5{width:84px}table.v39t col.c6{width:44px}}' +
+                '#v34Search .v34row{flex-wrap:wrap;overflow-x:visible!important}#v34Chips{flex-wrap:wrap;min-width:0}' +
+                '@media (max-width:639px){table.v39t,table.v39t tbody{display:block;width:100%}table.v39t thead,table.v39t colgroup{display:none}' +
+                'table.v39t tbody tr{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto auto;grid-template-areas:"i i i a a" "d k . s x";column-gap:6px;row-gap:6px;align-items:center;padding:12px 2px}' +
+                'table.v39t tbody td{padding:0!important;min-width:0}table.v39t td.v39i{grid-area:i;font-size:14px;padding-right:4px!important}table.v39t td.v39a{grid-area:a;font-size:15px}' +
+                'table.v39t td.v39d{grid-area:d;font-size:12px;color:#8B95A1}table.v39t td.v39k{grid-area:k}table.v39t td.v39s{grid-area:s}table.v39t td.v39x{grid-area:x}' +
+                'table.v39t td.v39s:empty{display:none}table.v39t td.v39x button{min-width:32px;min-height:30px}}';
+            document.head.appendChild(css);
+            const prev = renderListView;
+            renderListView = function (container, filtered) {
+                const r = prev.apply(this, arguments);
+                const t = container && container.querySelector('table'); if (!t || t.classList.contains('v39t')) return r;
+                t.classList.add('v39t');
+                const cg = document.createElement('colgroup'); cg.innerHTML = '<col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6">'; t.insertBefore(cg, t.firstChild);
+                const th = t.querySelectorAll('thead th'); if (th.length === 6) { th[0].textContent = '날짜'; th[1].textContent = '구분'; th[4].textContent = '최저가'; th[4].classList.add('v39s'); th[4].title = '최저가 검색'; }
+                const wide = window.matchMedia('(min-width:640px)').matches; if (wide && th[4]) th[4].textContent = '최저가 검색';
+                t.querySelectorAll('tbody tr').forEach(tr => { const td = tr.children; if (td.length !== 6) return;
+                    td[0].classList.add('v39d'); td[1].classList.add('v39k'); td[2].classList.add('v39i'); td[3].classList.add('v39a'); td[4].classList.add('v39s'); td[5].classList.add('v39x');
+                    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(td[0].textContent.trim()); if (m && !wide) { td[0].title = m[0]; td[0].textContent = m[2] + '.' + m[3]; }
+                    if (td[4].textContent.trim() === '-') td[4].textContent = '';
+                    const b = td[4].querySelector('button'); if (b) { b.textContent = wide ? '🛒 최저가 검색' : '🛒 검색'; b.setAttribute('aria-label', '쿠팡 최저가 검색'); } });
+                return r;
+            };
+            try { if (currentHistoryView === 'list') renderHistorySection(); } catch (e) {}
+        })();
+        /* ==== V39_LIST_END ==== */
     </script>
 </body>
 </html>
