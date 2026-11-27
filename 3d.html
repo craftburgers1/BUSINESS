@@ -12,6 +12,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="용돈냥이">
+<!-- v40: 🌐 한국어·English·日本語 -->
+<script src="soloI18n.js"></script>
 <style>
 :root{
   --cream:#fff8ef; --butter:#ffe6a3; --mint:#3fa58a; --mint-l:#bfe9dc; --apricot:#ffc9a3; --coral:#ef8a74; --coral-d:#d9674f;
@@ -633,7 +635,7 @@ function makeSample(mode = MODE) {
     d.family = [['아이 학원 픽업', '오늘 16:30'], ['관리비 납부', '매달 25일'], ['보험료 자동이체', '매달 27일'], ['가족 외식', '이번 주 토요일'], ['분리수거', '매주 수요일']]
       .map(([text, when], i) => ({ id: uid(), text, when, done: i === 4 }));
   }
-  return d;
+  return window.soloI18n ? soloI18n.sample(d) : d; // v40: 처음 만드는 견본만 그 언어에 맞게(ko는 그대로)
 }
 function toMin(t) { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); }
 function saveData(d = DATA) { try { localStorage.setItem(dkey(MODE), JSON.stringify(d)); } catch (e) {} }
@@ -1304,7 +1306,7 @@ function stepCat(now, T, dt) {
 const shelfLabels = [];
 const SHELF_TXT = { restaurant: ['세무', '회계', '급여'], salon: ['세무', '장부', '예약'], home: ['가계', '영수', '보험'] };
 function drawShelfLabels() {
-  shelfLabels.forEach(({ tex, col }, i) => { const t = SHELF_TXT[MODE][i], c = tex.image, g = c.getContext('2d'), w = c.width, h = c.height;
+  shelfLabels.forEach(({ tex, col }, i) => { const t = window.soloI18n ? soloI18n.shelf(SHELF_TXT[MODE][i]) : SHELF_TXT[MODE][i], c = tex.image, g = c.getContext('2d'), w = c.width, h = c.height;
     g.clearRect(0, 0, w, h); g.fillStyle = '#fffaf2'; g.beginPath(); g.roundRect ? g.roundRect(4, 4, w - 8, h - 8, 12) : g.rect(4, 4, w - 8, h - 8); g.fill();
     g.fillStyle = col; g.font = `800 30px ${FONT}`; g.textAlign = 'center'; g.fillText(t[0], w / 2, 66); g.fillText(t[1], w / 2, 108); tex.needsUpdate = true; });
 }
@@ -2445,6 +2447,7 @@ function closeAi() {
   setTimeout(() => { if (!aiOpen) aiEl.hidden = true; }, 280);
 }
 async function copyText(t) {
+  if (window.soloI18n) t = soloI18n.t(t); // v40: 지금 언어의 지시문을 복사(ko는 그대로)
   try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(t); return true; } } catch (e) {}
   try { const ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px;opacity:0'; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length); const ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
 }
@@ -4925,6 +4928,14 @@ smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (
   if (a === 'bl-paid' && b.dataset.bid) { const P = blPaid(), id = b.dataset.bid; if (P[id]) delete P[id]; else P[id] = 1; blSet(BL_PAID_KEY, JSON.stringify(P)); blRerender(); return; } });
 if (POCKET && blGet(BL_STORE_KEY)) blInit();
 /* ==== V29_BOSS_LINK_END ==== */
+/* ==== V40_I18N_BEGIN: 🌐 한국어·English·日本語 — 글자 번역은 soloI18n.js 가 화면에서만. 여기서는 표시 통화 판단용 상태 알려 주기 + 언어를 바꾸면 3D 간판·패널 다시 그리기만. 저장 경로 변화 없음 ==== */
+if (window.soloI18n) { const I = window.soloI18n;
+  const tell3 = () => { try { I.ctx({ demo: !(fbAuth && fbAuth.currentUser), biz: !POCKET && MODE !== 'home' }); } catch (e) {} };
+  const _renderHud_i18n = renderHud; renderHud = function () { tell3(); return _renderHud_i18n.apply(this, arguments); };
+  I.on(() => { tell3(); [drawShelfLabels, drawBoard, drawSign, drawCork, drawMenu, drawWallCal, drawTv, refreshPos, relabel, applyModeUI, renderAuth].forEach(f => { try { f(); } catch (e) {} });
+    try { renderHud(true); } catch (e) {} try { if (activeKey) renderPanel(); } catch (e) {} try { if (smOpen) renderSm(); } catch (e) {} try { if (aiOpen) renderAi(); } catch (e) {} });
+  tell3(); }
+/* ==== V40_I18N_END ==== */
 window.__solo3d = { info: () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, dpr: renderer.getPixelRatio(), geos: renderer.info.memory.geometries, fb: !!fbAuth, live: REAL.status }) };
 }
 </script>
