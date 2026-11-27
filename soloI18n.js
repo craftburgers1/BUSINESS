@@ -137,7 +137,7 @@
     var tg = el.tagName; if (tg === 'SCRIPT' || tg === 'STYLE' || tg === 'NOSCRIPT' || tg === 'TEXTAREA') return true;
     return !!el.closest('[data-i18n-skip],[data-i18n-ui],[contenteditable="true"],[contenteditable=""]');
   }
-  function origOf(v, r) { if (r && v === r[1]) return r[0]; if (everTr && !HANGUL.test(v)) { var k = REV.get(v.trim()); if (k) return v.replace(v.trim(), k); } return v; }
+  function origOf(v, r) { if (r && v === r[1]) return r[0]; if (everTr && !HANGUL.test(v)) { var tv = v.trim(), k = REV.get(tv) || REV.get(bare(tv)); if (k) return v.replace(tv, k); } return v; }
   function doText(n) {
     var p = n.parentElement; if (!p || skipEl(p)) return;
     var v = n.nodeValue; if (!v || !/\S/.test(v)) return;
@@ -212,7 +212,10 @@
 
   // ---------- 사전 불러오기 ----------
   var base = (function () { try { var s = document.currentScript && document.currentScript.src; return s ? s.replace(/[^/]*$/, '') : ''; } catch (e) { return ''; } })();
-  function indexRev(l) { var d = dict(l); Object.keys(d).forEach(function (k) { var v = d[k]; if (typeof v === 'string' && v.indexOf('{') < 0 && k.indexOf('{') < 0 && !REV.has(v.trim())) REV.set(v.trim(), k); }); }
+  // 앱이 앞 이모지·기호를 떼고 다시 쓰는 글자('🏪 Shop spending' → 'Shop spending')도 원문을 찾도록, 뗀 모양도 함께 기억
+  function bare(s) { return s.replace(/^[^\p{L}\p{N}(]+/u, ''); }
+  function indexRev(l) { var d = dict(l); Object.keys(d).forEach(function (k) { var v = d[k]; if (typeof v !== 'string' || v.indexOf('{') >= 0 || k.indexOf('{') >= 0) return; v = v.trim();
+    if (!REV.has(v)) REV.set(v, k); var bv = bare(v), bk = bare(k); if (bv && bv !== v && HANGUL.test(bk) && !REV.has(bv)) REV.set(bv, bk); }); }
   var loading = {};
   function load(l, cb) {
     if (l === 'ko' || DICT[l]) { if (DICT[l] && !DICT[l].__rev) { DICT[l].__rev = 1; indexRev(l); } return cb(); }
