@@ -729,7 +729,7 @@ function accountOf(cat, memo) {
   for (const t of [normT(cat), normT(memo)]) { if (!t) continue; for (const [a, ks] of RULES_N) if (ks.some(k => t.includes(k))) return a; }
   return '기타비용';
 }
-const LIVE_CH = ['홀 매출', '배민 매출', '쿠팡이츠 매출', '요기요 매출', '땡겨요 매출', '일일 총매출'];
+const LIVE_CH = (window.soloI18n && soloI18n.liveCh()) || ['홀 매출', '배민 매출', '쿠팡이츠 매출', '요기요 매출', '땡겨요 매출', '일일 총매출']; // v41: en/ja 새 사용자는 그 나라 채널(ko는 그대로)
 const LIVE_FIX = ['임차료', '관리비', '통신비', '세금과공과', '기타'];
 const LIVE_ORDER = ['보통예금', '매출액', '식자재비', '임차료', '인건비', '지급수수료', '소모품비', '광고선전비', '통신비', '수도광열비', '보험료', '세금과공과', '차량유지비', '접대비', '기타비용', '개인출금'];
 const REAL = { on: false, uid: null, status: 'idle', docs: [], unsub: null, db: null, staff: null, staffState: 'idle' };
@@ -3471,14 +3471,16 @@ async function driveFetch(url, opts, token) { const o = Object.assign({}, opts |
   if (r.status === 401) { driveToken = null; try { sessionStorage.removeItem('soloDriveToken:' + REAL.uid); } catch (e) {} throw new Error('drive-401'); } if (!r.ok) { const e = new Error('drive-' + r.status); e.status = r.status; throw e; } return r; }
 const driveQ = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 async function driveFolder(token, name, parent) {
-  const q = `name='${driveQ(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${driveQ(parent || 'root')}' in parents`;
-  const j = await (await driveFetch(`${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&pageSize=10&spaces=drive`, {}, token)).json(); if (j.files && j.files.length) return j.files[0].id;
+  const names = [].concat(name); name = names[names.length - 1]; // v41: 이름 후보를 차례로 찾고(기존 폴더 먼저), 없을 때만 마지막 이름으로 만든다
+  for (const n of names) { const q = `name='${driveQ(n)}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${driveQ(parent || 'root')}' in parents`;
+  const j = await (await driveFetch(`${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&pageSize=10&spaces=drive`, {}, token)).json(); if (j.files && j.files.length) return j.files[0].id; }
+  if (window.soloI18n) soloI18n.folderMade(name);
   return (await (await driveFetch(`${DRIVE_API}/files?fields=id`, { method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8' }, body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: parent ? [parent] : ['root'] }) }, token)).json()).id;
 }
 // 폴더 id는 2D와 같은 settings/config.receiptDrive 에 (다른 설정은 merge로 보존)
 async function driveMonthFolder(token, ym, reset) {
   const cfg = !reset && REAL.cfg && REAL.cfg.receiptDrive && typeof REAL.cfg.receiptDrive === 'object' ? JSON.parse(JSON.stringify(REAL.cfg.receiptDrive)) : { rootId: '', months: {} }; cfg.months = cfg.months || {}; let ch = false;
-  if (!cfg.rootId) { cfg.rootId = await driveFolder(token, RECEIPT_ROOT_FOLDER, ''); cfg.months = {}; ch = true; }
+  if (!cfg.rootId) { cfg.rootId = await driveFolder(token, window.soloI18n ? soloI18n.folder('receipt') : RECEIPT_ROOT_FOLDER, ''); cfg.months = {}; ch = true; }
   if (!cfg.months[ym]) { cfg.months[ym] = await driveFolder(token, ym, cfg.rootId); ch = true; }
   REAL.cfg = Object.assign({}, REAL.cfg || {}, { receiptDrive: cfg });
   if (ch && rcUid()) { try { await FSm.setDoc(FSm.doc(REAL.db, 'users', REAL.uid, 'settings', 'config'), { receiptDrive: cfg }, { merge: true }); } catch (e) {} }
@@ -3741,7 +3743,7 @@ async function bookSheet() {
   if (!rcUid()) { toast('로그인 상태를 확인할 수 없어요', true); return; }
   const tokenP = driveGetToken(true); // 누른 그 클릭 안에서 권한 창(팝업 차단 방지)
   BK.busy = 'gs'; BK.msg = '📊 구글 시트를 만드는 중…'; BK.link = ''; bookRefresh();
-  const run = async token => { await loadBook(); const o = bookOpts(), wb = window.SoloBook.build(o), folder = await driveFolder(token, '솔로운영_장부', '');
+  const run = async token => { await loadBook(); const o = bookOpts(), wb = window.SoloBook.build(o), folder = await driveFolder(token, window.soloI18n ? soloI18n.folder('book') : '솔로운영_장부', '');
     const hm = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).replace(':', '');
     return window.SoloBook.uploadAsGoogleSheet((u, op) => driveFetch(u, op, token), folder, `용돈냥이PRO_세무장부_${o.tag}_${hm}`, wb); };
   try { let f; try { f = await run(await tokenP); } catch (e) { if (!(e && e.message === 'drive-401')) throw e; f = await run(await driveGetToken(true)); }
@@ -3824,10 +3826,11 @@ renderClerk = function () { _renderClerk_by(); if (!isLive()) return; const k = 
 const CP = { id: 1046008, track: 'AF4185384', sub: 'craftburgers' };
 const CP_NOTE = '이 배너는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
 const AD_ON = new Set(['clerk', 'brief', 'cal', 'day', 'bbs', 'me', 'shop', 'rcbox', 'install', 'game']); // (오락실 창에는 광고를 넣지 않음) // 입력 폼·처음 안내에는 넣지 않음
-const smAd = document.createElement('div'); smAd.id = 'smAd'; smAd.hidden = true;
-smAd.innerHTML = `<div class="adhead"><span>🛒 사장님 맞춤 상품 추천 (쿠팡)</span><span>광고</span></div><div class="adframe"></div><p class="adnote">${CP_NOTE}</p>`;
+const CP_ON = () => !window.soloI18n || soloI18n.ads(); // v41: 쿠팡 광고는 한국어 화면에서만(en/ja 는 요청 0건)
+const smAd = document.createElement('div'); smAd.id = 'smAd'; smAd.hidden = true; smAd.setAttribute('data-ko-only', '');
+if (CP_ON()) smAd.innerHTML = `<div class="adhead"><span>🛒 사장님 맞춤 상품 추천 (쿠팡)</span><span>광고</span></div><div class="adframe"></div><p class="adnote">${CP_NOTE}</p>`;
 smBody.after(smAd);
-function adSync() { const on = !!smOpen && AD_ON.has(smOpen) && navigator.onLine !== false; smAd.hidden = !on; if (!on || smAd.dataset.made) return;
+function adSync() { const on = !!smOpen && AD_ON.has(smOpen) && navigator.onLine !== false && CP_ON() && !!smAd.innerHTML; smAd.hidden = !on; if (!on || smAd.dataset.made) return;
   const box = smAd.querySelector('.adframe'), w = Math.max(280, Math.min(680, Math.floor(box.clientWidth || 320))); smAd.dataset.made = '1';
   const f = document.createElement('iframe'); f.title = '쿠팡 파트너스 상품 추천'; f.width = w; f.height = 140; f.loading = 'lazy'; f.setAttribute('frameborder', '0'); f.setAttribute('scrolling', 'no'); f.referrerPolicy = 'unsafe-url';
   f.src = `https://ads-partners.coupang.com/widgets.html?id=${CP.id}&template=carousel&trackingCode=${CP.track}&subId=${CP.sub}&width=${w}&height=140&tsource=`; box.appendChild(f); }
@@ -3865,7 +3868,8 @@ function renderShop() { const home = MODE === 'home';
     <div class="qk shopk" style="margin:0 0 10px">${shopWords().map(w => `<button type="button" data-shop="${esc(w)}">🔎 ${esc(w)}</button>`).join('')}</div>
     <div class="form" style="margin:0 0 6px"><div class="field" style="display:flex;gap:6px"><input id="shopQ" autocomplete="off" maxlength="30" placeholder="찾을 물건 (예: 버거 포장지)" style="flex:1;font-size:16px"><button type="button" class="save" data-act="shop-go" style="flex:none;padding:0 16px;height:46px;border-radius:12px;background:var(--coral);color:#fff;font-weight:800">검색</button></div></div>
     <p class="hintp">검색 버튼과 아래 배너는 쿠팡 파트너스 광고예요. 이를 통해 구매하면 운영자가 일정액의 수수료를 받아요(구매 가격은 같아요).</p>`; }
-function shopGo(q) { q = String(q || '').replace(/[^a-zA-Z0-9가-힣\s]/g, '').trim(); if (!q) { toast('찾을 물건을 적어 주세요', true); return; }
+function shopGo(q) { if (!CP_ON()) { if (!soloI18n.shop(q)) toast('찾을 물건을 적어 주세요', true); return; } // v41: en/ja 는 제휴 없는 Amazon 검색
+  q = String(q || '').replace(/[^a-zA-Z0-9가-힣\s]/g, '').trim(); if (!q) { toast('찾을 물건을 적어 주세요', true); return; }
   window.open(`https://www.coupang.com/np/search?q=${encodeURIComponent(q)}&lptag=${CP.track}&subid=${CP.sub}`, '_blank', 'noopener'); }
 const _renderSm_shop = renderSm; renderSm = function () { if (smOpen === 'shop') { renderShop(); adSync(); return; } _renderSm_shop(); };
 smEl.addEventListener('click', e => { const b = e.target.closest('button'); if (!b || smOpen !== 'shop') return; if (b.dataset.shop) shopGo(b.dataset.shop); if (b.dataset.act === 'shop-go') shopGo(document.getElementById('shopQ').value); });
