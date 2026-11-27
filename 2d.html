@@ -13,6 +13,8 @@
     <!-- v18: 📲 홈 화면에 앱 추가(PWA) -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-title" content="용돈냥이">
+    <!-- v40: 🌐 한국어·English·日本語 (ko 화면은 그대로, 사전은 다른 언어를 고를 때만 불러옴) -->
+    <script src="soloI18n.js"></script>
     <!-- v18: 꾸미기 폰트(손글씨체 Gaegu · 둥근체 Jua). 화면을 막지 않게 늦게 적용, 실패하면 Pretendard -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap" media="print" onload="this.media='all'">
@@ -1915,6 +1917,7 @@
 
         // v10: 클립보드 API를 못 쓰면 iOS 폴백으로 넘어가는 공용 복사 (2단계·풀세팅 버튼이 함께 씀)
         async function copyTextWithFallback(text) {
+            if (window.soloI18n) text = soloI18n.t(text); // v40: 지금 언어의 피클 지시문을 복사(ko는 그대로)
             let ok = false;
             try {
                 if (navigator.clipboard && window.isSecureContext) {
@@ -4743,6 +4746,24 @@
             try { if (currentHistoryView === 'list') renderHistorySection(); } catch (e) {}
         })();
         /* ==== V39_LIST_END ==== */
+        /* ==== V40_I18N_BEGIN: 🌐 한국어·English·日本語 — 글자 번역은 soloI18n.js 가 화면에서만 한다. 여기서는 ①표시 통화 판단용 상태 알려 주기 ②체험판 샘플 현지화(메모리 안에서만)만 한다. 저장·Firestore 경로 변화 없음 ==== */
+        (function () {
+            const I = window.soloI18n; if (!I) return;
+            const tell = () => { try { const pocket = v24IsPocket(), key = storeConfig && storeConfig.industryKey; I.ctx({ demo: !!isDemoMode, biz: !!storeConfig && !pocket && key !== 'home' }); } catch (e) {} };
+            const prevDash = renderDashboard;
+            renderDashboard = function () { tell(); return prevDash.apply(this, arguments); };
+            const prevDemo = startDemoMode;
+            startDemoMode = function () {
+                const r = prevDemo.apply(this, arguments);
+                if (isDemoMode && I.lang !== 'ko') { I.localizeDemo(storeConfig, dbData); applyStoreConfigUI(); switchTab('sales'); renderDashboard(); }
+                return r;
+            };
+            const prevGoal = v24GoalGet; // 체험판 목표 금액(50,000)도 그 통화에 맞는 숫자로
+            v24GoalGet = function () { const r = prevGoal.apply(this, arguments); if (isDemoMode && r && I.lang !== 'ko' && r.g === 50000 && r.name === '자전거 사기') return { g: I.amt(r.g), name: r.name }; return r; };
+            I.on(() => { if (isDemoMode) { startDemoMode(v24IsPocket() ? 'pocket' : 'pro'); } else { tell(); renderDashboard(); } });
+            tell();
+        })();
+        /* ==== V40_I18N_END ==== */
     </script>
 </body>
 </html>
