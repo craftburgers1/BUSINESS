@@ -1,0 +1,21 @@
+// 용돈냥이 게시판 사진(v42) — Firestore 규칙에 "한 번만" 추가하는 블록
+// 위치: Firebase 콘솔 → 프로젝트 alluser-77808 → Firestore Database → 규칙
+//       기존  match /community_board/{postId} { ... }  블록 "바로 아래"(같은 깊이)에 붙여넣고 [게시].
+// 이 블록이 없으면: 게시판 글·댓글·공감은 그대로 되고, 사진 올리기만 실패합니다(앱이 "사진 없이 글만 올릴까요?" 하고 물어봅니다).
+
+    match /board_photos/{photoId} {
+      // 공개 글에 붙는 사진이라 누구나 볼 수 있음(비공개 글에는 앱이 사진을 붙이지 않음)
+      allow read: if true;
+      // 로그인한 본인만, 정해진 5칸만, 줄인 사진 1장(약 30만 글자 이하)만
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['uid', 'postId', 'idx', 'data', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.postId is string
+        && request.resource.data.idx is int && request.resource.data.idx >= 0 && request.resource.data.idx < 3
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 300000;
+      allow update: if false;
+      // 올린 사람 또는 관리자만 삭제
+      allow delete: if request.auth != null
+        && (resource.data.uid == request.auth.uid || request.auth.token.email == 'solojayoungup@gmail.com');
+    }

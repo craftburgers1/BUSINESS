@@ -437,9 +437,24 @@
                         <p class="text-[10px] text-slate-400">※ 이 웹페이지에서 피클 앱의 대화창을 바로 여는 링크(딥링크)는 지원되지 않아요.</p>
                     </div>
                 </div>
-                <div class="bg-slate-50 p-3 rounded-xl space-y-2">
-                    <p class="font-bold text-slate-800">2단계 · 피클에게 보낼 말 복사</p>
+                <!-- v42: 🏪 내 가게 알려 주기 → 피클이 포스·배달앱을 스스로 물어보고 연결하는 '시작 프롬프트' (soloPickle.js) -->
+                <div id="pickleSetupStep" class="bg-slate-50 p-3 rounded-xl space-y-2">
+                    <p class="font-bold text-slate-800">2단계 · 내 가게 알려 주기 <span class="text-[11px] font-medium text-slate-400">(30초 · 건너뛰어도 돼요)</span></p>
+                    <div id="pickleSetupMount"></div>
+                </div>
+                <div id="pickleStartStep" class="bg-blue-50 border border-blue-100 p-3 rounded-xl space-y-2">
+                    <p class="font-bold text-slate-800">3단계 · 피클에게 보낼 말 복사</p>
+                    <p class="text-[11px] text-slate-600 leading-relaxed break-keep">붙여넣으면 피클이 <b class="text-slate-800">"어떤 포스 쓰세요?"</b>부터 하나씩 물어보고, 대답하는 대로 포스·배달앱 연결까지 차례로 진행해요. 매일 아침 <b class="text-slate-800">오늘·내일 들어올 돈</b>도 알려 줘요.</p>
                     <p class="text-[11px] leading-relaxed"><span class="text-red-600 font-bold">복사 후 피클 앱 채팅창에 붙여넣으세요!</span></p>
+                    <button type="button" id="pickleStartCopyBtn" onclick="copyPickleStart()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-sm transition">📋 피클 시작 프롬프트 복사 (추천)</button>
+                    <details class="text-[11px] text-slate-500">
+                        <summary class="cursor-pointer font-semibold text-slate-500 py-1">복사할 문구 미리보기</summary>
+                        <p id="pickleStartPreview" class="mt-1 text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg p-2 whitespace-pre-line break-keep max-h-56 overflow-y-auto"></p>
+                    </details>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl space-y-2">
+                    <p id="pickleQuickTitle" class="font-bold text-slate-800">⚡ 영수증만 간단히 맡길래요</p>
+                    <p id="pickleQuickLead" class="text-[11px] text-slate-500 break-keep">포스·배달앱 연결 없이, 영수증·주문내역 입력만 바로 시키는 짧은 문장이에요.</p>
                     <p id="pickleMessagePreview" class="text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg p-2 break-all"></p>
                     <!-- v8: 🍽️ 식당·카페 토글(기본 해제) -->
                     <label for="pickleRestaurantToggle" class="flex items-start gap-2 cursor-pointer text-[11px] text-slate-700 font-semibold leading-snug">
@@ -449,7 +464,8 @@
                     <button type="button" id="pickleCopyBtn" onclick="copyPickleMessage()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-sm transition">📋 피클에게 보낼 말 복사</button>
                 </div>
                 <div class="bg-slate-50 p-3 rounded-xl space-y-1">
-                    <p class="font-bold text-slate-800">3단계 · 영수증 보내기</p>
+                    <p id="pickleLastStepTitle" class="font-bold text-slate-800">4단계 · 피클이 묻는 말에 답하고, 영수증 보내기</p>
+                    <p id="pickleLastStepLead" class="text-[11px] text-slate-500 break-keep">피클이 포스·배달앱을 물어보면 답만 해 주세요. 로그인은 피클 브라우저에서 <b class="text-slate-700">사장님이 직접</b> 하시면 되고, 비밀번호를 채팅에 적을 필요는 없어요.</p>
                     <p class="text-[11px] text-slate-500">처음 한 번만 피클 브라우저에서 직접 로그인해 주면, 다음부터는 영수증·거래명세표 사진이나 정산 내역만 톡으로 보내도 알아서 입력해 줍니다. 쿠팡·네이버쇼핑·G마켓 등 자주 쓰는 쇼핑몰/매장 계정도 피클에 연결해 두면, 주문내역을 보고 매장 지출을 알아서 정리·입력해 줍니다.</p>
                     <p class="text-[11px] text-slate-500">식당·카페라면 배민·쿠팡이츠·요기요·포스까지 연결해 매일 매출 기록과 월말 수수료 정산도 맡길 수 있습니다.</p>
                 </div>
@@ -460,13 +476,14 @@
                     <p class="text-[11px] leading-relaxed">아래 프롬프트를 <span class="text-red-600 font-bold">복사해서 피클 앱 채팅창에 그대로 붙여넣어 주세요!</span></p>
                     <div class="bg-slate-50 p-3 rounded-xl space-y-1.5">
                         <p class="text-[11px] text-slate-600 leading-relaxed">💰 <b class="text-slate-800">매출·월말 정산 자동 기입</b> — 포스·배달앱 전날 매출은 매일 자동 기록, 배달앱 수수료·배달비는 매월 1일 정산서 기준으로 한 번에 정리</p>
+                        <p id="pickleFullIncomingLine" class="text-[11px] text-slate-600 leading-relaxed">🏦 <b class="text-slate-800">들어올 돈 브리핑</b> — 카드·배달앱 입금 예정액을 매일 아침 예상해서 알려 줘요 (2단계에서 고른 연매출 구간의 수수료율로 계산)</p>
                         <p class="text-[11px] text-slate-600 leading-relaxed">💬 <b class="text-slate-800">매일 리뷰 답글 자동화</b> — 긍정 리뷰(4~5점)는 매장 톤으로 답글 작성, 부정 리뷰(1~3점)는 답글 보류 후 즉시 알림</p>
                         <p class="text-[11px] text-slate-600 leading-relaxed">🧾 <b class="text-slate-800">식자재·지출 자동 정리</b> — 영수증 사진과 쿠팡·네이버쇼핑·G마켓 주문내역을 항목별로 자동 분류</p>
                         <p class="text-[11px] text-slate-600 leading-relaxed">📅 <b class="text-slate-800">예약·매장 챙김</b> — 네이버 예약 메일 알림 및 캘린더 일정 자동 등록</p>
                     </div>
                     <button type="button" id="pickleFullRoutineCopyBtn" onclick="copyPickleFullRoutine()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs shadow-sm transition">📋 풀세팅 루틴 프롬프트 복사</button>
                     <p class="text-[10px] text-slate-400">복사할 문구 미리보기</p>
-                    <p id="pickleFullRoutinePreview" class="text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg p-2 whitespace-pre-line break-keep"></p>
+                    <p id="pickleFullRoutinePreview" class="text-[11px] text-slate-500 bg-white border border-slate-200 rounded-lg p-2 whitespace-pre-line break-keep max-h-56 overflow-y-auto"></p>
                 </div>
             </div>
 
@@ -903,6 +920,8 @@
     <!-- v20: 세무회계 장부 엑셀(3D와 공용) -->
     <script src="soloBook.js"></script>
     <script src="soloLegal.js"></script>
+    <script src="soloPickle.js"></script>
+    <script src="soloBoard.js"></script>
     <!-- Application Script -->
     <script>
         const COUPANG_TRACKING_CODE = "AF4185384";
@@ -973,6 +992,12 @@
 
         /* ----- 💬 자유 게시판 제어 함수 ----- */
         function openBoardModal() {
+            // v42: 새 사장님 커뮤니티 화면(soloBoard.js — 분류·댓글·공감·사진). 파일을 못 불렀으면 아래 예전 게시판 그대로.
+            if (window.soloBoard && window.firebaseDb) {
+                const fs = { collection: window.collection, doc: window.doc, setDoc: window.setDoc, getDoc: window.getDoc, getDocs: window.getDocs, deleteDoc: window.__soloRawDeleteDoc || window.deleteDoc, query: window.query, where: window.where };
+                const adm = !!(currentUser && currentUser.email && currentUser.email === ADMIN_EMAIL);
+                if (soloBoard.open({ db: window.firebaseDb, fs: fs, user: currentUser ? { uid: currentUser.uid, email: currentUser.email } : null, isAdmin: adm })) return;
+            }
             document.getElementById('boardModal').classList.remove('hidden');
             togglePostForm(false);
             loadBoardPosts();
@@ -1020,7 +1045,7 @@
                 const snaps = await Promise.all(queries.map(q => window.getDocs(q)));
                 const map = {};
                 snaps.forEach(s => s.forEach(d => { const x = d.data(); map[x.id || d.id] = x; }));
-                boardPosts = Object.values(map).filter(p => !(p && typeof p.content === 'string' && p.content.startsWith('ARCADE|'))); // 3D 오락실 랭킹 글은 게시판에서 숨김
+                boardPosts = Object.values(map).filter(p => !(p && typeof p.content === 'string' && /^(ARCADE|RE|LIKE|REPORT)\|/.test(p.content))); // 3D 오락실 랭킹 글은 게시판에서 숨김
                 renderBoardList();
             } catch(e) {
                 console.error("Board load error:", e);
@@ -1873,6 +1898,7 @@
             const pickleToggle = document.getElementById('pickleRestaurantToggle');
             if (pickleToggle) pickleToggle.checked = false; // v8: 열 때마다 해제
             updatePicklePreview();
+            renderPickleSetup(); // v42: 내 가게 알려 주기 + 시작 프롬프트
             renderPickleFullRoutinePreview(); // v10: 풀세팅 프롬프트 미리보기
             document.getElementById('pickleGuideModal').classList.remove('hidden');
         }
@@ -1992,14 +2018,46 @@
         }
 
         /* ----- v10: 🚀 자영업자 풀세팅 루틴 프롬프트 ----- */
+        // v42: 피클이 포스·배달앱을 스스로 물어보고 연결하는 프롬프트(soloPickle.js). 가정용 가계부·파일을 못 불렀을 때는 예전 문장 그대로.
+        function v42PickleMode() {
+            const k = storeConfig && storeConfig.industryKey;
+            if (k === 'home' || k === 'pocket') return 'home';
+            if (k === 'general') return 'store';
+            return k ? 'restaurant' : 'store';
+        }
+        function v42PickleOn() { return !!window.soloPickle && v42PickleMode() !== 'home'; }
+        function getPickleFullPrompt() { return v42PickleOn() ? soloPickle.prompt({ mode: v42PickleMode(), full: true }) : PICKLE_FULL_ROUTINE_PROMPT; }
+        function getPickleStartPrompt() { return v42PickleOn() ? soloPickle.prompt({ mode: v42PickleMode(), full: false }) : getCurrentPickleMessage(); }
+        function renderPickleSetup() {
+            const on = v42PickleOn();
+            ['pickleSetupStep', 'pickleStartStep', 'pickleQuickLead', 'pickleLastStepLead', 'pickleFullIncomingLine'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', !on); });
+            const qt = document.getElementById('pickleQuickTitle'); if (qt) qt.textContent = on ? '⚡ 영수증만 간단히 맡길래요' : '2단계 · 피클에게 보낼 말 복사';
+            const lt = document.getElementById('pickleLastStepTitle'); if (lt) lt.textContent = on ? '4단계 · 피클이 묻는 말에 답하고, 영수증 보내기' : '3단계 · 영수증 보내기';
+            const refresh = () => { const sp = document.getElementById('pickleStartPreview'); if (sp) sp.textContent = getPickleStartPrompt(); renderPickleFullRoutinePreview(); };
+            if (on) soloPickle.mount(document.getElementById('pickleSetupMount'), { mode: v42PickleMode(), onChange: refresh });
+            const sp = document.getElementById('pickleStartPreview'); if (sp) sp.textContent = getPickleStartPrompt();
+        }
+        let pickleStartTimer = null;
+        async function copyPickleStart() {
+            const ok = await copyTextWithFallback(getPickleStartPrompt());
+            const btn = document.getElementById('pickleStartCopyBtn');
+            if (btn) {
+                if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+                btn.textContent = ok ? '✅ 복사 완료! 피클 채팅창에 붙여넣으세요' : '복사가 안 됐어요. 미리보기를 열어 길게 눌러 복사해 주세요';
+                clearTimeout(pickleStartTimer);
+                pickleStartTimer = setTimeout(() => { btn.textContent = btn.dataset.label; }, 2500);
+            }
+            return ok;
+        }
+
         function renderPickleFullRoutinePreview() {
             const p = document.getElementById('pickleFullRoutinePreview');
-            if (p) p.textContent = PICKLE_FULL_ROUTINE_PROMPT;
+            if (p) p.textContent = getPickleFullPrompt();
         }
 
         let pickleFullRoutineTimer = null;
         async function copyPickleFullRoutine() {
-            const ok = await copyTextWithFallback(PICKLE_FULL_ROUTINE_PROMPT);
+            const ok = await copyTextWithFallback(getPickleFullPrompt());
             const btn = document.getElementById('pickleFullRoutineCopyBtn');
             if (btn) {
                 if (!btn.dataset.label) btn.dataset.label = btn.textContent;
